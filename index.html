@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.3.1</title>
+<title>PH Alpha 0.3.2</title>
 <style>
 :root{
  --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
@@ -31,6 +31,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 .source{font-size:11px;color:var(--muted)}.timeline{border-left:3px solid #dbeafe;padding-left:15px}.event{margin-bottom:14px}.checklist{display:grid;gap:8px}
 .check{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfdff}.check input{width:auto;min-height:auto;margin-top:2px}
 .mobile-bar{display:none}
+.session-strip{background:#fff;border:1px solid var(--line);border-radius:12px;box-shadow:var(--shadow);padding:12px;margin-bottom:14px}.session-grid{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px}.session-grid .readonly{background:#f8fafc}@media(max-width:1100px){.session-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}@media(max-width:700px){.session-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:900px){
  .shell{grid-template-columns:1fr}.two,.three,.four{grid-template-columns:1fr}
  aside{position:sticky;top:76px;z-index:15;display:flex;overflow-x:auto;gap:6px;padding:8px;background:#0f172a}
@@ -46,7 +47,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Clinical Scenario Data Engine — Alpha 0.3.1</p></div>
+ <div><h1>PH</h1><p>Clinical Session & Provider Context — Alpha 0.3.2</p></div>
  <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 <div class="shell">
@@ -68,6 +69,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </select></div>
 </aside>
 <main>
+<div class="session-strip"><div class="session-grid">
+<label>Patient<input id="sessionPatient" class="readonly" readonly></label>
+<label>DOB<input id="sessionDob" class="readonly" readonly></label>
+<label>Age<input id="sessionAge" class="readonly" readonly></label>
+<label>Visit Date<input id="sessionVisitDate" class="readonly" readonly></label>
+<label>Rendering Provider<select id="renderingProvider"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider — synthetic</option><option>Unassigned</option></select></label>
+<label>Documented By<select id="documentedBy"><option>Same as Provider</option><option>Medical Scribe</option><option>Nursing</option><option>Medical Assistant</option></select></label>
+</div></div>
 <section id="dashboard" class="view">
  <div class="panel"><div class="row between"><h2>Longitudinal Case Workflow</h2><span id="caseId" class="badge"></span></div><div id="stepper" class="stepper"></div></div>
  <div class="grid four">
@@ -234,6 +243,8 @@ function service(){return services.find(x=>x.id===state.soap.serviceId)||service
 function diagnosis(){return diagnoses.find(x=>x.id===state.soap.diagnosisId)}
 function set(id,v){if($(id))$(id).value=v??""}
 function get(id){return $(id)?.value??""}
+function calculateAge(dob,encounterDate){if(!dob)return "";const b=new Date(dob),r=encounterDate?new Date(encounterDate):new Date();if(Number.isNaN(b.getTime())||Number.isNaN(r.getTime()))return "";let a=r.getFullYear()-b.getFullYear();const m=r.getMonth()-b.getMonth();if(m<0||(m===0&&r.getDate()<b.getDate()))a--;return a>=0?`${a} years`:""}
+function updateSessionHeader(){set("sessionPatient",state.patient.name);set("sessionDob",state.patient.dob);set("sessionAge",calculateAge(state.patient.dob,state.patient.appointmentDate));set("sessionVisitDate",state.patient.appointmentDate)}
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 function populate(){
  const p=state.patient,v=state.visitAuth,s=state.soap,t=state.treatmentAuth,b=state.billing;
@@ -243,13 +254,13 @@ function populate(){
  set("diagnosisId",s.diagnosisId);set("icd10",diagnosis()?.icd10||"");
  updateServices(s.planAction,s.serviceId);
  set("treatmentType",t.type);set("requestedService",serviceLabel());set("treatmentDiagnosis",diagnosis()?.name||"");set("treatmentIcd10",diagnosis()?.icd10||"");set("treatmentStatus",t.status);set("treatmentAuthNumber",t.authNumber);
- set("billingService",b.service);set("billingAuthNumber",b.authNumber);set("billingUnits",b.units);set("billingDateRange",b.dateRange);set("billingIcd10",b.icd10);set("billingCode",b.code);set("handoffStatus",b.status)
+ set("billingService",b.service);set("billingAuthNumber",b.authNumber);set("billingUnits",b.units);set("billingDateRange",b.dateRange);set("billingIcd10",b.icd10);set("billingCode",b.code);set("handoffStatus",b.status);if(!state.session)state.session={renderingProvider:"Todd Pillen, PA-C/SA",documentedBy:"Same as Provider"};set("renderingProvider",state.session.renderingProvider);set("documentedBy",state.session.documentedBy);updateSessionHeader()
 }
 function read(){
  state.patient={name:get("patientName"),mrn:get("mrn"),dob:get("dob"),patientType:get("patientType"),payer:get("payer"),plan:get("planType"),referrer:get("referrer"),appointmentDate:get("appointmentDate"),chiefComplaint:get("chiefComplaint"),priorTreatments:get("priorTreatments"),availableDocuments:get("availableDocuments")};
  state.visitAuth={required:get("visitRequired"),referralRequired:get("referralRequired"),status:get("visitStatus"),authNumber:get("visitAuthNumber")};
  ["subjectiveComplaint","problemStatus","duration","symptomSeverity","pruritus","pain","sleepDisturbance","subjectiveNarrative","bodyLocation","morphology","distribution","color","lesionSize","lesionCount","bsa","iga","diseaseScore","photographs","pathology","baselineLabs","objectiveNarrative","diagnosisId","clinicalSeverity","assessmentNarrative","planAction","serviceId","doseFrequency","medicalNecessity","planNarrative"].forEach(id=>state.soap[id]=get(id));
- state.treatmentAuth.status=get("treatmentStatus");state.treatmentAuth.authNumber=get("treatmentAuthNumber");
+ state.treatmentAuth.status=get("treatmentStatus");state.treatmentAuth.authNumber=get("treatmentAuthNumber");state.session={renderingProvider:get("renderingProvider"),documentedBy:get("documentedBy")};
 }
 function serviceLabel(){const s=service();return s?`${s.name}${s.brand?` (${s.brand})`:""}${s.type==="Procedure"?` / CPT ${s.code}`:""}`:""}
 function updateServices(action,selected){const options=/procedure/i.test(action)?services.filter(x=>x.type==="Procedure"):services.filter(x=>x.type==="Medication");$("serviceId").innerHTML=options.map(x=>`<option value="${x.id}">${esc(x.name)}${x.brand?` (${esc(x.brand)})`:""}${x.type==="Procedure"?` / CPT ${x.code}`:""}</option>`).join("");if(selected)set("serviceId",selected);set("paDisposition",service()?.paLikely?"Automated PA will be created":"No automated PA trigger")}
@@ -285,10 +296,12 @@ function renderDocs(){$("documentList").innerHTML=state.documents.length?state.d
 function renderAudit(){$("auditList").innerHTML=state.audit.map(a=>`<div class="event"><b>${esc(a.action)}</b><br><span class="source">${esc(a.time)} · ${esc(a.user)}</span><div>${esc(a.detail)}</div></div>`).join("")}
 function renderProvenance(){const rows=[["Treatment PA diagnosis",diagnosis()?.name||"","SOAP Assessment"],["Treatment PA ICD-10",diagnosis()?.icd10||"","SOAP Assessment"],["Treatment PA service",serviceLabel(),"SOAP Plan"],["Severity evidence",`${state.soap.bsa||"N/A"}% BSA; ${state.soap.diseaseScore||""}`,"SOAP Objective"],["Failed therapies",state.patient.priorTreatments,"Intake / History"],["Medical necessity",state.soap.medicalNecessity,"SOAP Plan"],["Billing authorization",state.billing.authNumber||"","Treatment PA Decision"]];$("provenanceRows").innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}
 function requirements(id,missing){$(id).innerHTML=`<table><thead><tr><th>Requirement</th><th>Status</th></tr></thead><tbody>${missing.length?missing.map(x=>`<tr><td>${esc(x)}</td><td><span class="badge bad">Missing</span></td></tr>`).join(""):`<tr><td>All required elements</td><td><span class="badge ok">Complete</span></td></tr>`}</tbody></table>`}
-function loadScenario(key){state=clone(scenarios[key]);state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
+function loadScenario(key){state=clone(scenarios[key]);state.session={renderingProvider:"Todd Pillen, PA-C/SA",documentedBy:"Same as Provider"};state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
 function addTask(title,workflow,owner,priority="Routine"){if(!state.tasks.some(t=>t.title===title&&t.status==="Open"))state.tasks.push({id:`${Date.now()}-${Math.random()}`,title,workflow,owner,priority,status:"Open"})}
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("scenarioSelect").onchange=e=>loadScenario(e.target.value);$("resetBtn").onclick=()=>loadScenario(get("scenarioSelect"));
+$("renderingProvider").onchange=()=>{if(!state.session)state.session={};state.session.renderingProvider=get("renderingProvider");log("Rendering provider changed",state.session.renderingProvider);render()};
+$("documentedBy").onchange=()=>{if(!state.session)state.session={};state.session.documentedBy=get("documentedBy");log("Documenting role changed",state.session.documentedBy);render()};
 $("saveIntakeBtn").onclick=()=>{read();state.stage=Math.max(state.stage,1);log("Intake saved","Patient and coverage data saved.");render()};
 $("evaluateVisitBtn").onclick=()=>{read();const m=[];if(!state.patient.payer)m.push("Payer");if(!state.patient.appointmentDate)m.push("Appointment date");if(state.visitAuth.referralRequired==="Yes"&&!/referral/i.test(state.patient.availableDocuments))m.push("Referral");state.visitAuth.status=m.length?"Pending Information":(state.visitAuth.required==="Yes"?"Ready for Submission":"Not Required");m.forEach(r=>addTask(`Resolve: ${r}`,"Visit PA","Front Desk"));log("Visit PA readiness checked",m.length?m.join(", "):"Complete");populate();requirements("visitRequirements",m);render()};
 $("approveVisitBtn").onclick=()=>{read();state.visitAuth.status=state.visitAuth.required==="No"?"Not Required":"Approved";state.visitAuth.authNumber=state.visitAuth.authNumber||(state.visitAuth.status==="Approved"?`VA-${Math.floor(100000+Math.random()*899999)}`:"N/A");state.stage=Math.max(state.stage,2);log("Visit cleared",`${state.visitAuth.status} ${state.visitAuth.authNumber}`);populate();render()};
@@ -301,7 +314,7 @@ $("approveTreatmentBtn").onclick=()=>{state.treatmentAuth.status="Approved";stat
 $("denyTreatmentBtn").onclick=()=>{state.treatmentAuth.status="Appeal Required";addTask("Prepare appeal packet","Appeal","Provider","Urgent");log("Treatment PA denied","Appeal workflow initiated");populate();render()};
 $("queueFilter").onchange=renderTasks;$("completeAllTasksBtn").onclick=()=>{state.tasks.forEach(t=>t.status="Complete");log("Tasks completed","All open tasks completed.");render()};
 $("taskRows").onclick=e=>{const b=e.target.closest(".complete-task");if(!b)return;const t=state.tasks.find(x=>x.id===b.dataset.id);if(t){t.status="Complete";log("Task completed",t.title);render()}};
-function makeDoc(type){const body=`${type}\nPatient: ${state.patient.name}\nMRN: ${state.patient.mrn}\nPayer: ${state.patient.payer}\nDiagnosis: ${diagnosis()?.name} (${diagnosis()?.icd10})\nRequested service: ${serviceLabel()}\nSeverity: ${state.soap.clinicalSeverity}; BSA ${state.soap.bsa||"N/A"}%; ${state.soap.diseaseScore||""}\nFailed therapies: ${state.patient.priorTreatments}\nMedical necessity: ${state.soap.medicalNecessity}`;state.documents.push({id:`DOC-${Math.floor(100000+Math.random()*899999)}`,type,status:"Draft",created:now(),signedBy:"",body});state.stage=Math.max(state.stage,5);log("Document generated",type);render()}
+function makeDoc(type){const body=`${type}\nPatient: ${state.patient.name}\nMRN: ${state.patient.mrn}\nPayer: ${state.patient.payer}\nDiagnosis: ${diagnosis()?.name} (${diagnosis()?.icd10})\nRequested service: ${serviceLabel()}\nSeverity: ${state.soap.clinicalSeverity}; BSA ${state.soap.bsa||"N/A"}%; ${state.soap.diseaseScore||""}\nFailed therapies: ${state.patient.priorTreatments}\nMedical necessity: ${state.soap.medicalNecessity}\nRendering provider: ${state.session?.renderingProvider||""}\nDocumented by: ${state.session?.documentedBy||""}`;state.documents.push({id:`DOC-${Math.floor(100000+Math.random()*899999)}`,type,status:"Draft",created:now(),signedBy:"",body});state.stage=Math.max(state.stage,5);log("Document generated",type);render()}
 document.querySelectorAll(".doc-gen").forEach(b=>b.onclick=()=>makeDoc(b.dataset.type));$("documentList").onclick=e=>{const b=e.target.closest(".sign-doc");if(!b)return;const d=state.documents.find(x=>x.id===b.dataset.id);if(d){d.status="Signed";d.signedBy="Demo Provider, PA-C";log("Document signed",d.id);render()}};
 $("completeHandoffBtn").onclick=()=>{if(state.treatmentAuth.status!=="Approved"){alert("Treatment authorization must be approved before handoff.");return}state.billing.status="Completed";state.stage=6;log("Handoff completed",get("nextAction"));populate();render()};
 $("downloadCaseBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${state.caseId}.json`;a.click();URL.revokeObjectURL(url)};
