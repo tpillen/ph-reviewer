@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1f3a">
+<title>PH Alpha 0.3.1</title>
+<style>
+:root{
+ --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
+ --line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;
+ --bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)
+}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
+button,input,select,textarea{font:inherit}button{touch-action:manipulation}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(120deg,var(--navy),#164e8c 58%,var(--teal));color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:24px}header p{margin:3px 0 0;opacity:.9;font-size:14px}.header-actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 78px)}aside{background:#0f172a;color:#dbeafe;padding:12px;overflow:auto}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#93c5fd;margin:12px 10px 7px}.nav{width:100%;text-align:left;border:0;background:transparent;color:#dbeafe;padding:11px 12px;border-radius:8px;margin:2px 0;cursor:pointer}
+.nav:hover,.nav.active{background:#1e3a8a;color:#fff}main{padding:18px;overflow:auto}.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.panel h2,.panel h3{margin-top:0}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+label{display:block;font-size:12px;font-weight:700;color:#475569}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;margin-top:5px;background:#fff;color:#0f172a;min-height:44px}
+textarea{min-height:88px;resize:vertical}.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.btn{border:0;border-radius:9px;padding:11px 14px;font-weight:700;cursor:pointer;min-height:44px}
+.primary{background:var(--blue);color:#fff}.secondary{background:#e2e8f0}.success{background:var(--ok);color:#fff}.danger{background:var(--bad);color:#fff}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#e8eefc;color:#24428f}.badge.ok{background:#dcfce7;color:#166534}.badge.warn{background:#fef3c7;color:#92400e}.badge.bad{background:#fee2e2;color:#991b1b}
+.notice{padding:12px 13px;border-radius:9px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a}.notice.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.notice.warn{border-color:#fed7aa;background:#fff7ed;color:#9a3412}
+.metric{border:1px solid var(--line);border-radius:11px;padding:14px;background:#fff}.metric small{color:var(--muted);text-transform:uppercase}.metric strong{display:block;font-size:22px;margin-top:4px}
+.stepper{display:flex;gap:7px;overflow:auto;padding-bottom:4px}.step{min-width:145px;border:1px solid var(--line);border-radius:9px;padding:9px;background:#fff}.step.done{background:#f0fdf4}.step.current{background:#eff6ff}.step.blocked{background:#fef2f2}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc;font-size:11px;text-transform:uppercase;color:#475569}
+.hidden{display:none!important}.code{white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;background:#0f172a;color:#d1fae5;padding:11px;border-radius:8px;font-size:12px}
+.source{font-size:11px;color:var(--muted)}.timeline{border-left:3px solid #dbeafe;padding-left:15px}.event{margin-bottom:14px}.checklist{display:grid;gap:8px}
+.check{display:flex;gap:10px;align-items:flex-start;border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfdff}.check input{width:auto;min-height:auto;margin-top:2px}
+.mobile-bar{display:none}
+@media(max-width:900px){
+ .shell{grid-template-columns:1fr}.two,.three,.four{grid-template-columns:1fr}
+ aside{position:sticky;top:76px;z-index:15;display:flex;overflow-x:auto;gap:6px;padding:8px;background:#0f172a}
+ aside h3{display:none}.nav{min-width:max-content;width:auto;margin:0;padding:10px}.scenario-wrap{min-width:240px}
+ main{padding:12px}.mobile-bar{display:block}.step{min-width:125px}header{padding-top:max(12px,env(safe-area-inset-top))}
+}
+@media(max-width:600px){
+ header h1{font-size:21px}header p{font-size:12px}.header-actions{width:100%}.header-actions .btn{flex:1}
+ .panel{padding:13px}.btn{width:100%}.row .btn{flex:1 1 100%}
+ table{font-size:12px}th,td{padding:7px}
+}
+</style>
+</head>
+<body>
+<header>
+ <div><h1>PH</h1><p>Clinical Scenario Data Engine — Alpha 0.3.1</p></div>
+ <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
+</header>
+<div class="shell">
+<aside>
+ <h3>Workflow</h3>
+ <button class="nav active" data-view="dashboard">Dashboard</button>
+ <button class="nav" data-view="intake">1. Intake</button>
+ <button class="nav" data-view="visit">2. Visit Authorization</button>
+ <button class="nav" data-view="soap">3. Structured SOAP</button>
+ <button class="nav" data-view="treatment">4. Treatment Authorization</button>
+ <button class="nav" data-view="queue">5. Work Queue</button>
+ <button class="nav" data-view="documents">6. Documents</button>
+ <button class="nav" data-view="handoff">7. Handoff</button>
+ <button class="nav" data-view="audit">Audit</button>
+ <div class="scenario-wrap"><h3>Scenario</h3><select id="scenarioSelect">
+  <option value="atopic">Atopic dermatitis → Dupilumab</option>
+  <option value="bcc">Basal cell carcinoma → Mohs</option>
+  <option value="psoriasis">Plaque psoriasis → Biologic</option>
+ </select></div>
+</aside>
+<main>
+<section id="dashboard" class="view">
+ <div class="panel"><div class="row between"><h2>Longitudinal Case Workflow</h2><span id="caseId" class="badge"></span></div><div id="stepper" class="stepper"></div></div>
+ <div class="grid four">
+  <div class="metric"><small>Current stage</small><strong id="metricStage"></strong></div>
+  <div class="metric"><small>Open tasks</small><strong id="metricTasks"></strong></div>
+  <div class="metric"><small>PA readiness</small><strong id="metricReady"></strong></div>
+  <div class="metric"><small>Visit gate</small><strong id="metricVisit"></strong></div>
+ </div>
+ <div class="panel grid two"><div><h3>Patient & Coverage</h3><div id="patientSummary"></div></div><div><h3>Operational State</h3><div id="operationalSummary"></div></div></div>
+ <div class="panel"><h3>Scenario Engine Output</h3><div id="engineOutput"></div></div>
+</section>
+
+<section id="intake" class="view hidden">
+ <div class="panel"><h2>Patient Intake</h2>
+ <div class="grid two">
+  <label>Patient Name<input id="patientName"></label><label>MRN<input id="mrn"></label>
+  <label>Date of Birth<input id="dob" type="date"></label><label>Patient Type<select id="patientType"><option>New</option><option>Established</option></select></label>
+  <label>Payer<input id="payer"></label><label>Plan Type<select id="planType"><option>HMO</option><option>PPO</option><option>Medicare Advantage</option><option>Medicaid Managed Care</option></select></label>
+  <label>Referring Provider<input id="referrer"></label><label>Appointment Date<input id="appointmentDate" type="date"></label>
+ </div>
+ <label>Chief Complaint<textarea id="chiefComplaint"></textarea></label>
+ <div class="grid two"><label>Prior Treatments<textarea id="priorTreatments"></textarea></label><label>Available Documents / Results<textarea id="availableDocuments"></textarea></label></div>
+ <button id="saveIntakeBtn" class="btn primary">Save Intake</button></div>
+</section>
+
+<section id="visit" class="view hidden">
+ <div class="panel"><h2>Visit Authorization Gate</h2><div id="visitNotice" class="notice warn"></div>
+ <div class="grid two">
+  <label>Authorization Required?<select id="visitRequired"><option>Yes</option><option>No</option></select></label>
+  <label>Referral Required?<select id="referralRequired"><option>Yes</option><option>No</option></select></label>
+  <label>Status<select id="visitStatus"><option>Pending Information</option><option>Ready for Submission</option><option>Approved</option><option>Denied</option><option>Not Required</option></select></label>
+  <label>Authorization Number<input id="visitAuthNumber"></label>
+ </div>
+ <div class="row"><button id="evaluateVisitBtn" class="btn primary">Run Readiness Check</button><button id="approveVisitBtn" class="btn success">Approve / Clear Visit</button></div>
+ <div id="visitRequirements"></div></div>
+</section>
+
+<section id="soap" class="view hidden">
+ <div class="panel"><h2>Structured Dermatology SOAP</h2><div id="soapNotice" class="notice warn"></div></div>
+ <div class="panel"><h3>S — Subjective</h3><div class="grid three">
+  <label>Complaint<select id="subjectiveComplaint"><option>Rash / dermatitis</option><option>Skin lesion / tumor</option><option>Psoriasis</option></select></label>
+  <label>Problem Status<select id="problemStatus"><option>New</option><option>Established - worsening</option><option>Established - stable</option></select></label>
+  <label>Duration<select id="duration"><option>&lt; 1 month</option><option>1–6 months</option><option>6–12 months</option><option>&gt; 1 year</option></select></label>
+  <label>Severity<select id="symptomSeverity"><option>Mild</option><option>Moderate</option><option>Severe</option></select></label>
+  <label>Pruritus 0–10<input id="pruritus" type="number"></label><label>Pain 0–10<input id="pain" type="number"></label>
+  <label>Sleep Disturbance<select id="sleepDisturbance"><option>None</option><option>Mild</option><option>Moderate</option><option>Severe</option></select></label>
+ </div><label>Subjective Narrative<textarea id="subjectiveNarrative"></textarea></label></div>
+ <div class="panel"><h3>O — Objective</h3><div class="grid three">
+  <label>Body Location<select id="bodyLocation"><option>Generalized</option><option>Face</option><option>Trunk</option><option>Extremities</option><option>Scalp</option></select></label>
+  <label>Morphology<select id="morphology"><option>Eczematous plaques</option><option>Pearly papule / plaque</option><option>Scaly plaques</option></select></label>
+  <label>Distribution<select id="distribution"><option>Generalized</option><option>Localized</option><option>Symmetric</option></select></label>
+  <label>Color<select id="color"><option>Erythematous</option><option>Skin-colored</option><option>Brown</option></select></label>
+  <label>Size<input id="lesionSize"></label><label>Lesion Count<input id="lesionCount"></label>
+  <label>BSA %<input id="bsa" type="number"></label><label>IGA/PGA<select id="iga"><option>2 - Mild</option><option>3 - Moderate</option><option>4 - Severe</option></select></label>
+  <label>Disease Score<input id="diseaseScore"></label><label>Photographs<select id="photographs"><option>Not obtained</option><option>Obtained</option></select></label>
+  <label>Pathology<select id="pathology"><option>Not applicable</option><option>Pending</option><option>Confirmed</option></select></label>
+  <label>Baseline Labs<select id="baselineLabs"><option>Not required</option><option>Pending</option><option>Complete</option></select></label>
+ </div><label>Objective Narrative<textarea id="objectiveNarrative"></textarea></label></div>
+ <div class="panel"><h3>A/P — Assessment and Plan</h3><div class="grid two">
+  <label>Diagnosis<select id="diagnosisId"></select></label><label>ICD-10<input id="icd10" readonly></label>
+  <label>Clinical Severity<select id="clinicalSeverity"><option>Mild</option><option>Moderate</option><option>Severe</option><option>High-risk location</option></select></label>
+  <label>Plan Action<select id="planAction"><option>Start medication</option><option>Order procedure</option></select></label>
+  <label>Therapy / Procedure<select id="serviceId"></select></label><label>Dose / Frequency / Units<input id="doseFrequency"></label>
+  <label>PA Disposition<input id="paDisposition" readonly></label>
+ </div>
+ <label>Assessment Narrative<textarea id="assessmentNarrative"></textarea></label>
+ <label>Medical Necessity Rationale<textarea id="medicalNecessity"></textarea></label>
+ <label>Plan Narrative<textarea id="planNarrative"></textarea></label>
+ <div class="row"><button id="previewSoapBtn" class="btn secondary">Preview SOAP</button><button id="signSoapBtn" class="btn primary">Save & E-sign SOAP</button></div>
+ <div id="soapPreview"></div></div>
+</section>
+
+<section id="treatment" class="view hidden">
+ <div class="panel"><h2>Automated Treatment Prior Authorization</h2><div id="treatmentNotice" class="notice"></div>
+ <div class="grid two">
+  <label>Authorization Type<input id="treatmentType" readonly></label><label>Requested Service<input id="requestedService" readonly></label>
+  <label>Diagnosis<input id="treatmentDiagnosis" readonly></label><label>ICD-10<input id="treatmentIcd10" readonly></label>
+  <label>Status<select id="treatmentStatus"><option>Not Started</option><option>Pending Information</option><option>Ready for Submission</option><option>Submitted</option><option>Approved</option><option>Appeal Required</option></select></label>
+  <label>Authorization Number<input id="treatmentAuthNumber"></label>
+ </div>
+ <h3>Dynamic PA Checklist</h3><div id="paChecklist" class="checklist"></div>
+ <div class="row"><button id="evaluateTreatmentBtn" class="btn primary">Run Disease / Therapy Readiness</button><button id="approveTreatmentBtn" class="btn success">Record Approval</button><button id="denyTreatmentBtn" class="btn danger">Record Denial</button></div>
+ <div id="treatmentRequirements"></div></div>
+</section>
+
+<section id="queue" class="view hidden">
+ <div class="panel"><div class="row between"><h2>Operational Work Queue</h2><div class="row"><select id="queueFilter"><option>All</option><option>Open</option><option>Complete</option><option>Visit PA</option><option>Treatment PA</option><option>Appeal</option></select><button id="completeAllTasksBtn" class="btn secondary">Complete Open Tasks</button></div></div>
+ <div style="overflow:auto"><table><thead><tr><th>Patient</th><th>Task</th><th>Workflow</th><th>Owner</th><th>Priority</th><th>Status</th><th>Action</th></tr></thead><tbody id="taskRows"></tbody></table></div></div>
+</section>
+
+<section id="documents" class="view hidden">
+ <div class="panel"><h2>Document Automation</h2><div class="row">
+  <button class="btn primary doc-gen" data-type="Medical Necessity Letter">Medical Necessity Letter</button>
+  <button class="btn secondary doc-gen" data-type="Appeal Letter">Appeal Letter</button>
+  <button class="btn secondary doc-gen" data-type="Supporting Document Packet">Supporting Packet</button>
+  <button class="btn secondary doc-gen" data-type="SOAP Note">SOAP Note</button>
+ </div><div id="documentList"></div></div>
+</section>
+
+<section id="handoff" class="view hidden">
+ <div class="panel"><h2>Billing / Treatment Handoff</h2><div id="handoffNotice" class="notice warn"></div>
+ <div class="grid two"><label>Approved Service<input id="billingService"></label><label>Authorization Number<input id="billingAuthNumber"></label>
+ <label>Approved Units / Duration<input id="billingUnits"></label><label>Approval Date Range<input id="billingDateRange"></label>
+ <label>Suggested ICD-10<input id="billingIcd10"></label><label>Suggested CPT / HCPCS<input id="billingCode"></label>
+ <label>Next Action<select id="nextAction"><option>Schedule procedure</option><option>Route prescription to specialty pharmacy</option><option>Arrange medication teaching</option><option>Submit claim</option></select></label>
+ <label>Status<select id="handoffStatus"><option>Not Ready</option><option>Ready</option><option>Completed</option></select></label></div>
+ <button id="completeHandoffBtn" class="btn success">Complete Handoff</button></div>
+</section>
+
+<section id="audit" class="view hidden">
+ <div class="panel"><div class="row between"><h2>Audit Trail</h2><button id="downloadCaseBtn" class="btn secondary">Download Structured Case JSON</button></div><div id="auditList" class="timeline"></div></div>
+ <div class="panel"><h2>Data Provenance</h2><div style="overflow:auto"><table><thead><tr><th>Downstream Field</th><th>Current Value</th><th>Source</th></tr></thead><tbody id="provenanceRows"></tbody></table></div></div>
+</section>
+</main>
+</div>
+
+<script>
+const diagnoses=[
+ {id:"DX-AD",name:"Atopic dermatitis",icd10:"L20.9"},
+ {id:"DX-BCC",name:"Basal cell carcinoma of face",icd10:"C44.319"},
+ {id:"DX-PSO",name:"Plaque psoriasis",icd10:"L40.0"}
+];
+const services=[
+ {id:"MED-DUP",type:"Medication",name:"Dupilumab",brand:"Dupixent",code:"J3590",paLikely:true,requirements:["Signed SOAP","Diagnosis / ICD-10","Medical necessity rationale","Prior treatment history","Baseline laboratory screening","Severity score","Provider signature"]},
+ {id:"PROC-MOHS",type:"Procedure",name:"Mohs surgery",code:"17311",paLikely:true,requirements:["Signed SOAP","Diagnosis / ICD-10","Medical necessity rationale","Confirmed pathology","Clinical photograph","Provider signature"]},
+ {id:"MED-SEC",type:"Medication",name:"Secukinumab",brand:"Cosentyx",code:"J3590",paLikely:true,requirements:["Signed SOAP","Diagnosis / ICD-10","Medical necessity rationale","Prior treatment history","TB screening","Hepatitis screening","PASI or BSA","Provider signature"]}
+];
+const scenarios={
+ atopic:{
+  caseId:"PH-AD-0001",stage:2,
+  patient:{name:"Jordan Ellis",mrn:"SYN-AD-001",dob:"1980-04-15",patientType:"Established",payer:"Example Blue HMO",plan:"HMO",referrer:"Dr. Rivera",appointmentDate:"2026-08-12",chiefComplaint:"Severe atopic dermatitis with persistent pruritus and sleep disruption.",priorTreatments:"Failed triamcinolone, clobetasol, tacrolimus, and phototherapy.",availableDocuments:"Insurance card; referral; treatment history; clinical photographs."},
+  visitAuth:{required:"Yes",referralRequired:"Yes",status:"Approved",authNumber:"VA-AD-1001"},
+  soap:{subjectiveComplaint:"Rash / dermatitis",problemStatus:"Established - worsening",duration:"> 1 year",symptomSeverity:"Severe",pruritus:"9",pain:"2",sleepDisturbance:"Severe",subjectiveNarrative:"Persistent pruritus, excoriation, and sleep disturbance despite topical corticosteroids, tacrolimus, and phototherapy.",bodyLocation:"Generalized",morphology:"Eczematous plaques",distribution:"Generalized",color:"Erythematous",lesionSize:"Diffuse",lesionCount:"",bsa:"35",iga:"4 - Severe",diseaseScore:"EASI 28",photographs:"Obtained",pathology:"Not applicable",baselineLabs:"Pending",objectiveNarrative:"Diffuse eczematous plaques with excoriations involving trunk and extremities.",diagnosisId:"DX-AD",clinicalSeverity:"Severe",assessmentNarrative:"Severe atopic dermatitis refractory to topical therapy and phototherapy.",planAction:"Start medication",serviceId:"MED-DUP",doseFrequency:"600 mg loading dose, then 300 mg every 2 weeks",medicalNecessity:"Severe disease with 35% BSA involvement, EASI 28, and inadequate response to high-potency topical corticosteroids, tacrolimus, and phototherapy.",planNarrative:"Initiate dupilumab after payer authorization. Complete baseline screening and provide injection education.",signed:false},
+  treatmentAuth:{type:"Medication",serviceId:"MED-DUP",status:"Pending Information",authNumber:"",dateRange:""},
+  tasks:[{id:"T-AD-1",title:"Complete baseline laboratory screening",workflow:"Treatment PA",owner:"Nursing",priority:"High",status:"Open"},{id:"T-AD-2",title:"Provider signature on SOAP",workflow:"Treatment PA",owner:"Provider",priority:"High",status:"Open"}],
+  documents:[],billing:{service:"",authNumber:"",units:"",dateRange:"",icd10:"L20.9",code:"J3590",status:"Not Ready"},audit:[]
+ },
+ bcc:{
+  caseId:"PH-BCC-0001",stage:2,
+  patient:{name:"Morgan Chen",mrn:"SYN-BCC-001",dob:"1968-07-19",patientType:"Established",payer:"Example MetroCare HMO",plan:"HMO",referrer:"Dr. Patel",appointmentDate:"2026-08-13",chiefComplaint:"Biopsy-proven basal cell carcinoma requiring definitive treatment.",priorTreatments:"Diagnostic shave biopsy completed.",availableDocuments:"Insurance card; referral; pathology report; lesion photograph."},
+  visitAuth:{required:"Yes",referralRequired:"Yes",status:"Approved",authNumber:"VA-BCC-2201"},
+  soap:{subjectiveComplaint:"Skin lesion / tumor",problemStatus:"Established - worsening",duration:"1–6 months",symptomSeverity:"Moderate",pruritus:"0",pain:"1",sleepDisturbance:"None",subjectiveNarrative:"Returns after biopsy for definitive treatment planning.",bodyLocation:"Face",morphology:"Pearly papule / plaque",distribution:"Localized",color:"Skin-colored",lesionSize:"1.2 cm",lesionCount:"1",bsa:"",iga:"2 - Mild",diseaseScore:"High-risk facial site",photographs:"Obtained",pathology:"Confirmed",baselineLabs:"Not required",objectiveNarrative:"1.2 cm pearly plaque on the left cheek; biopsy confirms basal cell carcinoma.",diagnosisId:"DX-BCC",clinicalSeverity:"High-risk location",assessmentNarrative:"Basal cell carcinoma of the left cheek in a high-risk anatomic location.",planAction:"Order procedure",serviceId:"PROC-MOHS",doseFrequency:"One initial stage; additional stages as clinically necessary",medicalNecessity:"Mohs surgery is medically necessary for tissue preservation and margin control at a high-risk facial location.",planNarrative:"Proceed with Mohs surgery after payer authorization and scheduling.",signed:false},
+  treatmentAuth:{type:"Procedure",serviceId:"PROC-MOHS",status:"Ready for Submission",authNumber:"",dateRange:""},
+  tasks:[{id:"T-BCC-1",title:"Provider signature on SOAP",workflow:"Treatment PA",owner:"Provider",priority:"High",status:"Open"}],
+  documents:[],billing:{service:"",authNumber:"",units:"",dateRange:"",icd10:"C44.319",code:"17311",status:"Not Ready"},audit:[]
+ },
+ psoriasis:{
+  caseId:"PH-PSO-0001",stage:2,
+  patient:{name:"Casey Monroe",mrn:"SYN-PSO-001",dob:"1975-11-03",patientType:"Established",payer:"Example Horizon PPO",plan:"PPO",referrer:"Not required",appointmentDate:"2026-08-14",chiefComplaint:"Worsening plaque psoriasis despite prior systemic therapy.",priorTreatments:"Failed high-potency topical corticosteroids, calcipotriene, phototherapy, and methotrexate.",availableDocuments:"Insurance card; prior medication list; PASI worksheet; photographs."},
+  visitAuth:{required:"No",referralRequired:"No",status:"Not Required",authNumber:"N/A"},
+  soap:{subjectiveComplaint:"Psoriasis",problemStatus:"Established - worsening",duration:"> 1 year",symptomSeverity:"Severe",pruritus:"7",pain:"3",sleepDisturbance:"Moderate",subjectiveNarrative:"Progressive plaque psoriasis affecting quality of life despite topical therapy, phototherapy, and methotrexate.",bodyLocation:"Generalized",morphology:"Scaly plaques",distribution:"Symmetric",color:"Erythematous",lesionSize:"Multiple confluent plaques",lesionCount:"",bsa:"18",iga:"4 - Severe",diseaseScore:"PASI 16.4",photographs:"Obtained",pathology:"Not applicable",baselineLabs:"Pending",objectiveNarrative:"Well-demarcated erythematous plaques with silvery scale involving scalp, trunk, elbows, and knees.",diagnosisId:"DX-PSO",clinicalSeverity:"Severe",assessmentNarrative:"Moderate-to-severe plaque psoriasis refractory to topical therapy, phototherapy, and methotrexate.",planAction:"Start medication",serviceId:"MED-SEC",doseFrequency:"300 mg subcutaneous per induction and maintenance schedule",medicalNecessity:"PASI 16.4 and 18% BSA with inadequate response to topical therapy, phototherapy, and methotrexate.",planNarrative:"Initiate secukinumab after payer authorization and completion of TB and hepatitis screening.",signed:false},
+  treatmentAuth:{type:"Medication",serviceId:"MED-SEC",status:"Pending Information",authNumber:"",dateRange:""},
+  tasks:[{id:"T-PSO-1",title:"Complete TB screening",workflow:"Treatment PA",owner:"Nursing",priority:"High",status:"Open"},{id:"T-PSO-2",title:"Complete hepatitis screening",workflow:"Treatment PA",owner:"Nursing",priority:"High",status:"Open"},{id:"T-PSO-3",title:"Provider signature on SOAP",workflow:"Treatment PA",owner:"Provider",priority:"High",status:"Open"}],
+  documents:[],billing:{service:"",authNumber:"",units:"",dateRange:"",icd10:"L40.0",code:"J3590",status:"Not Ready"},audit:[]
+ }
+};
+const stages=["Intake","Visit PA","Structured SOAP","Treatment PA","Work Queue","Documents","Handoff"];
+const $=id=>document.getElementById(id),clone=x=>JSON.parse(JSON.stringify(x)),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
+let state;
+function now(){return new Date().toLocaleString()}
+function log(action,detail,user="Prototype User"){state.audit.unshift({time:now(),user,action,detail})}
+function visitCleared(){return["Approved","Not Required"].includes(state.visitAuth.status)}
+function service(){return services.find(x=>x.id===state.soap.serviceId)||services.find(x=>x.id===state.treatmentAuth.serviceId)}
+function diagnosis(){return diagnoses.find(x=>x.id===state.soap.diagnosisId)}
+function set(id,v){if($(id))$(id).value=v??""}
+function get(id){return $(id)?.value??""}
+function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
+function populate(){
+ const p=state.patient,v=state.visitAuth,s=state.soap,t=state.treatmentAuth,b=state.billing;
+ [["patientName",p.name],["mrn",p.mrn],["dob",p.dob],["patientType",p.patientType],["payer",p.payer],["planType",p.plan],["referrer",p.referrer],["appointmentDate",p.appointmentDate],["chiefComplaint",p.chiefComplaint],["priorTreatments",p.priorTreatments],["availableDocuments",p.availableDocuments],["visitRequired",v.required],["referralRequired",v.referralRequired],["visitStatus",v.status],["visitAuthNumber",v.authNumber]].forEach(x=>set(...x));
+ Object.keys(s).forEach(k=>{if($(k))set(k,s[k])});
+ $("diagnosisId").innerHTML=diagnoses.map(d=>`<option value="${d.id}">${esc(d.name)} — ${d.icd10}</option>`).join("");
+ set("diagnosisId",s.diagnosisId);set("icd10",diagnosis()?.icd10||"");
+ updateServices(s.planAction,s.serviceId);
+ set("treatmentType",t.type);set("requestedService",serviceLabel());set("treatmentDiagnosis",diagnosis()?.name||"");set("treatmentIcd10",diagnosis()?.icd10||"");set("treatmentStatus",t.status);set("treatmentAuthNumber",t.authNumber);
+ set("billingService",b.service);set("billingAuthNumber",b.authNumber);set("billingUnits",b.units);set("billingDateRange",b.dateRange);set("billingIcd10",b.icd10);set("billingCode",b.code);set("handoffStatus",b.status)
+}
+function read(){
+ state.patient={name:get("patientName"),mrn:get("mrn"),dob:get("dob"),patientType:get("patientType"),payer:get("payer"),plan:get("planType"),referrer:get("referrer"),appointmentDate:get("appointmentDate"),chiefComplaint:get("chiefComplaint"),priorTreatments:get("priorTreatments"),availableDocuments:get("availableDocuments")};
+ state.visitAuth={required:get("visitRequired"),referralRequired:get("referralRequired"),status:get("visitStatus"),authNumber:get("visitAuthNumber")};
+ ["subjectiveComplaint","problemStatus","duration","symptomSeverity","pruritus","pain","sleepDisturbance","subjectiveNarrative","bodyLocation","morphology","distribution","color","lesionSize","lesionCount","bsa","iga","diseaseScore","photographs","pathology","baselineLabs","objectiveNarrative","diagnosisId","clinicalSeverity","assessmentNarrative","planAction","serviceId","doseFrequency","medicalNecessity","planNarrative"].forEach(id=>state.soap[id]=get(id));
+ state.treatmentAuth.status=get("treatmentStatus");state.treatmentAuth.authNumber=get("treatmentAuthNumber");
+}
+function serviceLabel(){const s=service();return s?`${s.name}${s.brand?` (${s.brand})`:""}${s.type==="Procedure"?` / CPT ${s.code}`:""}`:""}
+function updateServices(action,selected){const options=/procedure/i.test(action)?services.filter(x=>x.type==="Procedure"):services.filter(x=>x.type==="Medication");$("serviceId").innerHTML=options.map(x=>`<option value="${x.id}">${esc(x.name)}${x.brand?` (${esc(x.brand)})`:""}${x.type==="Procedure"?` / CPT ${x.code}`:""}</option>`).join("");if(selected)set("serviceId",selected);set("paDisposition",service()?.paLikely?"Automated PA will be created":"No automated PA trigger")}
+function requirementStatus(r){
+ if(r==="Signed SOAP")return state.soap.signed;
+ if(r==="Diagnosis / ICD-10")return!!state.soap.diagnosisId;
+ if(r==="Medical necessity rationale")return!!state.soap.medicalNecessity;
+ if(r==="Prior treatment history")return!!state.patient.priorTreatments;
+ if(/laboratory|TB|Hepatitis/i.test(r))return state.soap.baselineLabs==="Complete";
+ if(r==="Severity score"||r==="PASI or BSA")return!!state.soap.diseaseScore||!!state.soap.bsa;
+ if(r==="Confirmed pathology")return state.soap.pathology==="Confirmed";
+ if(r==="Clinical photograph")return state.soap.photographs==="Obtained";
+ if(r==="Provider signature")return state.soap.signed;
+ return false
+}
+function readiness(){const req=service()?.requirements||[];return req.length?Math.round(req.filter(requirementStatus).length/req.length*100):100}
+function renderChecklist(){
+ const req=service()?.requirements||[];
+ $("paChecklist").innerHTML=req.map(r=>`<div class="check"><input type="checkbox" ${requirementStatus(r)?"checked":""} disabled><div><b>${esc(r)}</b><br><span class="source">${requirementStatus(r)?"Complete":"Missing"}</span></div></div>`).join("")
+}
+function render(){
+ $("caseId").textContent=state.caseId;$("metricStage").textContent=stages[Math.min(state.stage,6)];$("metricTasks").textContent=state.tasks.filter(t=>t.status==="Open").length;$("metricReady").textContent=`${readiness()}%`;$("metricVisit").textContent=visitCleared()?"Cleared":"Blocked";
+ $("stepper").innerHTML=stages.map((s,i)=>`<div class="step ${i<state.stage?"done":i===state.stage?"current":(i===2&&!visitCleared()?"blocked":"")}"><b>${i+1}. ${s}</b><br><small>${i<state.stage?"Complete":i===state.stage?"Current":(i===2&&!visitCleared()?"Blocked":"Pending")}</small></div>`).join("");
+ $("patientSummary").innerHTML=`<p><b>${esc(state.patient.name)}</b><br>${esc(state.patient.mrn)}<br>${esc(state.patient.payer)} · ${esc(state.patient.plan)}</p><p>${esc(state.patient.chiefComplaint)}</p>`;
+ $("operationalSummary").innerHTML=`<p>Visit PA: <span class="badge ${visitCleared()?"ok":"warn"}">${esc(state.visitAuth.status)}</span></p><p>SOAP: <span class="badge ${state.soap.signed?"ok":"warn"}">${state.soap.signed?"Signed":"Draft"}</span></p><p>Treatment PA: <span class="badge ${state.treatmentAuth.status==="Approved"?"ok":"warn"}">${esc(state.treatmentAuth.status)}</span></p>`;
+ $("engineOutput").innerHTML=`<div class="grid three"><div class="metric"><small>Diagnosis</small><strong>${esc(diagnosis()?.name||"")}</strong></div><div class="metric"><small>Requested service</small><strong>${esc(serviceLabel())}</strong></div><div class="metric"><small>Automation</small><strong>${service()?.paLikely?"PA Triggered":"No PA"}</strong></div></div>`;
+ [["visitNotice",visitCleared(),"Visit cleared for clinical evaluation.","SOAP remains blocked until visit authorization is resolved."],["soapNotice",visitCleared(),"Visit gate passed. Structured documentation is enabled.","Clinical encounter is operationally blocked."],["handoffNotice",state.treatmentAuth.status==="Approved","Authorization data is ready for handoff.","Handoff is blocked until authorization approval."]].forEach(x=>{const e=$(x[0]);e.className=`notice ${x[1]?"ok":"warn"}`;e.textContent=x[1]?x[2]:x[3]});
+ $("treatmentNotice").textContent=state.soap.signed?`SOAP data populated this ${state.treatmentAuth.type.toLowerCase()} authorization.`:"Treatment authorization is waiting for a signed SOAP note.";
+ renderChecklist();renderTasks();renderDocs();renderAudit();renderProvenance();localStorage.setItem("ph-alpha-0-3-1",JSON.stringify(state))
+}
+function renderTasks(){const f=get("queueFilter"),rows=state.tasks.filter(t=>f==="All"||t.status===f||t.workflow===f);$("taskRows").innerHTML=rows.length?rows.map(t=>`<tr><td>${esc(state.patient.name)}</td><td>${esc(t.title)}</td><td>${esc(t.workflow)}</td><td>${esc(t.owner)}</td><td>${esc(t.priority)}</td><td>${esc(t.status)}</td><td>${t.status==="Open"?`<button class="btn secondary complete-task" data-id="${t.id}">Complete</button>`:"—"}</td></tr>`).join(""):`<tr><td colspan="7">No matching tasks.</td></tr>`}
+function renderDocs(){$("documentList").innerHTML=state.documents.length?state.documents.map(d=>`<div class="panel"><div class="row between"><b>${esc(d.type)}</b><span class="badge ${d.status==="Signed"?"ok":"warn"}">${esc(d.status)}</span></div><p class="source">${esc(d.id)} · ${esc(d.created)}</p><div class="code">${esc(d.body)}</div>${d.status==="Draft"?`<button class="btn success sign-doc" data-id="${d.id}">E-sign</button>`:`<b>Signed by ${esc(d.signedBy)}</b>`}</div>`).join(""):`<div class="notice">No generated documents.</div>`}
+function renderAudit(){$("auditList").innerHTML=state.audit.map(a=>`<div class="event"><b>${esc(a.action)}</b><br><span class="source">${esc(a.time)} · ${esc(a.user)}</span><div>${esc(a.detail)}</div></div>`).join("")}
+function renderProvenance(){const rows=[["Treatment PA diagnosis",diagnosis()?.name||"","SOAP Assessment"],["Treatment PA ICD-10",diagnosis()?.icd10||"","SOAP Assessment"],["Treatment PA service",serviceLabel(),"SOAP Plan"],["Severity evidence",`${state.soap.bsa||"N/A"}% BSA; ${state.soap.diseaseScore||""}`,"SOAP Objective"],["Failed therapies",state.patient.priorTreatments,"Intake / History"],["Medical necessity",state.soap.medicalNecessity,"SOAP Plan"],["Billing authorization",state.billing.authNumber||"","Treatment PA Decision"]];$("provenanceRows").innerHTML=rows.map(r=>`<tr><td>${esc(r[0])}</td><td>${esc(r[1])}</td><td>${esc(r[2])}</td></tr>`).join("")}
+function requirements(id,missing){$(id).innerHTML=`<table><thead><tr><th>Requirement</th><th>Status</th></tr></thead><tbody>${missing.length?missing.map(x=>`<tr><td>${esc(x)}</td><td><span class="badge bad">Missing</span></td></tr>`).join(""):`<tr><td>All required elements</td><td><span class="badge ok">Complete</span></td></tr>`}</tbody></table>`}
+function loadScenario(key){state=clone(scenarios[key]);state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
+function addTask(title,workflow,owner,priority="Routine"){if(!state.tasks.some(t=>t.title===title&&t.status==="Open"))state.tasks.push({id:`${Date.now()}-${Math.random()}`,title,workflow,owner,priority,status:"Open"})}
+document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showView(b.dataset.view));
+$("scenarioSelect").onchange=e=>loadScenario(e.target.value);$("resetBtn").onclick=()=>loadScenario(get("scenarioSelect"));
+$("saveIntakeBtn").onclick=()=>{read();state.stage=Math.max(state.stage,1);log("Intake saved","Patient and coverage data saved.");render()};
+$("evaluateVisitBtn").onclick=()=>{read();const m=[];if(!state.patient.payer)m.push("Payer");if(!state.patient.appointmentDate)m.push("Appointment date");if(state.visitAuth.referralRequired==="Yes"&&!/referral/i.test(state.patient.availableDocuments))m.push("Referral");state.visitAuth.status=m.length?"Pending Information":(state.visitAuth.required==="Yes"?"Ready for Submission":"Not Required");m.forEach(r=>addTask(`Resolve: ${r}`,"Visit PA","Front Desk"));log("Visit PA readiness checked",m.length?m.join(", "):"Complete");populate();requirements("visitRequirements",m);render()};
+$("approveVisitBtn").onclick=()=>{read();state.visitAuth.status=state.visitAuth.required==="No"?"Not Required":"Approved";state.visitAuth.authNumber=state.visitAuth.authNumber||(state.visitAuth.status==="Approved"?`VA-${Math.floor(100000+Math.random()*899999)}`:"N/A");state.stage=Math.max(state.stage,2);log("Visit cleared",`${state.visitAuth.status} ${state.visitAuth.authNumber}`);populate();render()};
+$("diagnosisId").onchange=()=>{state.soap.diagnosisId=get("diagnosisId");set("icd10",diagnosis()?.icd10||"")};
+$("planAction").onchange=()=>updateServices(get("planAction"));$("serviceId").onchange=()=>{state.soap.serviceId=get("serviceId");set("paDisposition",service()?.paLikely?"Automated PA will be created":"No automated PA trigger");renderChecklist()};
+$("previewSoapBtn").onclick=()=>{read();$("soapPreview").innerHTML=`<div class="code">S: ${esc(state.soap.subjectiveNarrative)}\n\nO: ${esc(state.soap.objectiveNarrative)}\n\nA: ${esc(diagnosis()?.name||"")} (${esc(diagnosis()?.icd10||"")}), ${esc(state.soap.clinicalSeverity)}\n${esc(state.soap.assessmentNarrative)}\n\nP: ${esc(state.soap.planAction)} — ${esc(serviceLabel())}\n${esc(state.soap.doseFrequency)}\nMedical necessity: ${esc(state.soap.medicalNecessity)}\n${esc(state.soap.planNarrative)}</div>`};
+$("signSoapBtn").onclick=()=>{read();if(!visitCleared()){alert("Visit authorization gate has not been cleared.");return}state.soap.signed=true;state.treatmentAuth.type=service()?.type||"Medication";state.treatmentAuth.serviceId=state.soap.serviceId;state.treatmentAuth.status="Pending Information";state.stage=Math.max(state.stage,3);state.tasks=state.tasks.filter(t=>!/Provider signature/.test(t.title));log("SOAP signed",`Automated ${state.treatmentAuth.type} PA created.`);populate();render()};
+$("evaluateTreatmentBtn").onclick=()=>{read();const missing=(service()?.requirements||[]).filter(r=>!requirementStatus(r));state.treatmentAuth.status=missing.length?"Pending Information":"Ready for Submission";missing.forEach(r=>addTask(`Resolve: ${r}`,"Treatment PA",/lab|TB|Hepatitis/i.test(r)?"Nursing":"Provider","High"));state.stage=Math.max(state.stage,4);log("Treatment PA readiness checked",missing.length?missing.join(", "):"Ready for submission");populate();requirements("treatmentRequirements",missing);render()};
+$("approveTreatmentBtn").onclick=()=>{state.treatmentAuth.status="Approved";state.treatmentAuth.authNumber=state.treatmentAuth.authNumber||`TA-${Math.floor(100000+Math.random()*899999)}`;state.treatmentAuth.dateRange="2026-08-01 to 2027-01-31";state.billing={service:serviceLabel(),authNumber:state.treatmentAuth.authNumber,units:service()?.type==="Medication"?"6 months":"1 authorized procedure",dateRange:state.treatmentAuth.dateRange,icd10:diagnosis()?.icd10||"",code:service()?.code||"",status:"Ready"};state.stage=Math.max(state.stage,6);log("Treatment PA approved",state.treatmentAuth.authNumber);populate();render()};
+$("denyTreatmentBtn").onclick=()=>{state.treatmentAuth.status="Appeal Required";addTask("Prepare appeal packet","Appeal","Provider","Urgent");log("Treatment PA denied","Appeal workflow initiated");populate();render()};
+$("queueFilter").onchange=renderTasks;$("completeAllTasksBtn").onclick=()=>{state.tasks.forEach(t=>t.status="Complete");log("Tasks completed","All open tasks completed.");render()};
+$("taskRows").onclick=e=>{const b=e.target.closest(".complete-task");if(!b)return;const t=state.tasks.find(x=>x.id===b.dataset.id);if(t){t.status="Complete";log("Task completed",t.title);render()}};
+function makeDoc(type){const body=`${type}\nPatient: ${state.patient.name}\nMRN: ${state.patient.mrn}\nPayer: ${state.patient.payer}\nDiagnosis: ${diagnosis()?.name} (${diagnosis()?.icd10})\nRequested service: ${serviceLabel()}\nSeverity: ${state.soap.clinicalSeverity}; BSA ${state.soap.bsa||"N/A"}%; ${state.soap.diseaseScore||""}\nFailed therapies: ${state.patient.priorTreatments}\nMedical necessity: ${state.soap.medicalNecessity}`;state.documents.push({id:`DOC-${Math.floor(100000+Math.random()*899999)}`,type,status:"Draft",created:now(),signedBy:"",body});state.stage=Math.max(state.stage,5);log("Document generated",type);render()}
+document.querySelectorAll(".doc-gen").forEach(b=>b.onclick=()=>makeDoc(b.dataset.type));$("documentList").onclick=e=>{const b=e.target.closest(".sign-doc");if(!b)return;const d=state.documents.find(x=>x.id===b.dataset.id);if(d){d.status="Signed";d.signedBy="Demo Provider, PA-C";log("Document signed",d.id);render()}};
+$("completeHandoffBtn").onclick=()=>{if(state.treatmentAuth.status!=="Approved"){alert("Treatment authorization must be approved before handoff.");return}state.billing.status="Completed";state.stage=6;log("Handoff completed",get("nextAction"));populate();render()};
+$("downloadCaseBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${state.caseId}.json`;a.click();URL.revokeObjectURL(url)};
+const stored=localStorage.getItem("ph-alpha-0-3-1");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
+</script>
+</body>
+</html>
