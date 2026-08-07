@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.3.2</title>
+<title>PH Alpha 0.4.0</title>
 <style>
 :root{
  --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
@@ -43,11 +43,44 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  .panel{padding:13px}.btn{width:100%}.row .btn{flex:1 1 100%}
  table{font-size:12px}th,td{padding:7px}
 }
+
+.portal-overlay{position:fixed;inset:0;z-index:100;background:linear-gradient(135deg,#08172c,#164e8c 55%,#0f766e);display:flex;align-items:center;justify-content:center;padding:20px}
+.portal-card{width:min(760px,100%);background:rgba(255,255,255,.98);border-radius:20px;box-shadow:0 30px 80px rgba(0,0,0,.3);padding:28px}
+.portal-card h1{font-size:40px;margin:0;color:#0b1f3a}.portal-sub{font-size:18px;color:#475569;margin:8px 0 22px}.portal-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin:18px 0}.portal-person{border:1px solid var(--line);border-radius:12px;padding:14px;background:#f8fafc}
+.portal-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.portal-foot{margin-top:18px;color:#64748b;font-size:12px;text-align:center}
+.workflow-ribbon{display:flex;gap:6px;overflow-x:auto;padding:8px 0 14px}.ribbon-step{min-width:150px;border-radius:999px;padding:9px 12px;text-align:center;font-size:12px;font-weight:700;border:1px solid var(--line);background:#e2e8f0;color:#475569}
+.ribbon-step.complete{background:#dcfce7;color:#166534;border-color:#86efac}.ribbon-step.current{background:#dbeafe;color:#1e40af;border-color:#93c5fd}.ribbon-step.action{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
+.floating-feedback{position:fixed;right:18px;bottom:18px;z-index:50;border-radius:999px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px}.modal-card{width:min(640px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
+.feedback-list{display:grid;gap:10px}.feedback-item{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fbfdff}
+@media(max-width:650px){.portal-grid,.portal-actions{grid-template-columns:1fr}.portal-card{padding:20px}.portal-card h1{font-size:32px}.floating-feedback{right:10px;bottom:10px}}
+
 </style>
 </head>
 <body>
+
+<div id="reviewerPortal" class="portal-overlay">
+ <div class="portal-card">
+  <span class="badge">Synthetic Clinical Demonstration</span>
+  <h1>PH Clinical Reviewer Portal</h1>
+  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.4.0</div>
+  <div class="portal-grid">
+   <div class="portal-person"><strong>Clinical Systems Developer</strong><br>Todd Pillen, PA-C/SA</div>
+   <div class="portal-person"><strong>Clinical Validation Lead</strong><br>Mallory Heath, PA-C</div>
+  </div>
+  <div class="portal-actions">
+   <button id="startReviewBtn" class="btn primary">Start Clinical Review</button>
+   <button id="portalReleaseBtn" class="btn secondary">Release Notes</button>
+   <button id="portalIssuesBtn" class="btn secondary">Known Issues</button>
+   <button id="portalFeedbackBtn" class="btn secondary">Reviewer Feedback</button>
+  </div>
+  <div id="portalInfo" class="notice hidden" style="margin-top:14px"></div>
+  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.4.0</div>
+ </div>
+</div>
+
 <header>
- <div><h1>PH</h1><p>Clinical Session & Provider Context — Alpha 0.3.2</p></div>
+ <div><h1>PH</h1><p>Clinical Workflow Edition — Alpha 0.4.0</p></div>
  <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 <div class="shell">
@@ -69,6 +102,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </select></div>
 </aside>
 <main>
+
+<div id="workflowRibbon" class="workflow-ribbon"></div>
+
 <div class="session-strip"><div class="session-grid">
 <label>Patient<input id="sessionPatient" class="readonly" readonly></label>
 <label>DOB<input id="sessionDob" class="readonly" readonly></label>
@@ -193,6 +229,22 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </main>
 </div>
 
+<button id="feedbackBtn" class="btn primary floating-feedback">Feedback</button>
+<div id="feedbackModal" class="modal-backdrop hidden">
+ <div class="modal-card">
+  <div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedbackBtn" class="btn secondary">Close</button></div>
+  <div class="grid two">
+   <label>Reviewer<select id="feedbackReviewer"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other reviewer</option></select></label>
+   <label>Module<select id="feedbackModule"><option>Dashboard</option><option>Intake</option><option>Visit Authorization</option><option>Structured SOAP</option><option>Treatment Authorization</option><option>Work Queue</option><option>Documents</option><option>Handoff</option><option>General</option></select></label>
+   <label>Severity<select id="feedbackSeverity"><option>Suggestion</option><option>Minor</option><option>Major</option><option>Blocking</option></select></label>
+   <label>Status<input value="New" readonly></label>
+  </div>
+  <label>Comment<textarea id="feedbackComment" placeholder="Describe the workflow issue or recommendation."></textarea></label>
+  <div class="row"><button id="saveFeedbackBtn" class="btn primary">Save Feedback</button><button id="exportFeedbackBtn" class="btn secondary">Export Feedback JSON</button></div>
+  <h3>Saved Feedback</h3><div id="feedbackList" class="feedback-list"></div>
+ </div>
+</div>
+
 <script>
 const diagnoses=[
  {id:"DX-AD",name:"Atopic dermatitis",icd10:"L20.9"},
@@ -236,6 +288,9 @@ const scenarios={
 const stages=["Intake","Visit PA","Structured SOAP","Treatment PA","Work Queue","Documents","Handoff"];
 const $=id=>document.getElementById(id),clone=x=>JSON.parse(JSON.stringify(x)),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 let state;
+let reviewerFeedback=[];
+try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-alpha-0-4-0")||"[]")}catch{reviewerFeedback=[]}
+
 function now(){return new Date().toLocaleString()}
 function log(action,detail,user="Prototype User"){state.audit.unshift({time:now(),user,action,detail})}
 function visitCleared(){return["Approved","Not Required"].includes(state.visitAuth.status)}
@@ -245,7 +300,36 @@ function set(id,v){if($(id))$(id).value=v??""}
 function get(id){return $(id)?.value??""}
 function calculateAge(dob,encounterDate){if(!dob)return "";const b=new Date(dob),r=encounterDate?new Date(encounterDate):new Date();if(Number.isNaN(b.getTime())||Number.isNaN(r.getTime()))return "";let a=r.getFullYear()-b.getFullYear();const m=r.getMonth()-b.getMonth();if(m<0||(m===0&&r.getDate()<b.getDate()))a--;return a>=0?`${a} years`:""}
 function updateSessionHeader(){set("sessionPatient",state.patient.name);set("sessionDob",state.patient.dob);set("sessionAge",calculateAge(state.patient.dob,state.patient.appointmentDate));set("sessionVisitDate",state.patient.appointmentDate)}
-function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
+function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");
+function showFeedback(){
+ $("feedbackModal").classList.remove("hidden");
+ renderFeedback()
+}
+function renderFeedback(){
+ $("feedbackList").innerHTML=reviewerFeedback.length?reviewerFeedback.map((f,i)=>`<div class="feedback-item"><div class="row between"><b>${esc(f.module)} · ${esc(f.severity)}</b><span class="source">${esc(f.time)}</span></div><div>${esc(f.comment)}</div><div class="source">Reviewer: ${esc(f.reviewer)} · Build 0.4.0</div></div>`).join(""):`<div class="notice">No feedback saved yet.</div>`
+}
+function saveFeedback(){
+ const comment=get("feedbackComment").trim();
+ if(!comment){alert("Enter a feedback comment.");return}
+ reviewerFeedback.unshift({reviewer:get("feedbackReviewer"),module:get("feedbackModule"),severity:get("feedbackSeverity"),comment,time:now(),build:"0.4.0",caseId:state.caseId});
+ localStorage.setItem("ph-feedback-alpha-0-4-0",JSON.stringify(reviewerFeedback));
+ set("feedbackComment","");
+ renderFeedback()
+}
+function exportFeedback(){
+ const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="PH_Reviewer_Feedback_Alpha_0_4_0.json";a.click();URL.revokeObjectURL(url)
+}
+$("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
+$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.4.0</b><br>Added reviewer portal, persistent workflow ribbon, feedback capture, provider context, and calculated age."};
+$("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Authentication and server-side storage are simulated. Payer rules and coding suggestions remain demonstration content."};
+$("portalFeedbackBtn").onclick=showFeedback;
+$("feedbackBtn").onclick=showFeedback;
+$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");
+$("saveFeedbackBtn").onclick=saveFeedback;
+$("exportFeedbackBtn").onclick=exportFeedback;
+
+document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 function populate(){
  const p=state.patient,v=state.visitAuth,s=state.soap,t=state.treatmentAuth,b=state.billing;
  [["patientName",p.name],["mrn",p.mrn],["dob",p.dob],["patientType",p.patientType],["payer",p.payer],["planType",p.plan],["referrer",p.referrer],["appointmentDate",p.appointmentDate],["chiefComplaint",p.chiefComplaint],["priorTreatments",p.priorTreatments],["availableDocuments",p.availableDocuments],["visitRequired",v.required],["referralRequired",v.referralRequired],["visitStatus",v.status],["visitAuthNumber",v.authNumber]].forEach(x=>set(...x));
@@ -281,8 +365,21 @@ function renderChecklist(){
  const req=service()?.requirements||[];
  $("paChecklist").innerHTML=req.map(r=>`<div class="check"><input type="checkbox" ${requirementStatus(r)?"checked":""} disabled><div><b>${esc(r)}</b><br><span class="source">${requirementStatus(r)?"Complete":"Missing"}</span></div></div>`).join("")
 }
+function renderWorkflowRibbon(){
+ const labels=["Patient Intake","Insurance Verification","Visit Prior Authorization","Provider Evaluation","Treatment Prior Authorization","Billing","Follow-up"];
+ const states=[
+  state.stage>0?"complete":"current",
+  state.patient.payer?"complete":"action",
+  visitCleared()?"complete":(state.stage>=1?"action":""),
+  state.soap.signed?"complete":(visitCleared()?"current":""),
+  state.treatmentAuth.status==="Approved"?"complete":(state.soap.signed?"current":""),
+  state.billing.status==="Completed"?"complete":(state.treatmentAuth.status==="Approved"?"current":""),
+  state.billing.status==="Completed"?"current":""
+ ];
+ $("workflowRibbon").innerHTML=labels.map((label,i)=>`<div class="ribbon-step ${states[i]}">${label}</div>`).join("")
+}
 function render(){
- $("caseId").textContent=state.caseId;$("metricStage").textContent=stages[Math.min(state.stage,6)];$("metricTasks").textContent=state.tasks.filter(t=>t.status==="Open").length;$("metricReady").textContent=`${readiness()}%`;$("metricVisit").textContent=visitCleared()?"Cleared":"Blocked";
+ renderWorkflowRibbon();$("caseId").textContent=state.caseId;$("metricStage").textContent=stages[Math.min(state.stage,6)];$("metricTasks").textContent=state.tasks.filter(t=>t.status==="Open").length;$("metricReady").textContent=`${readiness()}%`;$("metricVisit").textContent=visitCleared()?"Cleared":"Blocked";
  $("stepper").innerHTML=stages.map((s,i)=>`<div class="step ${i<state.stage?"done":i===state.stage?"current":(i===2&&!visitCleared()?"blocked":"")}"><b>${i+1}. ${s}</b><br><small>${i<state.stage?"Complete":i===state.stage?"Current":(i===2&&!visitCleared()?"Blocked":"Pending")}</small></div>`).join("");
  $("patientSummary").innerHTML=`<p><b>${esc(state.patient.name)}</b><br>${esc(state.patient.mrn)}<br>${esc(state.patient.payer)} · ${esc(state.patient.plan)}</p><p>${esc(state.patient.chiefComplaint)}</p>`;
  $("operationalSummary").innerHTML=`<p>Visit PA: <span class="badge ${visitCleared()?"ok":"warn"}">${esc(state.visitAuth.status)}</span></p><p>SOAP: <span class="badge ${state.soap.signed?"ok":"warn"}">${state.soap.signed?"Signed":"Draft"}</span></p><p>Treatment PA: <span class="badge ${state.treatmentAuth.status==="Approved"?"ok":"warn"}">${esc(state.treatmentAuth.status)}</span></p>`;
@@ -298,6 +395,35 @@ function renderProvenance(){const rows=[["Treatment PA diagnosis",diagnosis()?.n
 function requirements(id,missing){$(id).innerHTML=`<table><thead><tr><th>Requirement</th><th>Status</th></tr></thead><tbody>${missing.length?missing.map(x=>`<tr><td>${esc(x)}</td><td><span class="badge bad">Missing</span></td></tr>`).join(""):`<tr><td>All required elements</td><td><span class="badge ok">Complete</span></td></tr>`}</tbody></table>`}
 function loadScenario(key){state=clone(scenarios[key]);state.session={renderingProvider:"Todd Pillen, PA-C/SA",documentedBy:"Same as Provider"};state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
 function addTask(title,workflow,owner,priority="Routine"){if(!state.tasks.some(t=>t.title===title&&t.status==="Open"))state.tasks.push({id:`${Date.now()}-${Math.random()}`,title,workflow,owner,priority,status:"Open"})}
+
+function showFeedback(){
+ $("feedbackModal").classList.remove("hidden");
+ renderFeedback()
+}
+function renderFeedback(){
+ $("feedbackList").innerHTML=reviewerFeedback.length?reviewerFeedback.map((f,i)=>`<div class="feedback-item"><div class="row between"><b>${esc(f.module)} · ${esc(f.severity)}</b><span class="source">${esc(f.time)}</span></div><div>${esc(f.comment)}</div><div class="source">Reviewer: ${esc(f.reviewer)} · Build 0.4.0</div></div>`).join(""):`<div class="notice">No feedback saved yet.</div>`
+}
+function saveFeedback(){
+ const comment=get("feedbackComment").trim();
+ if(!comment){alert("Enter a feedback comment.");return}
+ reviewerFeedback.unshift({reviewer:get("feedbackReviewer"),module:get("feedbackModule"),severity:get("feedbackSeverity"),comment,time:now(),build:"0.4.0",caseId:state.caseId});
+ localStorage.setItem("ph-feedback-alpha-0-4-0",JSON.stringify(reviewerFeedback));
+ set("feedbackComment","");
+ renderFeedback()
+}
+function exportFeedback(){
+ const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
+ a.href=url;a.download="PH_Reviewer_Feedback_Alpha_0_4_0.json";a.click();URL.revokeObjectURL(url)
+}
+$("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
+$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.4.0</b><br>Added reviewer portal, persistent workflow ribbon, feedback capture, provider context, and calculated age."};
+$("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Authentication and server-side storage are simulated. Payer rules and coding suggestions remain demonstration content."};
+$("portalFeedbackBtn").onclick=showFeedback;
+$("feedbackBtn").onclick=showFeedback;
+$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");
+$("saveFeedbackBtn").onclick=saveFeedback;
+$("exportFeedbackBtn").onclick=exportFeedback;
+
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("scenarioSelect").onchange=e=>loadScenario(e.target.value);$("resetBtn").onclick=()=>loadScenario(get("scenarioSelect"));
 $("renderingProvider").onchange=()=>{if(!state.session)state.session={};state.session.renderingProvider=get("renderingProvider");log("Rendering provider changed",state.session.renderingProvider);render()};

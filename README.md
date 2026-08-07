@@ -1,13 +1,17 @@
-# PH Alpha 0.3.2
+# PH Alpha 0.4.0 Clinical Workflow Edition
 
-Adds clinical session context, provider/documenter selection, calculated age, audit attribution, and responsive session controls.
+## Exact extraction folders
 
-Platform extraction target:
+### Private master repository
+Extract the platform update ZIP directly into:
+
 `C:\Users\tpill\OneDrive\Documents\GitHub\ph-platform`
 
-Reviewer extraction target:
+### Reviewer repository
+Extract the reviewer update ZIP directly into:
+
 `C:\Users\tpill\OneDrive\Documents\GitHub\ph-reviewer-live`
 
-Extract directly into the target folder and replace matching files. Do not delete `.git`.
+Choose **Replace the files in the destination**. Do not delete or modify `.git`.
 
 Synthetic data only.
