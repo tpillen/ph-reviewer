@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PH Prior Authorization Intake Engine Alpha 0.5.0</title>
+<style>
+:root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--purple:#7c3aed}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
+header{background:linear-gradient(120deg,var(--navy),#164e8c,var(--teal));color:#fff;padding:18px}.wrap{max-width:1550px;margin:auto;padding:16px}
+header h1{margin:0 0 5px}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:14px}
+.grid{display:grid;gap:12px}.four{grid-template-columns:repeat(4,1fr)}.three{grid-template-columns:repeat(3,1fr)}.two{grid-template-columns:repeat(2,1fr)}
+.metric{padding:12px;border:1px solid var(--line);border-radius:10px}.metric strong{display:block;font-size:22px}
+label{font-size:12px;font-weight:700;color:#475569}input,select,textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;margin-top:4px;background:#fff}textarea{min-height:86px}
+button{border:0;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e2e8f0}.success{background:var(--ok);color:#fff}.danger{background:var(--bad);color:#fff}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc;position:sticky;top:0}
+.badge{display:inline-block;padding:4px 7px;border-radius:999px;font-size:11px;font-weight:700}.known{background:#dcfce7;color:#166534}.candidate{background:#ede9fe;color:#5b21b6}.missing{background:#fef3c7;color:#92400e}.conflict{background:#fee2e2;color:#991b1b}.open{background:#dbeafe;color:#1e40af}.closed{background:#dcfce7;color:#166534}.high{background:#fee2e2;color:#991b1b}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.hidden{display:none}.source{font-size:11px;color:var(--muted)}.callout{border-left:4px solid var(--blue);padding:10px 12px;background:#eff6ff;border-radius:8px}.timeline{display:grid;gap:8px}.event{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfdff}
+.stepbar{display:flex;gap:6px;overflow:auto;margin:10px 0 14px}.step{min-width:150px;text-align:center;border:1px solid var(--line);border-radius:999px;padding:8px;font-size:12px;font-weight:700;background:#e2e8f0}.step.done{background:#dcfce7;color:#166534}.step.current{background:#dbeafe;color:#1e40af}.step.action{background:#fee2e2;color:#991b1b}
+@media(max-width:1000px){.four,.three,.two{grid-template-columns:1fr 1fr}}@media(max-width:700px){.four,.three,.two{grid-template-columns:1fr}.wrap{padding:10px}}
+</style>
+</head>
+<body>
+<header><h1>PH Prior Authorization Intake Engine</h1><div>Alpha 0.5.0 · Synthetic demonstration · inbound communications → structured PA case → work queue → approval/closure</div></header>
+<div class="wrap">
+<div class="panel grid four">
+ <div class="metric"><span>Open PA cases</span><strong id="openCount"></strong></div>
+ <div class="metric"><span>Action-required items</span><strong id="actionCount"></strong></div>
+ <div class="metric"><span>Ready to submit</span><strong id="readyCount"></strong></div>
+ <div class="metric"><span>Approved / Closed</span><strong id="closedCount"></strong></div>
+</div>
+
+<div class="panel">
+ <h2>1. Simulated Incoming Communication</h2>
+ <div class="grid three">
+  <label>Source<select id="sourceType"><option>Voicemail / call transcript</option><option>Fax</option><option>PDF / document attachment</option><option>Pharmacy message</option><option>Payer portal / API</option><option>HL7 / interface message</option></select></label>
+  <label>Authorization Type<select id="authType"><option>Medication Prior Authorization</option><option>Visit Prior Authorization</option><option>Procedure Prior Authorization</option><option>Referral Authorization</option></select></label>
+  <label>Sample Scenario<select id="scenarioSelect"><option value="dupixent">Dupixent - additional documentation</option><option value="visit">HMO new-patient visit authorization</option><option value="mohs">Mohs procedure authorization</option><option value="manual">Blank / manual intake</option></select></label>
+ </div>
+ <label>Incoming content<textarea id="incomingText"></textarea></label>
+ <div class="row"><button id="interpretBtn" class="primary">Interpret & Create / Update PA Case</button><button id="clearIntakeBtn" class="secondary">Clear</button></div>
+ <div class="source">Alpha 0.5 uses deterministic demonstration rules rather than a production AI service. The purpose is to validate workflow behavior before connecting live voice, fax, OCR, document-AI, or payer APIs.</div>
+</div>
+
+<div class="panel">
+ <h2>2. PA Work Queue</h2>
+ <div class="row">
+  <label>Status<select id="statusFilter"><option>All</option><option>Action Required</option><option>Ready to Submit</option><option>Submitted / Payer Review</option><option>Approved / Closed</option></select></label>
+  <label>Owner<select id="ownerFilter"><option>All</option><option>PA Coordinator</option><option>Provider</option><option>Front Office</option><option>Patient</option></select></label>
+  <button id="resetBtn" class="secondary">Reset Synthetic Data</button>
+ </div>
+ <div style="overflow:auto;margin-top:10px">
+ <table><thead><tr><th>PA Case</th><th>Patient</th><th>Type</th><th>Medication / Service</th><th>Status</th><th>Next Owner</th><th>Missing / Action</th><th></th></tr></thead><tbody id="queueRows"></tbody></table>
+ </div>
+</div>
+
+<div class="panel hidden" id="casePanel">
+ <h2 id="caseTitle"></h2>
+ <div id="steps" class="stepbar"></div>
+ <div class="grid four">
+  <label>Patient ID<input id="patientId"></label>
+  <label>Patient Name<input id="patientName"></label>
+  <label>MRN<input id="mrn"></label>
+  <label>Payer<input id="payer"></label>
+  <label>PA Type<input id="caseAuthType"></label>
+  <label>Medication / Service<input id="service"></label>
+  <label>Responsible Provider<select id="provider"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
+  <label>PA Coordinator<select id="coordinator"><option>PA Coordinator</option><option>Front Office</option><option>Medical Assistant</option></select></label>
+ </div>
+
+ <h3>Extracted / Required Elements</h3>
+ <div style="overflow:auto"><table><thead><tr><th>Variable</th><th>Value</th><th>Confidence</th><th>Required?</th><th>Action</th></tr></thead><tbody id="fieldRows"></tbody></table></div>
+ <div class="row"><button id="saveFieldBtn" class="secondary">Save Edited Values</button><button id="readinessBtn" class="primary">Run Readiness Check</button></div>
+
+ <h3>Work Items</h3>
+ <div id="taskList"></div>
+ <div class="grid three">
+   <label>New Task Owner<select id="newTaskOwner"><option>PA Coordinator</option><option>Provider</option><option>Front Office</option><option>Patient</option></select></label>
+   <label>Task<textarea id="newTaskText"></textarea></label>
+   <label>Due Date<input id="newTaskDue" type="date"></label>
+ </div>
+ <button id="addTaskBtn" class="secondary">Add Task</button>
+
+ <h3>Submission / Payer Response</h3>
+ <div class="grid three">
+  <label>Submission Method<select id="submissionMethod"><option>Payer portal</option><option>ePA / API</option><option>Fax</option><option>Phone</option><option>Other</option></select></label>
+  <label>Authorization Number<input id="authNumber"></label>
+  <label>Payer Status<select id="payerStatus"><option>Not Submitted</option><option>Submitted / Payer Review</option><option>Additional Information Requested</option><option>Approved</option><option>Denied</option><option>Appealed</option></select></label>
+ </div>
+ <div class="row"><button id="submitBtn" class="primary">Record Submission</button><button id="responseBtn" class="success">Record Payer Response / Update</button></div>
+
+ <h3>Patient-Facing Status Preview</h3>
+ <div class="callout" id="patientPreview"></div>
+
+ <h3>Case Timeline / Audit</h3>
+ <div class="timeline" id="timeline"></div>
+</div>
+</div>
+<script>
+const scenarioText={
+dupixent:`Caller from specialty pharmacy regarding patient Synthetic Jane Doe, MRN 100245. Dupixent requires additional information before approval. Insurance is Blue Horizon Health. Need diagnosis, body surface area, prior topical treatment failures, and signed recent office note. Diagnosis and treatment failures were previously submitted but the office note is unsigned.`,
+visit:`Referral line calling for Synthetic Robert Smith, MRN 100312. Patient has HMO coverage through Central Choice. New dermatology visit requires prior authorization and PCP referral before the appointment. Referral has been received. Authorization number is still pending.`,
+mohs:`Fax from payer for Synthetic Maria Lopez, MRN 100518. Mohs surgery requested for biopsy-proven basal cell carcinoma of the left cheek. Need pathology report, lesion location, diagnosis code, and provider-signed medical necessity documentation. Pathology report is attached; provider signature is still needed.`,
+manual:``
+};
+
+function baseCases(){return [
+ {id:"PA-SYN-001",patientId:"PT-SYN-001",patient:"Synthetic Jane Doe",mrn:"100245",payer:"Blue Horizon Health",type:"Medication Prior Authorization",service:"Dupixent",provider:"Todd Pillen, PA-C/SA",coordinator:"PA Coordinator",status:"Action Required",payerStatus:"Additional Information Requested",authNumber:"",submissionMethod:"ePA / API",fields:[
+  {name:"Diagnosis",value:"Atopic dermatitis (L20.9)",confidence:"Known",required:true},
+  {name:"BSA",value:"18%",confidence:"Known",required:true},
+  {name:"Prior topical failures",value:"Triamcinolone; tacrolimus",confidence:"Known",required:true},
+  {name:"Signed recent office note",value:"",confidence:"Missing",required:true}
+ ],tasks:[{owner:"Provider",text:"Sign recent office note",done:false,due:""}],timeline:[{time:"2026-08-07 09:00",event:"Additional information request received from specialty pharmacy."}]},
+ {id:"PA-SYN-002",patientId:"PT-SYN-002",patient:"Synthetic Robert Smith",mrn:"100312",payer:"Central Choice",type:"Visit Prior Authorization",service:"New dermatology consultation",provider:"Mallory Heath, PA-C",coordinator:"Front Office",status:"Action Required",payerStatus:"Not Submitted",authNumber:"",submissionMethod:"Payer portal",fields:[
+  {name:"PCP referral",value:"Received",confidence:"Known",required:true},
+  {name:"Visit authorization number",value:"",confidence:"Missing",required:true},
+  {name:"Appointment date",value:"2026-08-21",confidence:"Known",required:true}
+ ],tasks:[{owner:"Front Office",text:"Obtain HMO visit authorization number",done:false,due:"2026-08-15"}],timeline:[{time:"2026-08-07 09:15",event:"Visit authorization requirement identified from referral call."}]}
+]}
+let cases=JSON.parse(localStorage.getItem("ph-pa-alpha-050")||"null")||baseCases(),active=null;
+const $=x=>document.getElementById(x),esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+function now(){return new Date().toLocaleString()}
+function save(){localStorage.setItem("ph-pa-alpha-050",JSON.stringify(cases))}
+function missing(c){return c.fields.filter(f=>f.required && (!f.value || f.confidence==="Missing" || f.confidence==="Conflict"))}
+function openTasks(c){return c.tasks.filter(t=>!t.done)}
+function recalc(c){
+ const m=missing(c),t=openTasks(c);
+ if(c.payerStatus==="Approved"){c.status="Approved / Closed";return}
+ if(c.payerStatus==="Submitted / Payer Review" && m.length===0 && t.length===0){c.status="Submitted / Payer Review";return}
+ if(m.length===0 && t.length===0){c.status="Ready to Submit";return}
+ c.status="Action Required"
+}
+function render(){
+ cases.forEach(recalc);save();
+ $("openCount").textContent=cases.filter(c=>c.status!=="Approved / Closed").length;
+ $("actionCount").textContent=cases.filter(c=>c.status==="Action Required").length;
+ $("readyCount").textContent=cases.filter(c=>c.status==="Ready to Submit").length;
+ $("closedCount").textContent=cases.filter(c=>c.status==="Approved / Closed").length;
+ const sf=$("statusFilter").value||"All",of=$("ownerFilter").value||"All";
+ const rows=cases.filter(c=>(sf==="All"||c.status===sf)&&(of==="All"||openTasks(c).some(t=>t.owner===of)||c.coordinator===of));
+ $("queueRows").innerHTML=rows.map(c=>`<tr><td>${c.id}</td><td>${esc(c.patient)}<div class="source">${esc(c.mrn)}</div></td><td>${esc(c.type)}</td><td>${esc(c.service)}</td><td><span class="badge ${c.status==="Approved / Closed"?"closed":"open"}">${c.status}</span></td><td>${esc(openTasks(c)[0]?.owner||"—")}</td><td>${esc(missing(c).map(x=>x.name).join("; ")||openTasks(c).map(x=>x.text).join("; ")||"None")}</td><td><button class="primary" onclick="openCase('${c.id}')">Open</button></td></tr>`).join("");
+ if(active) renderCase()
+}
+function openCase(id){active=cases.find(c=>c.id===id);$("casePanel").classList.remove("hidden");renderCase();window.scrollTo(0,document.body.scrollHeight)}
+function renderCase(){
+ recalc(active);
+ $("caseTitle").textContent=`${active.id} — ${active.patient} — ${active.service}`;
+ $("patientId").value=active.patientId;$("patientName").value=active.patient;$("mrn").value=active.mrn;$("payer").value=active.payer;$("caseAuthType").value=active.type;$("service").value=active.service;$("provider").value=active.provider;$("coordinator").value=active.coordinator;$("submissionMethod").value=active.submissionMethod;$("authNumber").value=active.authNumber;$("payerStatus").value=active.payerStatus;
+ const stages=["Received","Structured","Gap Analysis","Work Queue","Ready / Submit","Payer Review","Outcome / Close"],si=active.status==="Approved / Closed"?6:active.status==="Submitted / Payer Review"?5:active.status==="Ready to Submit"?4:3;
+ $("steps").innerHTML=stages.map((s,i)=>`<div class="step ${i<si?"done":i===si?"current":""}">${s}</div>`).join("");
+ $("fieldRows").innerHTML=active.fields.map((f,i)=>`<tr><td>${esc(f.name)}</td><td><input data-fi="${i}" value="${esc(f.value)}"></td><td><select data-ci="${i}"><option ${f.confidence==="Known"?"selected":""}>Known</option><option ${f.confidence==="Candidate"?"selected":""}>Candidate</option><option ${f.confidence==="Missing"?"selected":""}>Missing</option><option ${f.confidence==="Conflict"?"selected":""}>Conflict</option></select></td><td>${f.required?"Yes":"No"}</td><td>${f.required&&!f.value?"Needs work":"—"}</td></tr>`).join("");
+ $("taskList").innerHTML=active.tasks.length?active.tasks.map((t,i)=>`<div class="event"><label><input type="checkbox" style="width:auto" data-ti="${i}" ${t.done?"checked":""}> ${esc(t.text)}</label><div class="source">Owner: ${esc(t.owner)}${t.due?` · Due ${t.due}`:""}</div></div>`).join(""):`<div class="callout">No open tasks.</div>`;
+ const miss=missing(active),tasks=openTasks(active);
+ let msg=`<b>${esc(active.service)}</b><br>Current status: <b>${active.status}</b><br>`;
+ if(active.status==="Approved / Closed") msg+=`Your authorization has been approved${active.authNumber?`. Authorization number: ${esc(active.authNumber)}`:""}.`;
+ else if(miss.length) msg+=`Your insurance process is waiting for additional information from the clinic. You do not need to take action unless the clinic contacts you.`;
+ else if(tasks.length) msg+=`The clinic is completing the remaining authorization steps.`;
+ else if(active.status==="Submitted / Payer Review") msg+=`The authorization has been submitted and is being reviewed by the payer.`;
+ else msg+=`The authorization is ready for submission.`;
+ $("patientPreview").innerHTML=msg;
+ $("timeline").innerHTML=active.timeline.slice().reverse().map(e=>`<div class="event"><b>${esc(e.time)}</b><div>${esc(e.event)}</div></div>`).join("")
+}
+function inferFromText(text,type){
+ const low=text.toLowerCase();
+ let patient=(text.match(/patient\s+([A-Z][A-Za-z]+\s+[A-Z][A-Za-z]+)/)||[])[1]||"Synthetic Patient";
+ let mrn=(text.match(/MRN\s*([0-9]+)/i)||[])[1]||"";
+ let payer=(text.match(/(?:insurance is|coverage through)\s+([A-Za-z ]+?)(?:\.|,|$)/i)||[])[1]||"";
+ let service=low.includes("dupixent")?"Dupixent":low.includes("mohs")?"Mohs surgery":type.includes("Visit")?"New dermatology consultation":"Prior authorization service";
+ let fields=[];
+ if(service==="Dupixent") fields=[
+   {name:"Diagnosis",value:low.includes("diagnosis")?"Atopic dermatitis (candidate)":"",confidence:low.includes("diagnosis")?"Candidate":"Missing",required:true},
+   {name:"BSA",value:"",confidence:"Missing",required:true},
+   {name:"Prior topical failures",value:low.includes("treatment failures")?"Previously submitted": "",confidence:low.includes("treatment failures")?"Candidate":"Missing",required:true},
+   {name:"Signed recent office note",value:low.includes("unsigned")?"":"",confidence:"Missing",required:true}
+ ];
+ else if(service==="Mohs surgery") fields=[
+   {name:"Pathology report",value:low.includes("attached")?"Attached":"",confidence:low.includes("attached")?"Known":"Missing",required:true},
+   {name:"Diagnosis",value:low.includes("basal cell carcinoma")?"Basal cell carcinoma":"",confidence:low.includes("basal cell carcinoma")?"Known":"Missing",required:true},
+   {name:"Lesion location",value:low.includes("left cheek")?"Left cheek":"",confidence:low.includes("left cheek")?"Known":"Missing",required:true},
+   {name:"Signed medical necessity",value:"",confidence:"Missing",required:true}
+ ];
+ else fields=[
+   {name:"Referral",value:low.includes("referral has been received")?"Received":"",confidence:low.includes("referral has been received")?"Known":"Missing",required:true},
+   {name:"Authorization number",value:"",confidence:"Missing",required:true}
+ ];
+ return {patient,mrn,payer,service,fields}
+}
+$("scenarioSelect").onchange=()=>{$("incomingText").value=scenarioText[$("scenarioSelect").value]};
+$("interpretBtn").onclick=()=>{
+ const text=$("incomingText").value.trim();if(!text)return alert("Enter or select an incoming communication.");
+ const inf=inferFromText(text,$("authType").value),id=`PA-SYN-${String(Math.max(0,...cases.map(c=>Number(c.id.split("-").pop())||0))+1).padStart(3,"0")}`;
+ let c={id,patientId:`PT-SYN-${String(cases.length+1).padStart(3,"0")}`,patient:inf.patient,mrn:inf.mrn,payer:inf.payer,type:$("authType").value,service:inf.service,provider:"Todd Pillen, PA-C/SA",coordinator:"PA Coordinator",status:"Action Required",payerStatus:"Not Submitted",authNumber:"",submissionMethod:"Payer portal",fields:inf.fields,tasks:[],timeline:[{time:now(),event:`Incoming ${$("sourceType").value} interpreted and PA case created.`}]};
+ missing(c).forEach(f=>c.tasks.push({owner:f.name.toLowerCase().includes("signed")?"Provider":"PA Coordinator",text:`Resolve missing requirement: ${f.name}`,done:false,due:""}));
+ cases.push(c);save();openCase(id);render()
+};
+$("clearIntakeBtn").onclick=()=>{$("incomingText").value="";$("scenarioSelect").value="manual"};
+$("saveFieldBtn").onclick=()=>{
+ active.patientId=$("patientId").value;active.patient=$("patientName").value;active.mrn=$("mrn").value;active.payer=$("payer").value;active.type=$("caseAuthType").value;active.service=$("service").value;active.provider=$("provider").value;active.coordinator=$("coordinator").value;
+ document.querySelectorAll("[data-fi]").forEach(el=>active.fields[+el.dataset.fi].value=el.value);
+ document.querySelectorAll("[data-ci]").forEach(el=>active.fields[+el.dataset.ci].confidence=el.value);
+ active.timeline.push({time:now(),event:"PA case fields reviewed/edited."});save();render()
+};
+$("readinessBtn").onclick=()=>{document.querySelectorAll("[data-fi]").forEach(el=>active.fields[+el.dataset.fi].value=el.value);document.querySelectorAll("[data-ci]").forEach(el=>active.fields[+el.dataset.ci].confidence=el.value);document.querySelectorAll("[data-ti]").forEach(el=>active.tasks[+el.dataset.ti].done=el.checked);recalc(active);active.timeline.push({time:now(),event:`Readiness check completed: ${active.status}.`});save();render()};
+$("addTaskBtn").onclick=()=>{const t=$("newTaskText").value.trim();if(!t)return;active.tasks.push({owner:$("newTaskOwner").value,text:t,done:false,due:$("newTaskDue").value});$("newTaskText").value="";active.timeline.push({time:now(),event:`Work item added for ${$("newTaskOwner").value}.`});save();render()};
+$("submitBtn").onclick=()=>{document.querySelectorAll("[data-ti]").forEach(el=>active.tasks[+el.dataset.ti].done=el.checked);recalc(active);if(active.status!=="Ready to Submit")return alert("Case is not ready to submit. Resolve required fields/tasks first.");active.submissionMethod=$("submissionMethod").value;active.payerStatus="Submitted / Payer Review";active.timeline.push({time:now(),event:`Authorization submitted via ${active.submissionMethod}.`});save();render()};
+$("responseBtn").onclick=()=>{active.payerStatus=$("payerStatus").value;active.authNumber=$("authNumber").value;active.submissionMethod=$("submissionMethod").value;if(active.payerStatus==="Additional Information Requested"){active.status="Action Required";active.tasks.push({owner:"PA Coordinator",text:"Review payer request for additional information",done:false,due:""})}recalc(active);active.timeline.push({time:now(),event:`Payer status recorded: ${active.payerStatus}${active.authNumber?` (${active.authNumber})`:""}.`});save();render()};
+$("statusFilter").onchange=render;$("ownerFilter").onchange=render;$("resetBtn").onclick=()=>{cases=baseCases();active=null;save();$("casePanel").classList.add("hidden");render()};
+$("incomingText").value=scenarioText.dupixent;render();
+</script>
+</body></html>
