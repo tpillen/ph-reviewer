@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PH Prior Authorization Intake Engine Alpha 0.5.0</title>
+<title>PH Prior Authorization Intake Engine Alpha 0.5.1</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--purple:#7c3aed}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
@@ -18,10 +18,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.hidden{display:none}.source{font-size:11px;color:var(--muted)}.callout{border-left:4px solid var(--blue);padding:10px 12px;background:#eff6ff;border-radius:8px}.timeline{display:grid;gap:8px}.event{border:1px solid var(--line);border-radius:9px;padding:10px;background:#fbfdff}
 .stepbar{display:flex;gap:6px;overflow:auto;margin:10px 0 14px}.step{min-width:150px;text-align:center;border:1px solid var(--line);border-radius:999px;padding:8px;font-size:12px;font-weight:700;background:#e2e8f0}.step.done{background:#dcfce7;color:#166534}.step.current{background:#dbeafe;color:#1e40af}.step.action{background:#fee2e2;color:#991b1b}
 @media(max-width:1000px){.four,.three,.two{grid-template-columns:1fr 1fr}}@media(max-width:700px){.four,.three,.two{grid-template-columns:1fr}.wrap{padding:10px}}
+
+.feedback-fab{position:fixed;right:18px;bottom:18px;z-index:50;border-radius:999px;box-shadow:0 10px 25px rgba(0,0,0,.25)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px}
+.modal{width:min(720px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
+.send-ok{background:#dcfce7;color:#166534;border:1px solid #86efac;padding:10px;border-radius:8px;margin-top:10px}
+.send-warn{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:10px;border-radius:8px;margin-top:10px}
 </style>
 </head>
 <body>
-<header><h1>PH Prior Authorization Intake Engine</h1><div>Alpha 0.5.0 · Synthetic demonstration · inbound communications → structured PA case → work queue → approval/closure</div></header>
+<header><h1>PH Prior Authorization Intake Engine</h1><div>Alpha 0.5.1 · Synthetic demonstration · inbound communications → structured PA case → work queue → approval/closure</div></header>
 <div class="wrap">
 <div class="panel grid four">
  <div class="metric"><span>Open PA cases</span><strong id="openCount"></strong></div>
@@ -206,5 +212,68 @@ $("submitBtn").onclick=()=>{document.querySelectorAll("[data-ti]").forEach(el=>a
 $("responseBtn").onclick=()=>{active.payerStatus=$("payerStatus").value;active.authNumber=$("authNumber").value;active.submissionMethod=$("submissionMethod").value;if(active.payerStatus==="Additional Information Requested"){active.status="Action Required";active.tasks.push({owner:"PA Coordinator",text:"Review payer request for additional information",done:false,due:""})}recalc(active);active.timeline.push({time:now(),event:`Payer status recorded: ${active.payerStatus}${active.authNumber?` (${active.authNumber})`:""}.`});save();render()};
 $("statusFilter").onchange=render;$("ownerFilter").onchange=render;$("resetBtn").onclick=()=>{cases=baseCases();active=null;save();$("casePanel").classList.add("hidden");render()};
 $("incomingText").value=scenarioText.dupixent;render();
+
+const PH_FEEDBACK_CONFIG={endpoint:"",appVersion:"0.5.1",environment:"Reviewer"};
+let phFeedback=[];
+try{phFeedback=JSON.parse(localStorage.getItem("ph-feedback-central-051")||"[]")}catch{phFeedback=[]}
+function saveFeedbackStore(){localStorage.setItem("ph-feedback-central-051",JSON.stringify(phFeedback))}
+function renderFeedbackHistory(){
+ const h=$("fbHistory"); if(!h)return;
+ h.innerHTML=phFeedback.length?phFeedback.map(f=>`<div class="event"><b>${esc(f.type)} · ${esc(f.priority)}</b><div>${esc(f.comment)}</div><div class="source">${esc(f.reviewer)} · ${esc(f.createdAt)} · ${f.sent?"Submitted":"Local backup / unsent"} · ${esc(f.id)}</div></div>`).join(""):`<div class="callout">No feedback recorded on this device.</div>`;
+}
+function openFeedback(){
+ $("feedbackModal").classList.remove("hidden");
+ $("fbCase").value=active?.id||$("scenarioSelect")?.value||"General";
+ $("fbUrl").value=location.href;
+ renderFeedbackHistory();
+}
+async function transmitFeedback(record){
+ if(!PH_FEEDBACK_CONFIG.endpoint) throw new Error("Central feedback receiver is not configured yet.");
+ const res=await fetch(PH_FEEDBACK_CONFIG.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});
+ if(!res.ok) throw new Error(`Server returned ${res.status}`);
+ return true;
+}
+async function submitFeedback(){
+ const comment=$("fbComment").value.trim(); if(!comment)return alert("Enter a feedback comment.");
+ const record={id:`CO-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,reviewer:$("fbReviewer").value,type:$("fbType").value,module:$("fbModule").value,priority:$("fbPriority").value,comment,caseId:$("fbCase").value,url:$("fbUrl").value,appVersion:PH_FEEDBACK_CONFIG.appVersion,environment:PH_FEEDBACK_CONFIG.environment,createdAt:new Date().toISOString(),status:"New",sent:false};
+ phFeedback.unshift(record);saveFeedbackStore();renderFeedbackHistory();$("fbComment").value="";
+ try{await transmitFeedback(record);record.sent=true;record.sentAt=new Date().toISOString();saveFeedbackStore();renderFeedbackHistory();$("fbStatus").className="send-ok";$("fbStatus").textContent="Feedback submitted centrally. A local backup was retained."}
+ catch(err){$("fbStatus").className="send-warn";$("fbStatus").textContent="Saved locally and queued for retry. "+err.message}
+}
+async function retryFeedback(){
+ const unsent=phFeedback.filter(f=>!f.sent);let sent=0;
+ for(const f of unsent){try{await transmitFeedback(f);f.sent=true;f.sentAt=new Date().toISOString();sent++}catch{}}
+ saveFeedbackStore();renderFeedbackHistory();$("fbStatus").className=sent===unsent.length?"send-ok":"send-warn";$("fbStatus").textContent=`Retry complete: ${sent} of ${unsent.length} transmitted.`;
+}
+function exportFeedbackBackup(){const blob=new Blob([JSON.stringify(phFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="PH_Feedback_Backup_Alpha_0_5_1.json";a.click();URL.revokeObjectURL(url)}
+$("feedbackBtn").onclick=openFeedback;$("feedbackClose").onclick=()=>$("feedbackModal").classList.add("hidden");$("fbSubmit").onclick=submitFeedback;$("fbRetry").onclick=retryFeedback;$("fbExport").onclick=exportFeedbackBackup;
+
 </script>
+
+<button id="feedbackBtn" class="primary feedback-fab">Feedback / Change Order</button>
+<div id="feedbackModal" class="modal-backdrop hidden">
+ <div class="modal">
+  <div class="row"><h2 style="margin-right:auto">Reviewer Feedback / Change Order</h2><button id="feedbackClose" class="secondary">Close</button></div>
+  <div class="grid two">
+   <label>Reviewer<select id="fbReviewer"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other reviewer</option></select></label>
+   <label>Type<select id="fbType"><option>Workflow suggestion</option><option>Bug / defect</option><option>Enhancement request</option><option>Change order</option><option>Training / help issue</option></select></label>
+   <label>Module<input id="fbModule" value="Prior Authorization Intake Engine"></label>
+   <label>Priority<select id="fbPriority"><option>Routine</option><option>Important</option><option>High</option><option>Blocking</option></select></label>
+  </div>
+  <label>Comment<textarea id="fbComment" placeholder="Describe what happened, what you expected, or what you want changed."></textarea></label>
+  <div class="grid two">
+   <label>Case / Scenario<input id="fbCase" readonly></label>
+   <label>Current URL<input id="fbUrl" readonly></label>
+  </div>
+  <div class="row">
+   <button id="fbSubmit" class="primary">Submit Feedback</button>
+   <button id="fbRetry" class="secondary">Retry Unsent</button>
+   <button id="fbExport" class="secondary">Export Backup JSON</button>
+  </div>
+  <div id="fbStatus"></div>
+  <h3>Local Backup / Submission History</h3>
+  <div id="fbHistory"></div>
+ </div>
+</div>
+
 </body></html>
