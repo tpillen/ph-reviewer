@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.5.1</title>
+<title>PH Alpha 0.5.2</title>
 <style>
 :root{
  --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
@@ -51,8 +51,9 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 .workflow-ribbon{display:flex;gap:6px;overflow-x:auto;padding:8px 0 14px}.ribbon-step{min-width:150px;border-radius:999px;padding:9px 12px;text-align:center;font-size:12px;font-weight:700;border:1px solid var(--line);background:#e2e8f0;color:#475569}
 .ribbon-step.complete{background:#dcfce7;color:#166534;border-color:#86efac}.ribbon-step.current{background:#dbeafe;color:#1e40af;border-color:#93c5fd}.ribbon-step.action{background:#fee2e2;color:#991b1b;border-color:#fca5a5}
 .floating-feedback{position:fixed;right:18px;bottom:18px;z-index:50;border-radius:999px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
-.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:90;display:flex;align-items:center;justify-content:center;padding:18px}.modal-card{width:min(640px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:110;display:flex;align-items:center;justify-content:center;padding:18px}.modal-card{width:min(640px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
 .feedback-list{display:grid;gap:10px}.feedback-item{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fbfdff}
+.send-ok{background:#dcfce7;color:#166534;border:1px solid #86efac;padding:10px;border-radius:8px;margin-top:10px}.send-warn{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:10px;border-radius:8px;margin-top:10px}.voice-tools{display:flex;gap:7px;align-items:center;margin-top:6px;flex-wrap:wrap}.voice-btn{border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;padding:7px 10px;font-weight:700;cursor:pointer;min-height:36px}.voice-btn.listening{background:#fee2e2;color:#991b1b;border-color:#fca5a5}.voice-status{font-size:11px;color:var(--muted)}
 @media(max-width:650px){.portal-grid,.portal-actions{grid-template-columns:1fr}.portal-card{padding:20px}.portal-card h1{font-size:32px}.floating-feedback{right:10px;bottom:10px}}
 
 </style>
@@ -63,7 +64,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <div class="portal-card">
   <span class="badge">Synthetic Clinical Demonstration</span>
   <h1>PH Clinical Reviewer Portal</h1>
-  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.4.0</div>
+  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.5.2</div>
   <div class="portal-grid">
    <div class="portal-person"><strong>Clinical Systems Developer</strong><br>Todd Pillen, PA-C/SA</div>
    <div class="portal-person"><strong>Clinical Validation Lead</strong><br>Mallory Heath, PA-C</div>
@@ -75,12 +76,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
    <button id="portalFeedbackBtn" class="btn secondary">Reviewer Feedback</button>
   </div>
   <div id="portalInfo" class="notice hidden" style="margin-top:14px"></div>
-  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.4.0</div>
+  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.5.2</div>
  </div>
 </div>
 
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.5.1</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.5.2</p></div>
  <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 <div class="shell">
@@ -231,19 +232,21 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </main>
 </div>
 
-<button id="feedbackBtn" class="btn primary floating-feedback">Feedback</button>
+<button id="feedbackBtn" class="btn primary floating-feedback">Feedback / Change Order</button>
 <div id="feedbackModal" class="modal-backdrop hidden">
  <div class="modal-card">
-  <div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedbackBtn" class="btn secondary">Close</button></div>
+  <div class="row between"><h2>Reviewer Feedback / Change Order</h2><button id="closeFeedbackBtn" class="btn secondary">Close</button></div>
   <div class="grid two">
    <label>Reviewer<select id="feedbackReviewer"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other reviewer</option></select></label>
+   <label>Type<select id="feedbackType"><option>Workflow suggestion</option><option>Bug / defect</option><option>Enhancement request</option><option>Change order</option><option>Training / help issue</option></select></label>
    <label>Module<select id="feedbackModule"><option>Dashboard</option><option>Intake</option><option>Visit Authorization</option><option>Structured SOAP</option><option>Treatment Authorization</option><option>Work Queue</option><option>Documents</option><option>Handoff</option><option>General</option></select></label>
-   <label>Severity<select id="feedbackSeverity"><option>Suggestion</option><option>Minor</option><option>Major</option><option>Blocking</option></select></label>
-   <label>Status<input value="New" readonly></label>
+   <label>Priority<select id="feedbackPriority"><option>Routine</option><option>Important</option><option>High</option><option>Blocking</option></select></label>
   </div>
-  <label>Comment<textarea id="feedbackComment" placeholder="Describe the workflow issue or recommendation."></textarea></label>
-  <div class="row"><button id="saveFeedbackBtn" class="btn primary">Save Feedback</button><button id="exportFeedbackBtn" class="btn secondary">Export Feedback JSON</button></div>
-  <h3>Saved Feedback</h3><div id="feedbackList" class="feedback-list"></div>
+  <label>Comment<textarea id="feedbackComment" placeholder="Describe what happened, what you expected, or what you want changed."></textarea></label>
+  <div class="grid two"><label>Case / Scenario<input id="feedbackCase" readonly></label><label>Current URL<input id="feedbackUrl" readonly></label></div>
+  <div class="row"><button id="saveFeedbackBtn" class="btn primary">Submit Feedback</button><button id="retryFeedbackBtn" class="btn secondary">Retry Unsent</button><button id="exportFeedbackBtn" class="btn secondary">Export Backup JSON</button></div>
+  <div id="feedbackStatus"></div>
+  <h3>Local Backup / Submission History</h3><div id="feedbackList" class="feedback-list"></div>
  </div>
 </div>
 
@@ -290,8 +293,6 @@ const scenarios={
 const stages=["Intake","Visit PA","Structured SOAP","Treatment PA","Work Queue","Documents","Handoff"];
 const $=id=>document.getElementById(id),clone=x=>JSON.parse(JSON.stringify(x)),esc=v=>String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]));
 let state;
-let reviewerFeedback=[];
-try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-alpha-0-4-0")||"[]")}catch{reviewerFeedback=[]}
 
 function now(){return new Date().toLocaleString()}
 function log(action,detail,user="Prototype User"){state.audit.unshift({time:now(),user,action,detail})}
@@ -302,36 +303,12 @@ function set(id,v){if($(id))$(id).value=v??""}
 function get(id){return $(id)?.value??""}
 function calculateAge(dob,encounterDate){if(!dob)return "";const b=new Date(dob),r=encounterDate?new Date(encounterDate):new Date();if(Number.isNaN(b.getTime())||Number.isNaN(r.getTime()))return "";let a=r.getFullYear()-b.getFullYear();const m=r.getMonth()-b.getMonth();if(m<0||(m===0&&r.getDate()<b.getDate()))a--;return a>=0?`${a} years`:""}
 function updateSessionHeader(){set("sessionPatient",state.patient.name);set("sessionDob",state.patient.dob);set("sessionAge",calculateAge(state.patient.dob,state.patient.appointmentDate));set("sessionVisitDate",state.patient.appointmentDate)}
-function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");
-function showFeedback(){
- $("feedbackModal").classList.remove("hidden");
- renderFeedback()
+function showView(id){
+ document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));
+ const target=$(id); if(target) target.classList.remove("hidden");
+ document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));
+ window.scrollTo(0,0)
 }
-function renderFeedback(){
- $("feedbackList").innerHTML=reviewerFeedback.length?reviewerFeedback.map((f,i)=>`<div class="feedback-item"><div class="row between"><b>${esc(f.module)} · ${esc(f.severity)}</b><span class="source">${esc(f.time)}</span></div><div>${esc(f.comment)}</div><div class="source">Reviewer: ${esc(f.reviewer)} · Build 0.4.0</div></div>`).join(""):`<div class="notice">No feedback saved yet.</div>`
-}
-function saveFeedback(){
- const comment=get("feedbackComment").trim();
- if(!comment){alert("Enter a feedback comment.");return}
- reviewerFeedback.unshift({reviewer:get("feedbackReviewer"),module:get("feedbackModule"),severity:get("feedbackSeverity"),comment,time:now(),build:"0.4.0",caseId:state.caseId});
- localStorage.setItem("ph-feedback-alpha-0-4-0",JSON.stringify(reviewerFeedback));
- set("feedbackComment","");
- renderFeedback()
-}
-function exportFeedback(){
- const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="PH_Reviewer_Feedback_Alpha_0_4_0.json";a.click();URL.revokeObjectURL(url)
-}
-$("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
-$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.4.0</b><br>Added reviewer portal, persistent workflow ribbon, feedback capture, provider context, and calculated age."};
-$("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Authentication and server-side storage are simulated. Payer rules and coding suggestions remain demonstration content."};
-$("portalFeedbackBtn").onclick=showFeedback;
-$("feedbackBtn").onclick=showFeedback;
-$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");
-$("saveFeedbackBtn").onclick=saveFeedback;
-$("exportFeedbackBtn").onclick=exportFeedback;
-
-document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 function populate(){
  const p=state.patient,v=state.visitAuth,s=state.soap,t=state.treatmentAuth,b=state.billing;
  [["patientName",p.name],["mrn",p.mrn],["dob",p.dob],["patientType",p.patientType],["payer",p.payer],["planType",p.plan],["referrer",p.referrer],["appointmentDate",p.appointmentDate],["chiefComplaint",p.chiefComplaint],["priorTreatments",p.priorTreatments],["availableDocuments",p.availableDocuments],["visitRequired",v.required],["referralRequired",v.referralRequired],["visitStatus",v.status],["visitAuthNumber",v.authNumber]].forEach(x=>set(...x));
@@ -388,7 +365,7 @@ function render(){
  $("engineOutput").innerHTML=`<div class="grid three"><div class="metric"><small>Diagnosis</small><strong>${esc(diagnosis()?.name||"")}</strong></div><div class="metric"><small>Requested service</small><strong>${esc(serviceLabel())}</strong></div><div class="metric"><small>Automation</small><strong>${service()?.paLikely?"PA Triggered":"No PA"}</strong></div></div>`;
  [["visitNotice",visitCleared(),"Visit cleared for clinical evaluation.","SOAP remains blocked until visit authorization is resolved."],["soapNotice",visitCleared(),"Visit gate passed. Structured documentation is enabled.","Clinical encounter is operationally blocked."],["handoffNotice",state.treatmentAuth.status==="Approved","Authorization data is ready for handoff.","Handoff is blocked until authorization approval."]].forEach(x=>{const e=$(x[0]);e.className=`notice ${x[1]?"ok":"warn"}`;e.textContent=x[1]?x[2]:x[3]});
  $("treatmentNotice").textContent=state.soap.signed?`SOAP data populated this ${state.treatmentAuth.type.toLowerCase()} authorization.`:"Treatment authorization is waiting for a signed SOAP note.";
- renderChecklist();renderTasks();renderDocs();renderAudit();renderProvenance();localStorage.setItem("ph-alpha-0-3-1",JSON.stringify(state))
+ renderChecklist();renderTasks();renderDocs();renderAudit();renderProvenance();localStorage.setItem("ph-alpha-0-5-2",JSON.stringify(state))
 }
 function renderTasks(){const f=get("queueFilter"),rows=state.tasks.filter(t=>f==="All"||t.status===f||t.workflow===f);$("taskRows").innerHTML=rows.length?rows.map(t=>`<tr><td>${esc(state.patient.name)}</td><td>${esc(t.title)}</td><td>${esc(t.workflow)}</td><td>${esc(t.owner)}</td><td>${esc(t.priority)}</td><td>${esc(t.status)}</td><td>${t.status==="Open"?`<button class="btn secondary complete-task" data-id="${t.id}">Complete</button>`:"—"}</td></tr>`).join(""):`<tr><td colspan="7">No matching tasks.</td></tr>`}
 function renderDocs(){$("documentList").innerHTML=state.documents.length?state.documents.map(d=>`<div class="panel"><div class="row between"><b>${esc(d.type)}</b><span class="badge ${d.status==="Signed"?"ok":"warn"}">${esc(d.status)}</span></div><p class="source">${esc(d.id)} · ${esc(d.created)}</p><div class="code">${esc(d.body)}</div>${d.status==="Draft"?`<button class="btn success sign-doc" data-id="${d.id}">E-sign</button>`:`<b>Signed by ${esc(d.signedBy)}</b>`}</div>`).join(""):`<div class="notice">No generated documents.</div>`}
@@ -398,33 +375,67 @@ function requirements(id,missing){$(id).innerHTML=`<table><thead><tr><th>Require
 function loadScenario(key){state=clone(scenarios[key]);state.session={renderingProvider:"Todd Pillen, PA-C/SA",documentedBy:"Same as Provider"};state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
 function addTask(title,workflow,owner,priority="Routine"){if(!state.tasks.some(t=>t.title===title&&t.status==="Open"))state.tasks.push({id:`${Date.now()}-${Math.random()}`,title,workflow,owner,priority,status:"Open"})}
 
+const PH_FEEDBACK_CONFIG={endpoint:"https://ph-feedback.tpillen104.workers.dev/",appVersion:"0.5.2",environment:"Reviewer"};
+let reviewerFeedback=[];
+try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-central-052")||"[]")}catch{reviewerFeedback=[]}
+function saveFeedbackStore(){localStorage.setItem("ph-feedback-central-052",JSON.stringify(reviewerFeedback))}
 function showFeedback(){
  $("feedbackModal").classList.remove("hidden");
+ set("feedbackCase",state?.caseId||get("scenarioSelect")||"General");
+ set("feedbackUrl",location.href);
+ $("feedbackStatus").className="";$("feedbackStatus").textContent="";
  renderFeedback()
 }
 function renderFeedback(){
- $("feedbackList").innerHTML=reviewerFeedback.length?reviewerFeedback.map((f,i)=>`<div class="feedback-item"><div class="row between"><b>${esc(f.module)} · ${esc(f.severity)}</b><span class="source">${esc(f.time)}</span></div><div>${esc(f.comment)}</div><div class="source">Reviewer: ${esc(f.reviewer)} · Build 0.4.0</div></div>`).join(""):`<div class="notice">No feedback saved yet.</div>`
+ $("feedbackList").innerHTML=reviewerFeedback.length?reviewerFeedback.map(f=>`<div class="feedback-item"><div class="row between"><b>${esc(f.type)} · ${esc(f.priority)}</b><span class="source">${esc(f.createdAt)}</span></div><div>${esc(f.comment)}</div><div class="source">Reviewer: ${esc(f.reviewer)} · ${f.sent?"Submitted":"Local backup / unsent"} · ${esc(f.id)}</div></div>`).join(""):`<div class="notice">No feedback recorded on this device.</div>`
 }
-function saveFeedback(){
+async function transmitFeedback(record){
+ const res=await fetch(PH_FEEDBACK_CONFIG.endpoint,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});
+ let body={};try{body=await res.json()}catch{}
+ if(!res.ok||body.ok===false)throw new Error(body.error||`Server returned ${res.status}`);
+ return body
+}
+async function saveFeedback(){
  const comment=get("feedbackComment").trim();
  if(!comment){alert("Enter a feedback comment.");return}
- reviewerFeedback.unshift({reviewer:get("feedbackReviewer"),module:get("feedbackModule"),severity:get("feedbackSeverity"),comment,time:now(),build:"0.4.0",caseId:state.caseId});
- localStorage.setItem("ph-feedback-alpha-0-4-0",JSON.stringify(reviewerFeedback));
- set("feedbackComment","");
- renderFeedback()
+ const record={id:`CO-${Date.now()}-${Math.random().toString(36).slice(2,7).toUpperCase()}`,reviewer:get("feedbackReviewer"),type:get("feedbackType"),module:get("feedbackModule"),priority:get("feedbackPriority"),comment,caseId:get("feedbackCase"),url:get("feedbackUrl"),appVersion:PH_FEEDBACK_CONFIG.appVersion,environment:PH_FEEDBACK_CONFIG.environment,createdAt:new Date().toISOString(),status:"New",sent:false};
+ reviewerFeedback.unshift(record);saveFeedbackStore();set("feedbackComment","");renderFeedback();
+ try{await transmitFeedback(record);record.sent=true;record.sentAt=new Date().toISOString();saveFeedbackStore();renderFeedback();$("feedbackStatus").className="send-ok";$("feedbackStatus").textContent="Feedback submitted centrally. A local backup was retained."}
+ catch(err){$("feedbackStatus").className="send-warn";$("feedbackStatus").textContent="Saved locally and queued for retry. "+err.message}
 }
-function exportFeedback(){
- const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");
- a.href=url;a.download="PH_Reviewer_Feedback_Alpha_0_4_0.json";a.click();URL.revokeObjectURL(url)
+async function retryFeedback(){
+ const unsent=reviewerFeedback.filter(f=>!f.sent); if(!unsent.length){$("feedbackStatus").className="send-ok";$("feedbackStatus").textContent="No unsent feedback remains.";return}
+ let sent=0;for(const f of unsent){try{await transmitFeedback(f);f.sent=true;f.sentAt=new Date().toISOString();sent++}catch{}}
+ saveFeedbackStore();renderFeedback();$("feedbackStatus").className=sent===unsent.length?"send-ok":"send-warn";$("feedbackStatus").textContent=`Retry complete: ${sent} of ${unsent.length} transmitted.`
+}
+function exportFeedback(){const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="PH_Feedback_Backup_Alpha_0_5_2.json";a.click();URL.revokeObjectURL(url)}
+
+let activeRecognition=null,activeVoiceButton=null;
+function speechCtor(){return window.SpeechRecognition||window.webkitSpeechRecognition||null}
+function setVoiceStatus(btn,msg){const s=btn?.parentElement?.querySelector(".voice-status");if(s)s.textContent=msg||""}
+function stopVoice(){try{activeRecognition?.stop()}catch{};activeRecognition=null;if(activeVoiceButton){activeVoiceButton.classList.remove("listening");activeVoiceButton.textContent="🎙 Voice entry";activeVoiceButton=null}}
+function startVoice(targetId,btn){
+ const SR=speechCtor(); if(!SR){setVoiceStatus(btn,"Voice recognition is not supported by this browser. Use keyboard dictation or type instead.");return}
+ if(!window.isSecureContext){setVoiceStatus(btn,"Voice recognition requires HTTPS or localhost.");return}
+ if(activeRecognition){stopVoice();return}
+ const target=$(targetId);if(!target)return;
+ const rec=new SR();activeRecognition=rec;activeVoiceButton=btn;rec.lang="en-US";rec.continuous=true;rec.interimResults=true;rec.maxAlternatives=1;
+ const baseline=target.value.trim();let finalText="";
+ btn.classList.add("listening");btn.textContent="■ Stop voice";setVoiceStatus(btn,"Listening… speak normally. Click Stop when finished.");
+ rec.onresult=e=>{let interim="";for(let i=e.resultIndex;i<e.results.length;i++){const t=e.results[i][0].transcript;if(e.results[i].isFinal)finalText+=(finalText?" ":"")+t.trim();else interim+=t}const merged=[baseline,finalText,interim.trim()].filter(Boolean).join(" ");target.value=merged};
+ rec.onerror=e=>{const map={"not-allowed":"Microphone permission was denied. Allow microphone access in the browser, then retry.","service-not-allowed":"Speech recognition service is blocked by the browser or device.","audio-capture":"No working microphone was detected.","network":"Speech recognition lost its network/service connection. Retry or type the text.","no-speech":"No speech was detected. Retry and begin speaking after Listening appears.","aborted":"Voice entry stopped."};setVoiceStatus(btn,map[e.error]||`Voice recognition error: ${e.error}`)};
+ rec.onend=()=>{if(activeRecognition===rec){activeRecognition=null;btn.classList.remove("listening");btn.textContent="🎙 Voice entry";activeVoiceButton=null;if(!btn.parentElement.querySelector(".voice-status")?.textContent?.includes("error"))setVoiceStatus(btn,"Voice entry stopped. Review the text before saving.")}};
+ try{rec.start()}catch(err){stopVoice();setVoiceStatus(btn,"Unable to start microphone: "+err.message)}
+}
+function initVoiceControls(){
+ document.querySelectorAll("textarea").forEach((ta,i)=>{if(ta.dataset.voiceReady||ta.id==="feedbackComment")return;ta.dataset.voiceReady="1";if(!ta.id)ta.id=`voiceTarget${i}`;const tools=document.createElement("div");tools.className="voice-tools";tools.innerHTML=`<button type="button" class="voice-btn" data-target="${ta.id}">🎙 Voice entry</button><span class="voice-status"></span>`;ta.insertAdjacentElement("afterend",tools)});
+ document.querySelectorAll(".voice-btn").forEach(btn=>btn.onclick=()=>startVoice(btn.dataset.target,btn))
 }
 $("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
-$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.4.0</b><br>Added reviewer portal, persistent workflow ribbon, feedback capture, provider context, and calculated age."};
-$("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Authentication and server-side storage are simulated. Payer rules and coding suggestions remain demonstration content."};
-$("portalFeedbackBtn").onclick=showFeedback;
-$("feedbackBtn").onclick=showFeedback;
-$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");
-$("saveFeedbackBtn").onclick=saveFeedback;
-$("exportFeedbackBtn").onclick=exportFeedback;
+$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.5.2</b><br>Stabilized reviewer feedback, centralized submission with local backup/retry, and browser voice-entry controls."};
+$("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Browser speech recognition availability varies by browser/device and may require network service. Payer rules and coding suggestions remain demonstration content."};
+$("portalFeedbackBtn").onclick=showFeedback;$("feedbackBtn").onclick=showFeedback;$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");$("saveFeedbackBtn").onclick=saveFeedback;$("retryFeedbackBtn").onclick=retryFeedback;$("exportFeedbackBtn").onclick=exportFeedback;
+initVoiceControls();
 
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("scenarioSelect").onchange=e=>loadScenario(e.target.value);$("resetBtn").onclick=()=>loadScenario(get("scenarioSelect"));
@@ -446,7 +457,7 @@ function makeDoc(type){const body=`${type}\nPatient: ${state.patient.name}\nMRN:
 document.querySelectorAll(".doc-gen").forEach(b=>b.onclick=()=>makeDoc(b.dataset.type));$("documentList").onclick=e=>{const b=e.target.closest(".sign-doc");if(!b)return;const d=state.documents.find(x=>x.id===b.dataset.id);if(d){d.status="Signed";d.signedBy="Demo Provider, PA-C";log("Document signed",d.id);render()}};
 $("completeHandoffBtn").onclick=()=>{if(state.treatmentAuth.status!=="Approved"){alert("Treatment authorization must be approved before handoff.");return}state.billing.status="Completed";state.stage=6;log("Handoff completed",get("nextAction"));populate();render()};
 $("downloadCaseBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${state.caseId}.json`;a.click();URL.revokeObjectURL(url)};
-const stored=localStorage.getItem("ph-alpha-0-3-1");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
+const stored=localStorage.getItem("ph-alpha-0-5-2");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
 </script>
 </body>
 </html>
