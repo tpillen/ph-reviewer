@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.5.4</title>
+<title>PH Alpha 0.6.0</title>
 <style>
 :root{
  --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
@@ -54,6 +54,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 .modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:110;display:flex;align-items:center;justify-content:center;padding:18px}.modal-card{width:min(640px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
 .feedback-list{display:grid;gap:10px}.feedback-item{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fbfdff}
 .send-ok{background:#dcfce7;color:#166534;border:1px solid #86efac;padding:10px;border-radius:8px;margin-top:10px}.send-warn{background:#fef3c7;color:#92400e;border:1px solid #fcd34d;padding:10px;border-radius:8px;margin-top:10px}.voice-tools{display:flex;gap:7px;align-items:center;margin-top:6px;flex-wrap:wrap}.voice-btn{border:1px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;padding:7px 10px;font-weight:700;cursor:pointer;min-height:36px}.voice-btn.listening{background:#fee2e2;color:#991b1b;border-color:#fca5a5}.voice-status{font-size:11px;color:var(--muted)}
+
+.ingest-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mapping-summary{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:12px 0}
+.mapping-card{border:1px solid var(--line);border-radius:10px;padding:10px;background:#f8fafc}
+.mapping-card small{display:block;color:var(--muted);font-size:11px}.mapping-card strong{font-size:18px}
+.mapping-table td,.mapping-table th{vertical-align:top}
+.map-ok{background:#dcfce7;color:#166534}.map-review{background:#fef3c7;color:#92400e}.map-unmapped{background:#fee2e2;color:#991b1b}
+.raw-source{min-height:220px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+@media(max-width:850px){.ingest-grid,.mapping-summary{grid-template-columns:1fr}}
+
 @media(max-width:650px){.portal-grid,.portal-actions{grid-template-columns:1fr}.portal-card{padding:20px}.portal-card h1{font-size:32px}.floating-feedback{right:10px;bottom:10px}}
 
 </style>
@@ -64,7 +74,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <div class="portal-card">
   <span class="badge">Synthetic Clinical Demonstration</span>
   <h1>PH Clinical Reviewer Portal</h1>
-  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.5.4</div>
+  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.6.0</div>
   <div class="portal-grid">
    <div class="portal-person"><strong>Clinical Systems Developer</strong><br>Todd Pillen, PA-C/SA</div>
    <div class="portal-person"><strong>Clinical Validation Lead</strong><br>Mallory Heath, PA-C</div>
@@ -77,18 +87,19 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
    <button id="portalFeedbackLogBtn" class="btn secondary">Feedback Log</button>
   </div>
   <div id="portalInfo" class="notice hidden" style="margin-top:14px"></div>
-  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.5.4</div>
+  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.6.0</div>
  </div>
 </div>
 
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.5.4</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.0</p></div>
  <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 <div class="shell">
 <aside>
  <h3>Workflow</h3>
  <button class="nav active" data-view="dashboard">Dashboard</button>
+ <button class="nav" data-view="documentIntake">0. Document Intake Lab</button>
  <button class="nav" data-view="intake">1. Intake</button>
  <button class="nav" data-view="visit">2. Visit Authorization</button>
  <button class="nav" data-view="soap">3. Structured SOAP</button>
@@ -127,6 +138,63 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </div>
  <div class="panel grid two"><div><h3>Patient & Coverage</h3><div id="patientSummary"></div></div><div><h3>Operational State</h3><div id="operationalSummary"></div></div></div>
  <div class="panel"><h3>Scenario Engine Output</h3><div id="engineOutput"></div></div>
+</section>
+
+
+<section id="documentIntake" class="view hidden">
+ <div class="panel">
+  <div class="row between">
+   <div><h2>Clinical Document Intake & Mapping Lab</h2><div class="source">Alpha 0.6.0 · Synthetic data only · TXT first-pass validation</div></div>
+   <span class="badge">Controlled Mapping Test Bench</span>
+  </div>
+  <div class="notice">Purpose: preserve the source, extract candidate clinical elements, map them to existing PH fields, and quarantine ambiguous or unmapped data for human review. This build does not use OCR and does not process real patient information.</div>
+ </div>
+
+ <div class="panel">
+  <h3>1. Source Document Intake</h3>
+  <div class="ingest-grid">
+   <div>
+    <label>Import synthetic text file<input id="clinicalFileInput" type="file" accept=".txt,text/plain"></label>
+    <div class="row">
+     <button id="loadSyntheticNoteBtn" class="btn secondary">Load Built-in Synthetic Note</button>
+     <button id="clearImportBtn" class="btn secondary">Clear</button>
+    </div>
+    <div id="sourceMeta" class="source" style="margin-top:8px">No source loaded.</div>
+   </div>
+   <div>
+    <div class="mapping-card"><small>Source preservation</small><strong id="sourcePreserved">Not loaded</strong><div class="source">Original text is retained unchanged in the active browser session with filename, import time, and SHA-256 fingerprint when available.</div></div>
+   </div>
+  </div>
+  <label>Original Source Document<textarea id="rawClinicalSource" class="raw-source" placeholder="Load the built-in synthetic note or select a TXT file."></textarea></label>
+  <button id="extractMapBtn" class="btn primary">Extract & Propose Mapping</button>
+ </div>
+
+ <div class="panel">
+  <h3>2. Mapping Review</h3>
+  <div class="mapping-summary">
+   <div class="mapping-card"><small>Extracted concepts</small><strong id="mapCount">0</strong></div>
+   <div class="mapping-card"><small>Mapped</small><strong id="mappedCount">0</strong></div>
+   <div class="mapping-card"><small>Needs review</small><strong id="reviewCount">0</strong></div>
+   <div class="mapping-card"><small>Unmapped</small><strong id="unmappedCount">0</strong></div>
+  </div>
+  <div style="overflow:auto">
+   <table class="mapping-table">
+    <thead><tr><th>Source Evidence</th><th>Normalized Concept</th><th>Proposed PH Field</th><th>Value</th><th>Confidence</th><th>Status</th></tr></thead>
+    <tbody id="mappingRows"><tr><td colspan="6">No extraction has been run.</td></tr></tbody>
+   </table>
+  </div>
+  <div class="row">
+   <button id="acceptMappingsBtn" class="btn success">Accept Mapped Fields & Populate PH</button>
+   <button id="goToIntakeBtn" class="btn secondary">Open Intake Fields</button>
+   <button id="goToSoapBtn" class="btn secondary">Open SOAP Fields</button>
+  </div>
+ </div>
+
+ <div class="panel">
+  <h3>3. Mapping Exception Queue</h3>
+  <div class="notice warn">Elements without a reliable destination are intentionally held here. They are not discarded and are not forced into the nearest field.</div>
+  <div id="mappingExceptions"><div class="notice">No mapping exceptions yet.</div></div>
+ </div>
 </section>
 
 <section id="intake" class="view hidden">
@@ -393,7 +461,7 @@ function render(){
  $("engineOutput").innerHTML=`<div class="grid three"><div class="metric"><small>Diagnosis</small><strong>${esc(diagnosis()?.name||"")}</strong></div><div class="metric"><small>Requested service</small><strong>${esc(serviceLabel())}</strong></div><div class="metric"><small>Automation</small><strong>${service()?.paLikely?"PA Triggered":"No PA"}</strong></div></div>`;
  [["visitNotice",visitCleared(),"Visit cleared for clinical evaluation.","SOAP remains blocked until visit authorization is resolved."],["soapNotice",visitCleared(),"Visit gate passed. Structured documentation is enabled.","Clinical encounter is operationally blocked."],["handoffNotice",state.treatmentAuth.status==="Approved","Authorization data is ready for handoff.","Handoff is blocked until authorization approval."]].forEach(x=>{const e=$(x[0]);e.className=`notice ${x[1]?"ok":"warn"}`;e.textContent=x[1]?x[2]:x[3]});
  $("treatmentNotice").textContent=state.soap.signed?`SOAP data populated this ${state.treatmentAuth.type.toLowerCase()} authorization.`:"Treatment authorization is waiting for a signed SOAP note.";
- renderChecklist();renderTasks();renderDocs();renderAudit();renderProvenance();localStorage.setItem("ph-alpha-0-5-4",JSON.stringify(state))
+ renderChecklist();renderTasks();renderDocs();renderAudit();renderProvenance();localStorage.setItem("ph-alpha-0-6-0",JSON.stringify(state))
 }
 function renderTasks(){const f=get("queueFilter"),rows=state.tasks.filter(t=>f==="All"||t.status===f||t.workflow===f);$("taskRows").innerHTML=rows.length?rows.map(t=>`<tr><td>${esc(state.patient.name)}</td><td>${esc(t.title)}</td><td>${esc(t.workflow)}</td><td>${esc(t.owner)}</td><td>${esc(t.priority)}</td><td>${esc(t.status)}</td><td>${t.status==="Open"?`<button class="btn secondary complete-task" data-id="${t.id}">Complete</button>`:"—"}</td></tr>`).join(""):`<tr><td colspan="7">No matching tasks.</td></tr>`}
 function renderDocs(){$("documentList").innerHTML=state.documents.length?state.documents.map(d=>`<div class="panel"><div class="row between"><b>${esc(d.type)}</b><span class="badge ${d.status==="Signed"?"ok":"warn"}">${esc(d.status)}</span></div><p class="source">${esc(d.id)} · ${esc(d.created)}</p><div class="code">${esc(d.body)}</div>${d.status==="Draft"?`<button class="btn success sign-doc" data-id="${d.id}">E-sign</button>`:`<b>Signed by ${esc(d.signedBy)}</b>`}</div>`).join(""):`<div class="notice">No generated documents.</div>`}
@@ -403,10 +471,132 @@ function requirements(id,missing){$(id).innerHTML=`<table><thead><tr><th>Require
 function loadScenario(key){state=clone(scenarios[key]);state.session={renderingProvider:"Todd Pillen, PA-C/SA",documentedBy:"Same as Provider"};state.audit=[{time:now(),user:"System",action:"Scenario instantiated",detail:key}];populate();render();showView("dashboard")}
 function addTask(title,workflow,owner,priority="Routine"){if(!state.tasks.some(t=>t.title===title&&t.status==="Open"))state.tasks.push({id:`${Date.now()}-${Math.random()}`,title,workflow,owner,priority,status:"Open"})}
 
-const PH_FEEDBACK_CONFIG={endpoint:"https://ph-feedback.tpillen104.workers.dev/",appVersion:"0.5.4",environment:"Reviewer"};
+
+const SYNTHETIC_INGEST_NOTE=`SYNTHETIC DERMATOLOGY REFERRAL / PROGRESS NOTE
+Patient: Jordan Ellis
+MRN: SYN-AD-001
+DOB: 1980-04-15
+Encounter Date: 2026-08-12
+Referring Provider: Dr. Rivera
+
+Diagnosis: Atopic dermatitis (L20.9)
+Problem status: Established - worsening
+Duration: > 1 year
+Severity: Severe
+Pruritus: 9/10
+Pain: 2/10
+Sleep disturbance: Severe
+
+History: Persistent pruritus, excoriation, and sleep disturbance despite treatment.
+Prior therapies failed: triamcinolone, clobetasol, tacrolimus, and phototherapy.
+
+Exam: Diffuse eczematous plaques with excoriations involving trunk and extremities.
+BSA: 35%
+IGA: 4 - Severe
+EASI: 28
+Photographs: Obtained
+Baseline labs: Pending
+
+Assessment: Severe atopic dermatitis refractory to topical therapy and phototherapy.
+Plan: Start dupilumab (Dupixent). 600 mg loading dose, then 300 mg every 2 weeks after payer authorization.
+Medical necessity: Severe disease with 35% BSA involvement, EASI 28, and inadequate response to high-potency topical corticosteroids, tacrolimus, and phototherapy.
+
+DLQI: 18
+Signed by: Dr. Synthetic Dermatology`;
+
+let ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[]};
+
+async function sha256Text(text){
+ try{
+  const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("");
+ }catch{return "unavailable"}
+}
+async function setRawSource(text,filename){
+ ingestState.raw=text; ingestState.filename=filename||"Synthetic built-in note"; ingestState.importedAt=new Date().toISOString();
+ ingestState.fingerprint=await sha256Text(text);
+ set("rawClinicalSource",text);
+ $("sourceMeta").textContent=`${ingestState.filename} · imported ${ingestState.importedAt} · SHA-256 ${ingestState.fingerprint.slice(0,16)}…`;
+ $("sourcePreserved").textContent="Preserved";
+ ingestState.mappings=[]; renderMappings();
+}
+function evidenceLine(text,pattern){
+ const line=text.split(/\r?\n/).find(x=>pattern.test(x));
+ return line||"";
+}
+function addMapping(arr,concept,field,value,evidence,confidence,status="Mapped",apply=null){
+ if(value===undefined||value===null||value==="")return;
+ arr.push({concept,field,value:String(value),evidence,confidence,status,apply});
+}
+function extractMappings(){
+ const t=get("rawClinicalSource");
+ if(!t.trim()){alert("Load a synthetic note or TXT file first.");return}
+ const m=[];
+ let x;
+ x=t.match(/Patient:\s*(.+)/i); if(x)addMapping(m,"Patient name","patientName",x[1].trim(),evidenceLine(t,/Patient:/i),0.99,"Mapped",()=>state.patient.name=x[1].trim());
+ x=t.match(/MRN:\s*(.+)/i); if(x)addMapping(m,"Medical record number","mrn",x[1].trim(),evidenceLine(t,/MRN:/i),0.99,"Mapped",()=>state.patient.mrn=x[1].trim());
+ x=t.match(/DOB:\s*(\d{4}-\d{2}-\d{2})/i); if(x)addMapping(m,"Date of birth","dob",x[1],evidenceLine(t,/DOB:/i),0.99,"Mapped",()=>state.patient.dob=x[1]);
+ x=t.match(/Encounter Date:\s*(\d{4}-\d{2}-\d{2})/i); if(x)addMapping(m,"Encounter date","appointmentDate",x[1],evidenceLine(t,/Encounter Date:/i),0.98,"Mapped",()=>state.patient.appointmentDate=x[1]);
+ x=t.match(/Referring Provider:\s*(.+)/i); if(x)addMapping(m,"Referring provider","referrer",x[1].trim(),evidenceLine(t,/Referring Provider:/i),0.98,"Mapped",()=>state.patient.referrer=x[1].trim());
+
+ if(/Atopic dermatitis/i.test(t))addMapping(m,"Diagnosis","diagnosisId","Atopic dermatitis",evidenceLine(t,/Diagnosis:/i),0.99,"Mapped",()=>state.soap.diagnosisId="DX-AD");
+ x=t.match(/\((L20\.9)\)/i); if(x)addMapping(m,"ICD-10","icd10",x[1],evidenceLine(t,/Diagnosis:/i),0.99,"Mapped",()=>{});
+ x=t.match(/Problem status:\s*(.+)/i); if(x)addMapping(m,"Problem status","problemStatus",x[1].trim(),evidenceLine(t,/Problem status:/i),0.97,"Mapped",()=>state.soap.problemStatus=x[1].trim());
+ x=t.match(/Duration:\s*(.+)/i); if(x)addMapping(m,"Duration","duration",x[1].trim(),evidenceLine(t,/Duration:/i),0.97,"Mapped",()=>state.soap.duration=x[1].trim());
+ x=t.match(/^Severity:\s*(.+)$/im); if(x)addMapping(m,"Symptom severity","symptomSeverity",x[1].trim(),evidenceLine(t,/^Severity:/i),0.97,"Mapped",()=>state.soap.symptomSeverity=x[1].trim());
+ x=t.match(/Pruritus:\s*(\d+)/i); if(x)addMapping(m,"Pruritus score","pruritus",x[1],evidenceLine(t,/Pruritus:/i),0.99,"Mapped",()=>state.soap.pruritus=x[1]);
+ x=t.match(/Pain:\s*(\d+)/i); if(x)addMapping(m,"Pain score","pain",x[1],evidenceLine(t,/Pain:/i),0.99,"Mapped",()=>state.soap.pain=x[1]);
+ x=t.match(/Sleep disturbance:\s*(.+)/i); if(x)addMapping(m,"Sleep disturbance","sleepDisturbance",x[1].trim(),evidenceLine(t,/Sleep disturbance:/i),0.99,"Mapped",()=>state.soap.sleepDisturbance=x[1].trim());
+
+ x=t.match(/Prior therapies failed:\s*(.+)/i); if(x)addMapping(m,"Prior treatment failures","priorTreatments",x[1].trim(),evidenceLine(t,/Prior therapies failed:/i),0.96,"Mapped",()=>state.patient.priorTreatments=`Failed ${x[1].trim()}`);
+ x=t.match(/BSA:\s*(\d+)%/i); if(x)addMapping(m,"Body surface area","bsa",x[1],evidenceLine(t,/BSA:/i),0.99,"Mapped",()=>state.soap.bsa=x[1]);
+ x=t.match(/IGA:\s*(.+)/i); if(x)addMapping(m,"IGA/PGA","iga",x[1].trim(),evidenceLine(t,/IGA:/i),0.99,"Mapped",()=>state.soap.iga=x[1].trim());
+ x=t.match(/EASI:\s*(\d+(?:\.\d+)?)/i); if(x)addMapping(m,"Disease score","diseaseScore",`EASI ${x[1]}`,evidenceLine(t,/EASI:/i),0.99,"Mapped",()=>state.soap.diseaseScore=`EASI ${x[1]}`);
+ x=t.match(/Photographs:\s*(.+)/i); if(x)addMapping(m,"Clinical photographs","photographs",x[1].trim(),evidenceLine(t,/Photographs:/i),0.98,"Mapped",()=>state.soap.photographs=x[1].trim());
+ x=t.match(/Baseline labs:\s*(.+)/i); if(x)addMapping(m,"Baseline laboratory screening","baselineLabs",x[1].trim(),evidenceLine(t,/Baseline labs:/i),0.98,"Mapped",()=>state.soap.baselineLabs=x[1].trim());
+
+ x=t.match(/Assessment:\s*(.+)/i); if(x)addMapping(m,"Assessment narrative","assessmentNarrative",x[1].trim(),evidenceLine(t,/Assessment:/i),0.94,"Mapped",()=>state.soap.assessmentNarrative=x[1].trim());
+ x=t.match(/Plan:\s*(.+)/i); if(x){
+  addMapping(m,"Plan action","planAction","Start medication",evidenceLine(t,/Plan:/i),0.93,"Mapped",()=>state.soap.planAction="Start medication");
+  addMapping(m,"Therapy / procedure","serviceId","Dupilumab (Dupixent)",evidenceLine(t,/Plan:/i),0.98,"Mapped",()=>state.soap.serviceId="MED-DUP");
+  const dose=x[1].match(/(600 mg loading dose, then 300 mg every 2 weeks)/i);
+  if(dose)addMapping(m,"Dose / frequency","doseFrequency",dose[1],evidenceLine(t,/Plan:/i),0.99,"Mapped",()=>state.soap.doseFrequency=dose[1]);
+ }
+ x=t.match(/Medical necessity:\s*(.+)/i); if(x)addMapping(m,"Medical necessity rationale","medicalNecessity",x[1].trim(),evidenceLine(t,/Medical necessity:/i),0.96,"Mapped",()=>state.soap.medicalNecessity=x[1].trim());
+
+ x=t.match(/DLQI:\s*(\d+)/i); if(x)addMapping(m,"Dermatology Life Quality Index","UNMAPPED",x[1],evidenceLine(t,/DLQI:/i),0.99,"Unmapped",null);
+ x=t.match(/Signed by:\s*(.+)/i); if(x)addMapping(m,"Source document signer","SOURCE_METADATA",x[1].trim(),evidenceLine(t,/Signed by:/i),0.90,"Needs review",null);
+
+ ingestState.raw=t; ingestState.mappings=m; renderMappings();
+ log("Document extraction completed",`${m.length} concepts identified from ${ingestState.filename||"source text"}`);
+ renderAudit();
+}
+function renderMappings(){
+ const m=ingestState.mappings||[];
+ $("mapCount").textContent=m.length;
+ $("mappedCount").textContent=m.filter(x=>x.status==="Mapped").length;
+ $("reviewCount").textContent=m.filter(x=>x.status==="Needs review").length;
+ $("unmappedCount").textContent=m.filter(x=>x.status==="Unmapped").length;
+ $("mappingRows").innerHTML=m.length?m.map(x=>`<tr>
+  <td>${esc(x.evidence)}</td><td>${esc(x.concept)}</td><td>${esc(x.field)}</td><td>${esc(x.value)}</td>
+  <td>${Math.round(x.confidence*100)}%</td><td><span class="badge ${x.status==="Mapped"?"map-ok":x.status==="Needs review"?"map-review":"map-unmapped"}">${esc(x.status)}</span></td>
+ </tr>`).join(""):'<tr><td colspan="6">No extraction has been run.</td></tr>';
+ const ex=m.filter(x=>x.status!=="Mapped");
+ $("mappingExceptions").innerHTML=ex.length?ex.map(x=>`<div class="event"><b>${esc(x.concept)}</b> — ${esc(x.value)}<br><span class="source">${esc(x.evidence)}</span><div>Disposition: ${x.status==="Unmapped"?"No PH destination field exists in this prototype. Candidate schema review.":"Source metadata requires human validation before becoming authoritative."}</div></div>`).join(""):'<div class="notice">No mapping exceptions.</div>';
+}
+function acceptMappings(){
+ if(!ingestState.mappings.length){alert("Run Extract & Propose Mapping first.");return}
+ ingestState.mappings.filter(x=>x.status==="Mapped"&&typeof x.apply==="function").forEach(x=>x.apply());
+ state.patient.availableDocuments=[state.patient.availableDocuments,`Imported source: ${ingestState.filename||"synthetic note"}`].filter(Boolean).join("; ");
+ log("Document mappings accepted",`${ingestState.mappings.filter(x=>x.status==="Mapped").length} mapped concepts populated into PH; ${ingestState.mappings.filter(x=>x.status!=="Mapped").length} exceptions retained`);
+ populate(); render();
+ alert("Mapped fields were populated into PH. Unmapped/review items were retained in the exception queue.");
+}
+
+const PH_FEEDBACK_CONFIG={endpoint:"https://ph-feedback.tpillen104.workers.dev/",appVersion:"0.6.0",environment:"Reviewer"};
 let reviewerFeedback=[];
-try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-central-054")||"[]")}catch{reviewerFeedback=[]}
-function saveFeedbackStore(){localStorage.setItem("ph-feedback-central-054",JSON.stringify(reviewerFeedback))}
+try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-central-060")||"[]")}catch{reviewerFeedback=[]}
+function saveFeedbackStore(){localStorage.setItem("ph-feedback-central-060",JSON.stringify(reviewerFeedback))}
 function showFeedback(){
  $("feedbackModal").classList.remove("hidden");
  set("feedbackCase",state?.caseId||get("scenarioSelect")||"General");
@@ -436,7 +626,7 @@ async function retryFeedback(){
  let sent=0;for(const f of unsent){try{await transmitFeedback(f);f.sent=true;f.sentAt=new Date().toISOString();sent++}catch{}}
  saveFeedbackStore();renderFeedback();$("feedbackStatus").className=sent===unsent.length?"send-ok":"send-warn";$("feedbackStatus").textContent=`Retry complete: ${sent} of ${unsent.length} transmitted.`
 }
-function exportFeedback(){const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="PH_Feedback_Backup_Alpha_0_5_4.json";a.click();URL.revokeObjectURL(url)}
+function exportFeedback(){const blob=new Blob([JSON.stringify(reviewerFeedback,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download="PH_Feedback_Backup_Alpha_0_6_0.json";a.click();URL.revokeObjectURL(url)}
 
 let centralFeedback=[];
 async function loadCentralFeedback(){
@@ -489,10 +679,19 @@ function initVoiceControls(){
  document.querySelectorAll(".voice-btn").forEach(btn=>btn.onclick=()=>startVoice(btn.dataset.target,btn))
 }
 $("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
-$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.5.4</b><br>Added a PH Central Feedback Log viewer so reviewers can see centrally stored Cloudflare feedback without navigating the Cloudflare console. SOAP signing, centralized submission, local backup/retry, and voice-entry controls remain enabled."};
+$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.6.0</b><br>Alpha 0.6.0 adds the first Clinical Document Intake & Mapping Lab. The initial controlled test supports synthetic TXT ingestion, source preservation/fingerprinting, deterministic clinical-element extraction, proposed mapping into existing PH fields, explicit mapping exceptions, human acceptance, and downstream PH population. PDF/DOCX/JPEG/OCR and HL7/FHIR ingestion remain planned subsequent steps."};
 $("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Browser speech recognition availability varies by browser/device and may require network service. Payer rules and coding suggestions remain demonstration content."};
 $("portalFeedbackBtn").onclick=showFeedback;$("portalFeedbackLogBtn").onclick=showFeedbackLog;$("feedbackBtn").onclick=showFeedback;$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");$("saveFeedbackBtn").onclick=saveFeedback;$("retryFeedbackBtn").onclick=retryFeedback;$("exportFeedbackBtn").onclick=exportFeedback;$("closeFeedbackLogBtn").onclick=()=>$("feedbackLogModal").classList.add("hidden");$("refreshFeedbackLogBtn").onclick=loadCentralFeedback;$("feedbackLogReviewer").onchange=renderCentralFeedback;$("feedbackLogModule").onchange=renderCentralFeedback;$("feedbackLogStatus").onchange=renderCentralFeedback;
 initVoiceControls();
+
+
+$("loadSyntheticNoteBtn").onclick=()=>setRawSource(SYNTHETIC_INGEST_NOTE,"PH_Alpha_0_6_0_Synthetic_Dermatology_Note.txt");
+$("clearImportBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[]};set("rawClinicalSource","");$("sourceMeta").textContent="No source loaded.";$("sourcePreserved").textContent="Not loaded";renderMappings()};
+$("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;const text=await f.text();await setRawSource(text,f.name)};
+$("extractMapBtn").onclick=extractMappings;
+$("acceptMappingsBtn").onclick=acceptMappings;
+$("goToIntakeBtn").onclick=()=>showView("intake");
+$("goToSoapBtn").onclick=()=>showView("soap");
 
 document.querySelectorAll(".nav").forEach(b=>b.onclick=()=>showView(b.dataset.view));
 $("scenarioSelect").onchange=e=>loadScenario(e.target.value);$("resetBtn").onclick=()=>loadScenario(get("scenarioSelect"));
@@ -552,7 +751,7 @@ function makeDoc(type){const body=`${type}\nPatient: ${state.patient.name}\nMRN:
 document.querySelectorAll(".doc-gen").forEach(b=>b.onclick=()=>makeDoc(b.dataset.type));$("documentList").onclick=e=>{const b=e.target.closest(".sign-doc");if(!b)return;const d=state.documents.find(x=>x.id===b.dataset.id);if(d){d.status="Signed";d.signedBy="Demo Provider, PA-C";log("Document signed",d.id);render()}};
 $("completeHandoffBtn").onclick=()=>{if(state.treatmentAuth.status!=="Approved"){alert("Treatment authorization must be approved before handoff.");return}state.billing.status="Completed";state.stage=6;log("Handoff completed",get("nextAction"));populate();render()};
 $("downloadCaseBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${state.caseId}.json`;a.click();URL.revokeObjectURL(url)};
-const stored=localStorage.getItem("ph-alpha-0-5-4");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
+const stored=localStorage.getItem("ph-alpha-0-6-0");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
 </script>
 </body>
 </html>

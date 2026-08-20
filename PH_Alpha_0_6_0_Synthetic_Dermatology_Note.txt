@@ -1,0 +1,31 @@
+SYNTHETIC DERMATOLOGY REFERRAL / PROGRESS NOTE
+Patient: Jordan Ellis
+MRN: SYN-AD-001
+DOB: 1980-04-15
+Encounter Date: 2026-08-12
+Referring Provider: Dr. Rivera
+
+Diagnosis: Atopic dermatitis (L20.9)
+Problem status: Established - worsening
+Duration: > 1 year
+Severity: Severe
+Pruritus: 9/10
+Pain: 2/10
+Sleep disturbance: Severe
+
+History: Persistent pruritus, excoriation, and sleep disturbance despite treatment.
+Prior therapies failed: triamcinolone, clobetasol, tacrolimus, and phototherapy.
+
+Exam: Diffuse eczematous plaques with excoriations involving trunk and extremities.
+BSA: 35%
+IGA: 4 - Severe
+EASI: 28
+Photographs: Obtained
+Baseline labs: Pending
+
+Assessment: Severe atopic dermatitis refractory to topical therapy and phototherapy.
+Plan: Start dupilumab (Dupixent). 600 mg loading dose, then 300 mg every 2 weeks after payer authorization.
+Medical necessity: Severe disease with 35% BSA involvement, EASI 28, and inadequate response to high-potency topical corticosteroids, tacrolimus, and phototherapy.
+
+DLQI: 18
+Signed by: Dr. Synthetic Dermatology
