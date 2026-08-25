@@ -1443,5 +1443,239 @@ window.addEventListener("load", () => {
   }
 });
 </script>
+<script>
+/* PH Alpha 0.6.4 — corrected runtime patch
+   One-paste fix: Acne diagnosis + ingestState runtime + safe current-therapy handling.
+*/
+
+// Add Acne vulgaris to the diagnosis master list if it is not already present.
+if (!diagnoses.some(d => d.id === "DX-ACNE")) {
+  diagnoses.push({
+    id: "DX-ACNE",
+    name: "Acne vulgaris",
+    icd10: "L70.0"
+  });
+}
+
+// Override the 0.6.4 trust classifier.
+// Current therapy is intentionally NOT auto-populated until PH has a dedicated
+// current-medication/current-therapy destination.
+ph064ClassifyTrustedMapping = function(item) {
+  const concept = (item.concept || item.fact || "").toLowerCase();
+  const value = String(item.value || "");
+  const confidence = Number(item.confidence || 0);
+
+  if (concept === "diagnosis" && confidence >= 0.95)
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    concept === "icd-10" &&
+    /^[A-Z]\d{2}(?:\.\d+)?$/i.test(value) &&
+    confidence >= 0.98
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    [
+      "body surface area",
+      "disease score",
+      "iga/pga",
+      "problem status",
+      "duration",
+      "symptom severity",
+      "disease severity",
+      "pruritus score",
+      "pain score",
+      "sleep disturbance",
+      "clinical photographs",
+      "baseline laboratory screening"
+    ].includes(concept) &&
+    confidence >= 0.92
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    concept === "prior treatment history" &&
+    item.context === "historical" &&
+    confidence >= 0.94
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  // Do NOT silently place current meds into prior-treatment history.
+  if (concept === "current therapy")
+    return { status: "Needs review", trust: "Exception" };
+
+  if (
+    ["planned therapy", "follow-up", "counseling"].includes(concept)
+  )
+    return { status: "Needs review", trust: "Exception" };
+
+  if (
+    ["morphology", "bmi", "hematocrit", "source document signer"].includes(
+      concept
+    )
+  )
+    return { status: "Unmapped", trust: "Document only" };
+
+  return {
+    status: item.status || "Needs review",
+    trust: "Exception"
+  };
+};
+
+// Correct runtime access.
+// ingestState exists, but it is NOT window.ingestState.
+ph064ApplyTrustedMappings = function() {
+  if (!Array.isArray(ingestState.mappings)) return;
+
+  ingestState.mappings = ingestState.mappings.map(item => {
+    const decision = ph064ClassifyTrustedMapping(item);
+
+    return {
+      ...item,
+      status: decision.status,
+      trust: decision.trust
+    };
+  });
+
+  if (typeof renderMappings === "function") renderMappings();
+
+  const trusted = ingestState.mappings.filter(
+    x => x.status === "Mapped" && x.trust === "Trusted"
+  ).length;
+
+  const review = ingestState.mappings.filter(
+    x => x.status === "Needs review"
+  ).length;
+
+  const documentOnly = ingestState.mappings.filter(
+    x => x.status === "Unmapped"
+  ).length;
+
+  let box = document.getElementById("ph064AutoMapSummary");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "ph064AutoMapSummary";
+    box.className = "notice";
+
+    const mappingTable =
+      document.getElementById("mappingRows")?.closest(".panel");
+
+    if (mappingTable) {
+      mappingTable.insertBefore(
+        box,
+        mappingTable.children[1] || null
+      );
+    }
+  }
+
+  if (box) {
+    box.innerHTML =
+      "<b>Trusted Auto-Mapping:</b> " +
+      trusted +
+      " mapped automatically · " +
+      review +
+      " require exception review · " +
+      documentOnly +
+      " retained as document-only/schema gaps.";
+  }
+};
+
+// Correct the HPI-draft function so it can use ingestState.
+ph064BuildHpiDraft = function() {
+  if (!Array.isArray(ingestState.mappings)) return;
+
+  const trusted = ingestState.mappings.filter(
+    x => x.status === "Mapped"
+  );
+
+  const getValue = concept =>
+    trusted.find(x => x.concept === concept)?.value;
+
+  const lines = [];
+
+  if (getValue("Diagnosis"))
+    lines.push(
+      "Outside records document " +
+      getValue("Diagnosis") +
+      "."
+    );
+
+  if (getValue("Disease severity"))
+    lines.push(
+      "Disease severity is described as " +
+      getValue("Disease severity") +
+      "."
+    );
+
+  if (getValue("Body surface area"))
+    lines.push(
+      "Outside documentation reports BSA " +
+      getValue("Body surface area") +
+      "%."
+    );
+
+  const priorTherapies = trusted
+    .filter(x => x.concept === "Prior treatment history")
+    .map(x => x.value);
+
+  if (priorTherapies.length)
+    lines.push(
+      "Prior treatment history: " +
+      priorTherapies.join("; ") +
+      "."
+    );
+
+  // Current medication information can appear in the HPI draft,
+  // but it remains subject to medication reconciliation.
+  const currentTherapies = ingestState.mappings
+    .filter(x => x.concept === "Current therapy")
+    .map(x => x.value);
+
+  if (currentTherapies.length)
+    lines.push(
+      "External record reports current therapy: " +
+      currentTherapies.join("; ") +
+      ". Review medication reconciliation before encounter use."
+    );
+
+  let area = document.getElementById("ph064HpiDraft");
+
+  if (!area) {
+    const panel = document.createElement("div");
+    panel.className = "panel";
+
+    panel.innerHTML = `
+      <h3>External History / HPI Draft</h3>
+
+      <div class="notice">
+        Draft generated from trusted external-record mappings.
+        It does not become part of the legal encounter note until reviewed
+        and intentionally incorporated during the patient visit.
+      </div>
+
+      <textarea
+        id="ph064HpiDraft"
+        rows="8"
+        style="width:100%;margin-top:10px"
+      ></textarea>
+    `;
+
+    const mapping =
+      document.getElementById("mappingRows")?.closest(".panel");
+
+    if (mapping && mapping.parentNode)
+      mapping.parentNode.insertBefore(
+        panel,
+        mapping.nextSibling
+      );
+
+    area = document.getElementById("ph064HpiDraft");
+  }
+
+  if (area) area.value = lines.join(" ");
+};
+</script>
 </body>
 </html>
