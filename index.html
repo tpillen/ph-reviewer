@@ -78,7 +78,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <div class="portal-card">
   <span class="badge">Synthetic Clinical Demonstration</span>
   <h1>PH Clinical Reviewer Portal</h1>
-  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.6.3</div>
+  <div class="portal-sub">Clinical Workflow Edition · Alpha 0.6.4</div>
   <div class="portal-grid">
    <div class="portal-person"><strong>Clinical Systems Developer</strong><br>Todd Pillen, PA-C/SA</div>
    <div class="portal-person"><strong>Clinical Validation Lead</strong><br>Mallory Heath, PA-C</div>
@@ -91,12 +91,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
    <button id="portalFeedbackLogBtn" class="btn secondary">Feedback Log</button>
   </div>
   <div id="portalInfo" class="notice hidden" style="margin-top:14px"></div>
-  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.6.3</div>
+  <div class="portal-foot">Reviewer Build · Synthetic Data Only · Build 0.6.4</div>
  </div>
 </div>
 
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.3</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.4</p></div>
  <div class="header-actions"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 <div class="shell">
@@ -148,10 +148,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <section id="documentIntake" class="view hidden">
  <div class="panel">
   <div class="row between">
-   <div><h2>Clinical Document Intake & Mapping Lab</h2><div class="source">Alpha 0.6.3 · External Source Record + reconciliation + source anchoring prototype</div></div>
+   <div><h2>Clinical Document Intake & Mapping Lab</h2><div class="source">Alpha 0.6.4 · External Source Record + reconciliation + source anchoring prototype</div></div>
    <span class="badge">Controlled Mapping Test Bench</span>
   </div>
-  <div class="notice">Purpose: preserve the source, extract candidate clinical elements, map them to existing PH fields, and quarantine ambiguous or unmapped data for human review. Outside records remain separate from the clinic encounter. Alpha 0.6.3 converts TXT/RTF/DOCX/native PDF to normalized text and uses OCR for scanned PDF/JPG/JPEG/PNG. Extracted text is reconciled and mapped only after review. Use synthetic or de-identified test material only.</div>
+  <div class="notice">Purpose: preserve the source, extract candidate clinical elements, map them to existing PH fields, and quarantine ambiguous or unmapped data for human review. Outside records remain separate from the clinic encounter. Alpha 0.6.4 converts TXT/RTF/DOCX/native PDF to normalized text and uses OCR for scanned PDF/JPG/JPEG/PNG. Extracted text is reconciled and mapped only after review. Use synthetic or de-identified test material only.</div>
  </div>
 
  <div class="panel">
@@ -1010,7 +1010,7 @@ function acceptMappings(){
  alert("Mapped fields were populated into PH. Unmapped/review items were retained in the exception queue.");
 }
 
-const PH_FEEDBACK_CONFIG={endpoint:"https://ph-feedback.tpillen104.workers.dev/",appVersion:"0.6.3",environment:"Reviewer"};
+const PH_FEEDBACK_CONFIG={endpoint:"https://ph-feedback.tpillen104.workers.dev/",appVersion:"0.6.4",environment:"Reviewer"};
 let reviewerFeedback=[];
 try{reviewerFeedback=JSON.parse(localStorage.getItem("ph-feedback-central-063")||"[]")}catch{reviewerFeedback=[]}
 function saveFeedbackStore(){localStorage.setItem("ph-feedback-central-063",JSON.stringify(reviewerFeedback))}
@@ -1096,7 +1096,7 @@ function initVoiceControls(){
  document.querySelectorAll(".voice-btn").forEach(btn=>btn.onclick=()=>startVoice(btn.dataset.target,btn))
 }
 $("startReviewBtn").onclick=()=>$("reviewerPortal").classList.add("hidden");
-$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.6.3</b><br>Alpha 0.6.3 adds the first Clinical Document Intake & Mapping Lab. The initial controlled test supports synthetic TXT ingestion, source preservation/fingerprinting, deterministic clinical-element extraction, proposed mapping into existing PH fields, explicit mapping exceptions, human acceptance, and downstream PH population. PDF/DOCX/JPEG/OCR and HL7/FHIR ingestion remain planned subsequent steps."};
+$("portalReleaseBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Alpha 0.6.4</b><br>Alpha 0.6.4 adds the first Clinical Document Intake & Mapping Lab. The initial controlled test supports synthetic TXT ingestion, source preservation/fingerprinting, deterministic clinical-element extraction, proposed mapping into existing PH fields, explicit mapping exceptions, human acceptance, and downstream PH population. PDF/DOCX/JPEG/OCR and HL7/FHIR ingestion remain planned subsequent steps."};
 $("portalIssuesBtn").onclick=()=>{const e=$("portalInfo");e.classList.remove("hidden");e.innerHTML="<b>Known Issues</b><br>Browser speech recognition availability varies by browser/device and may require network service. Payer rules and coding suggestions remain demonstration content."};
 $("portalFeedbackBtn").onclick=showFeedback;$("portalFeedbackLogBtn").onclick=showFeedbackLog;$("feedbackBtn").onclick=showFeedback;$("closeFeedbackBtn").onclick=()=>$("feedbackModal").classList.add("hidden");$("saveFeedbackBtn").onclick=saveFeedback;$("retryFeedbackBtn").onclick=retryFeedback;$("exportFeedbackBtn").onclick=exportFeedback;$("closeFeedbackLogBtn").onclick=()=>$("feedbackLogModal").classList.add("hidden");$("refreshFeedbackLogBtn").onclick=loadCentralFeedback;$("feedbackLogReviewer").onchange=renderCentralFeedback;$("feedbackLogModule").onchange=renderCentralFeedback;$("feedbackLogStatus").onchange=renderCentralFeedback;
 initVoiceControls();
@@ -1425,7 +1425,7 @@ function ph064InstallControls() {
 }
 
 /* Hook the existing extraction button.
-   After 0.6.3 finishes extraction/mapping,
+   After 0.6.4 finishes extraction/mapping,
    automatically run the trusted classification pass. */
 
 window.addEventListener("load", () => {
