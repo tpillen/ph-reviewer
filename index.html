@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.3</title>
+<title>PH Alpha 0.6.4</title>
 <style>
 :root{
  --navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;
@@ -1185,6 +1185,263 @@ document.querySelectorAll(".doc-gen").forEach(b=>b.onclick=()=>makeDoc(b.dataset
 $("completeHandoffBtn").onclick=()=>{if(state.treatmentAuth.status!=="Approved"){alert("Treatment authorization must be approved before handoff.");return}state.billing.status="Completed";state.stage=6;log("Handoff completed",get("nextAction"));populate();render()};
 $("downloadCaseBtn").onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:"application/json"}),url=URL.createObjectURL(blob),a=document.createElement("a");a.href=url;a.download=`${state.caseId}.json`;a.click();URL.revokeObjectURL(url)};
 const stored=localStorage.getItem("ph-alpha-0-6-3");if(stored){try{state=JSON.parse(stored);populate();render()}catch{loadScenario("atopic")}}else loadScenario("atopic");
+</script>
+ <script>
+/* ============================================================
+   PH Alpha 0.6.4
+   Trusted Auto-Mapping + Exception-Only Review Patch
+   ============================================================ */
+
+function ph064ClassifyTrustedMapping(item) {
+  const concept = (item.concept || item.fact || "").toLowerCase();
+  const value = String(item.value || "");
+  const confidence = Number(item.confidence || 0);
+
+  if (concept === "diagnosis" && confidence >= 0.95)
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    concept === "icd-10" &&
+    /^[A-Z]\d{2}(?:\.\d+)?$/i.test(value) &&
+    confidence >= 0.98
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    [
+      "body surface area",
+      "disease score",
+      "iga/pga",
+      "problem status",
+      "duration",
+      "symptom severity",
+      "pruritus score",
+      "pain score",
+      "sleep disturbance",
+      "clinical photographs",
+      "baseline laboratory screening"
+    ].includes(concept) &&
+    confidence >= 0.96
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    concept === "current therapy" &&
+    item.context === "current" &&
+    confidence >= 0.95
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    concept === "prior treatment history" &&
+    item.context === "historical" &&
+    confidence >= 0.94
+  )
+    return { status: "Mapped", trust: "Trusted" };
+
+  if (
+    ["planned therapy", "follow-up", "counseling"].includes(concept)
+  )
+    return { status: "Needs review", trust: "Exception" };
+
+  if (
+    ["morphology", "bmi", "hematocrit", "source document signer"].includes(
+      concept
+    )
+  )
+    return { status: "Unmapped", trust: "Document only" };
+
+  return {
+    status: item.status || "Needs review",
+    trust: "Exception"
+  };
+}
+
+function ph064ApplyTrustedMappings() {
+  if (!window.ingestState || !Array.isArray(ingestState.mappings)) return;
+
+  ingestState.mappings = ingestState.mappings.map(item => {
+    const decision = ph064ClassifyTrustedMapping(item);
+    return {
+      ...item,
+      status: decision.status,
+      trust: decision.trust
+    };
+  });
+
+  if (typeof renderMappings === "function") renderMappings();
+
+  const trusted = ingestState.mappings.filter(
+    x => x.status === "Mapped" && x.trust === "Trusted"
+  ).length;
+
+  const review = ingestState.mappings.filter(
+    x => x.status === "Needs review"
+  ).length;
+
+  const documentOnly = ingestState.mappings.filter(
+    x => x.status === "Unmapped"
+  ).length;
+
+  let box = document.getElementById("ph064AutoMapSummary");
+
+  if (!box) {
+    box = document.createElement("div");
+    box.id = "ph064AutoMapSummary";
+    box.className = "notice";
+
+    const mappingTable =
+      document.getElementById("mappingRows")?.closest(".panel");
+
+    if (mappingTable) {
+      mappingTable.insertBefore(box, mappingTable.children[1] || null);
+    }
+  }
+
+  if (box) {
+    box.innerHTML =
+      "<b>Trusted Auto-Mapping:</b> " +
+      trusted +
+      " mapped automatically · " +
+      review +
+      " require exception review · " +
+      documentOnly +
+      " retained as document-only/schema gaps.";
+  }
+}
+
+function ph064BuildHpiDraft() {
+  if (!window.ingestState || !Array.isArray(ingestState.mappings)) return;
+
+  const trusted = ingestState.mappings.filter(
+    x => x.status === "Mapped"
+  );
+
+  const getValue = concept =>
+    trusted.find(x => x.concept === concept)?.value;
+
+  const lines = [];
+
+  if (getValue("Diagnosis"))
+    lines.push(
+      "Outside records document " + getValue("Diagnosis") + "."
+    );
+
+  if (getValue("Disease severity"))
+    lines.push(
+      "Disease severity is described as " +
+        getValue("Disease severity") +
+        "."
+    );
+
+  if (getValue("Body surface area"))
+    lines.push(
+      "Outside documentation reports BSA " +
+        getValue("Body surface area") +
+        "%."
+    );
+
+  const currentTherapies = trusted
+    .filter(x => x.concept === "Current therapy")
+    .map(x => x.value);
+
+  if (currentTherapies.length)
+    lines.push(
+      "Current therapy documented externally: " +
+        currentTherapies.join("; ") +
+        "."
+    );
+
+  const priorTherapies = trusted
+    .filter(x => x.concept === "Prior treatment history")
+    .map(x => x.value);
+
+  if (priorTherapies.length)
+    lines.push(
+      "Prior treatment history: " +
+        priorTherapies.join("; ") +
+        "."
+    );
+
+  let area = document.getElementById("ph064HpiDraft");
+
+  if (!area) {
+    const panel = document.createElement("div");
+    panel.className = "panel";
+
+    panel.innerHTML = `
+      <h3>External History / HPI Draft</h3>
+      <div class="notice">
+        Draft generated from trusted external-record mappings.
+        It does not become part of the legal encounter note until reviewed
+        and intentionally incorporated during the patient visit.
+      </div>
+      <textarea id="ph064HpiDraft"
+        rows="8"
+        style="width:100%;margin-top:10px"></textarea>
+    `;
+
+    const mapping =
+      document.getElementById("mappingRows")?.closest(".panel");
+
+    if (mapping && mapping.parentNode)
+      mapping.parentNode.insertBefore(panel, mapping.nextSibling);
+
+    area = document.getElementById("ph064HpiDraft");
+  }
+
+  if (area) area.value = lines.join(" ");
+}
+
+function ph064InstallControls() {
+  if (document.getElementById("ph064Controls")) return;
+
+  const mapping =
+    document.getElementById("mappingRows")?.closest(".panel");
+
+  if (!mapping) return;
+
+  const controls = document.createElement("div");
+  controls.id = "ph064Controls";
+  controls.className = "row";
+  controls.style.marginTop = "12px";
+
+  controls.innerHTML = `
+    <button id="ph064AutoMapBtn" class="btn primary">
+      Apply Trusted Auto-Mapping
+    </button>
+    <button id="ph064HpiBtn" class="btn secondary">
+      Create External HPI Draft
+    </button>
+  `;
+
+  mapping.appendChild(controls);
+
+  document.getElementById("ph064AutoMapBtn").onclick =
+    ph064ApplyTrustedMappings;
+
+  document.getElementById("ph064HpiBtn").onclick =
+    ph064BuildHpiDraft;
+}
+
+/* Hook the existing extraction button.
+   After 0.6.3 finishes extraction/mapping,
+   automatically run the trusted classification pass. */
+
+window.addEventListener("load", () => {
+  ph064InstallControls();
+
+  const extractBtn = document.getElementById("extractMapBtn");
+
+  if (extractBtn) {
+    extractBtn.addEventListener("click", () => {
+      setTimeout(() => {
+        ph064ApplyTrustedMappings();
+        ph064InstallControls();
+      }, 250);
+    });
+  }
+});
 </script>
 </body>
 </html>
