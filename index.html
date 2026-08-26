@@ -1736,5 +1736,297 @@ function audio(){
 window.addEventListener("load",()=>{version();ensure();audio();document.getElementById("extractMapBtn")?.addEventListener("click",()=>setTimeout(render,450));document.getElementById("ph064HpiBtn")?.addEventListener("click",()=>setTimeout(render,100));document.getElementById("ph064AutoMapBtn")?.addEventListener("click",()=>setTimeout(render,100));render()});
 })();
 </script>
+<style>
+#ph066Adjudicator{position:fixed;inset:0;z-index:220;background:rgba(15,23,42,.72);display:none;align-items:center;justify-content:center;padding:18px}
+#ph066Adjudicator.open{display:flex}
+.ph066-card{width:min(1200px,96vw);max-height:92vh;overflow:auto;background:#fff;border-radius:18px;box-shadow:0 30px 80px rgba(0,0,0,.32);padding:18px}
+.ph066-head{display:flex;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:12px}
+.ph066-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.ph066-pane{border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#fff}
+.ph066-pane h4{margin:0;padding:12px 14px;background:#f8fafc;border-bottom:1px solid var(--line)}
+.ph066-body{padding:14px}
+.ph066-source{min-height:360px;max-height:58vh;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5;background:#fbfdff;border:1px solid var(--line);border-radius:9px;padding:12px}
+.ph066-mark{background:#fde68a;border-radius:4px;padding:1px 2px}
+.ph066-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.ph066-field{display:grid;gap:6px;margin:10px 0}
+.ph066-field select,.ph066-field input,.ph066-field textarea{width:100%}
+.ph066-chip{display:inline-block;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:800;background:#eef2ff;color:#1e3a8a}
+.ph066-note{font-size:12px;color:var(--muted);line-height:1.45}
+.ph066-row-click{cursor:pointer}
+.ph066-row-click:hover{outline:2px solid #bfdbfe;outline-offset:-2px}
+@media(max-width:900px){.ph066-grid{grid-template-columns:1fr}.ph066-actions{grid-template-columns:1fr}}
+</style>
+
+<div id="ph066Adjudicator" aria-hidden="true">
+  <div class="ph066-card">
+    <div class="ph066-head">
+      <div>
+        <h3 style="margin:0 0 4px">Interactive Mapping Adjudication</h3>
+        <div class="ph066-note">Review one extracted concept against its source. This action does not create or modify a clinic encounter.</div>
+      </div>
+      <button id="ph066Close" class="btn secondary">Close</button>
+    </div>
+
+    <div class="ph066-grid">
+      <div class="ph066-pane">
+        <h4>PH Interpretation / Mapping Decision</h4>
+        <div class="ph066-body">
+          <div><span id="ph066Status" class="ph066-chip">Status</span></div>
+
+          <div class="ph066-field">
+            <label>Extracted concept</label>
+            <input id="ph066Concept" readonly>
+          </div>
+
+          <div class="ph066-field">
+            <label>Extracted value</label>
+            <textarea id="ph066Value" rows="4" readonly></textarea>
+          </div>
+
+          <div class="ph066-field">
+            <label>Current proposed PH field</label>
+            <input id="ph066CurrentField" readonly>
+          </div>
+
+          <div class="ph066-field">
+            <label>Choose an existing PH destination</label>
+            <select id="ph066FieldSelect">
+              <option value="">— Select field —</option>
+              <option value="diagnosisId">Diagnosis</option>
+              <option value="icd10">ICD-10</option>
+              <option value="symptomSeverity">Disease/Symptom Severity</option>
+              <option value="bodyLocation">Body Location</option>
+              <option value="lesionColor">Color</option>
+              <option value="bsa">BSA %</option>
+              <option value="photos">Photographs</option>
+              <option value="objectiveNarrative">Objective Narrative</option>
+              <option value="priorTreatments">Prior Treatments</option>
+              <option value="planNarrative">Plan Narrative</option>
+              <option value="medicalNecessity">Medical Necessity</option>
+              <option value="dlqi">DLQI</option>
+              <option value="easi">EASI</option>
+              <option value="iga">IGA/PGA</option>
+              <option value="baselineLabs">Baseline Labs</option>
+            </select>
+          </div>
+
+          <div class="ph066-actions">
+            <button id="ph066MapExisting" class="btn primary">Map to Selected PH Field</button>
+            <button id="ph066CreateSchema" class="btn secondary">Propose New PH Field</button>
+            <button id="ph066DocumentOnly" class="btn secondary">Document-only</button>
+            <button id="ph066NeedsObtained" class="btn secondary">Needs to be obtained</button>
+            <button id="ph066NotApplicable" class="btn secondary">Not applicable</button>
+            <button id="ph066KeepReview" class="btn secondary">Keep in review</button>
+          </div>
+
+          <div id="ph066DecisionNote" class="notice" style="margin-top:12px">
+            No adjudication decision recorded for this item in the current browser session.
+          </div>
+        </div>
+      </div>
+
+      <div class="ph066-pane">
+        <h4>Original Source / Validation</h4>
+        <div class="ph066-body">
+          <div id="ph066SourceMeta" class="ph066-note">Source evidence will be highlighted when available.</div>
+          <div id="ph066Source" class="ph066-source">No source loaded.</div>
+          <div id="ph066AudioWrap" class="ph065-audio hidden" style="margin-top:12px">
+            <b>Original audio</b>
+            <div class="ph066-note">Use the original recording to validate transcription and interpretation.</div>
+            <audio id="ph066Audio" controls style="width:100%;margin-top:8px"></audio>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  const VERSION="0.6.6";
+  let activeIndex=null;
+
+  function updateVersion(){
+    document.title="PH Alpha "+VERSION;
+    document.querySelectorAll("header p").forEach(p=>{
+      if(/Intelligent Prior Authorization Engine/.test(p.textContent))
+        p.textContent="Intelligent Prior Authorization Engine — Alpha "+VERSION;
+    });
+    document.querySelectorAll(".portal-sub").forEach(x=>x.textContent="Clinical Workflow Edition · Alpha "+VERSION);
+    document.querySelectorAll(".portal-foot").forEach(x=>x.textContent="Reviewer Build · Synthetic Data Only · Build "+VERSION);
+  }
+
+  function getMappings(){
+    try{
+      if(typeof ingestState!=="undefined" && Array.isArray(ingestState.mappings)) return ingestState.mappings;
+    }catch(e){}
+    return [];
+  }
+
+  function getRaw(){
+    return document.getElementById("rawClinicalSource")?.value || "";
+  }
+
+  function evidenceOf(x){
+    return String(x?.source || x?.evidence || x?.sourceEvidence || "").trim();
+  }
+
+  function renderSource(x){
+    const raw=getRaw();
+    const box=document.getElementById("ph066Source");
+    const meta=document.getElementById("ph066SourceMeta");
+    if(!box) return;
+
+    const ev=evidenceOf(x);
+    if(!raw){ box.textContent="No source loaded."; return; }
+
+    if(ev){
+      const pos=raw.toLowerCase().indexOf(ev.toLowerCase());
+      if(pos>=0){
+        box.innerHTML=
+          escapeHtml(raw.slice(0,pos))+
+          '<span class="ph066-mark">'+escapeHtml(raw.slice(pos,pos+ev.length))+'</span>'+
+          escapeHtml(raw.slice(pos+ev.length));
+        setTimeout(()=>box.querySelector(".ph066-mark")?.scrollIntoView({behavior:"smooth",block:"center"}),50);
+        if(meta) meta.textContent="Source evidence located and highlighted.";
+        return;
+      }
+    }
+
+    box.textContent=raw;
+    if(meta) meta.textContent="Exact source phrase was not found automatically. Full preserved source is displayed.";
+  }
+
+  function escapeHtml(s){
+    return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]));
+  }
+
+  function openItem(index){
+    const rows=getMappings();
+    const x=rows[index];
+    if(!x) return;
+
+    activeIndex=index;
+    document.getElementById("ph066Status").textContent=x.status||"Review";
+    document.getElementById("ph066Concept").value=x.concept||x.fact||"";
+    document.getElementById("ph066Value").value=x.value||"";
+    document.getElementById("ph066CurrentField").value=x.field||x.proposedField||"UNMAPPED";
+    document.getElementById("ph066FieldSelect").value="";
+    document.getElementById("ph066DecisionNote").textContent=
+      "Choose a mapping disposition. The original extracted value is preserved in the current browser session.";
+
+    renderSource(x);
+
+    const overlay=document.getElementById("ph066Adjudicator");
+    overlay.classList.add("open");
+    overlay.setAttribute("aria-hidden","false");
+  }
+
+  function close(){
+    const overlay=document.getElementById("ph066Adjudicator");
+    overlay.classList.remove("open");
+    overlay.setAttribute("aria-hidden","true");
+    activeIndex=null;
+  }
+
+  function writeDecision(kind,detail){
+    const rows=getMappings();
+    const x=rows[activeIndex];
+    if(!x) return;
+
+    x.adjudication = {
+      kind,
+      detail: detail||"",
+      reviewedAt: new Date().toISOString(),
+      sourceEvidence: evidenceOf(x)
+    };
+
+    if(kind==="map-existing"){
+      x.field=detail;
+      x.proposedField=detail;
+      x.status="Mapped";
+      x.trust="Human adjudicated";
+    }else if(kind==="document-only"){
+      x.status="Unmapped";
+      x.trust="Document only";
+    }else if(kind==="needs-obtained"){
+      x.status="Needs review";
+      x.trust="Clinical data gap";
+    }else if(kind==="not-applicable"){
+      x.status="Unmapped";
+      x.trust="Not applicable";
+    }else if(kind==="schema-proposal"){
+      x.status="Unmapped";
+      x.trust="Schema proposal";
+    }else{
+      x.status="Needs review";
+      x.trust="Exception";
+    }
+
+    document.getElementById("ph066Status").textContent=x.status;
+    document.getElementById("ph066DecisionNote").textContent=
+      "Decision recorded: "+kind+(detail?(" → "+detail):"")+
+      ". Original source and extracted value remain preserved.";
+
+    try{
+      if(typeof renderMappings==="function") renderMappings();
+      if(typeof updateAutoMapSummary==="function") updateAutoMapSummary();
+      if(typeof render065==="function") render065();
+    }catch(e){}
+    setTimeout(hookRows,100);
+  }
+
+  function hookRows(){
+    const table=document.getElementById("mappingRows");
+    if(!table) return;
+
+    const trs=[...table.querySelectorAll("tr")];
+    trs.forEach((tr,i)=>{
+      tr.classList.add("ph066-row-click");
+      tr.title="Click to review this mapping against the source document";
+      tr.onclick=()=>openItem(i);
+      const statusCell=tr.lastElementChild;
+      if(statusCell){
+        statusCell.style.cursor="pointer";
+        statusCell.onclick=(e)=>{e.stopPropagation();openItem(i)};
+      }
+    });
+  }
+
+  function hookAudio(){
+    const p=document.getElementById("ph065Player");
+    const wrap=document.getElementById("ph066AudioWrap");
+    const a=document.getElementById("ph066Audio");
+    if(p?.src && wrap && a){
+      a.src=p.src;
+      wrap.classList.remove("hidden");
+    }
+  }
+
+  window.addEventListener("load",()=>{
+    updateVersion();
+    document.getElementById("ph066Close").onclick=close;
+    document.getElementById("ph066Adjudicator").addEventListener("click",e=>{
+      if(e.target.id==="ph066Adjudicator") close();
+    });
+
+    document.getElementById("ph066MapExisting").onclick=()=>{
+      const v=document.getElementById("ph066FieldSelect").value;
+      if(!v){alert("Select a PH destination field first.");return;}
+      writeDecision("map-existing",v);
+    };
+    document.getElementById("ph066CreateSchema").onclick=()=>writeDecision("schema-proposal","Candidate new PH field / schema review");
+    document.getElementById("ph066DocumentOnly").onclick=()=>writeDecision("document-only");
+    document.getElementById("ph066NeedsObtained").onclick=()=>writeDecision("needs-obtained");
+    document.getElementById("ph066NotApplicable").onclick=()=>writeDecision("not-applicable");
+    document.getElementById("ph066KeepReview").onclick=()=>writeDecision("keep-review");
+
+    document.getElementById("extractMapBtn")?.addEventListener("click",()=>setTimeout(()=>{hookRows();hookAudio()},600));
+    document.getElementById("ph064AutoMapBtn")?.addEventListener("click",()=>setTimeout(hookRows,150));
+
+    setTimeout(()=>{hookRows();hookAudio()},500);
+  });
+})();
+</script>
 </body>
 </html>
