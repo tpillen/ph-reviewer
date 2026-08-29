@@ -2028,5 +2028,256 @@ window.addEventListener("load",()=>{version();ensure();audio();document.getEleme
   });
 })();
 </script>
+ <!-- PH Alpha 0.6.7 — Schema-Aware Mapping Learning Module
+PASTE THIS ENTIRE BLOCK immediately before the final </body> tag in index.html.
+It is additive and builds on Alpha 0.6.6. -->
+
+<style>
+#ph067SchemaBox{margin-top:12px;border:1px solid var(--line);border-radius:10px;padding:12px;background:#f8fafc}
+.ph067-candidate{border:1px solid var(--line);border-radius:9px;padding:10px;margin:8px 0;background:#fff}
+.ph067-candidate.best{border-color:#93c5fd;background:#eff6ff}
+.ph067-small{font-size:11px;color:var(--muted)}
+.ph067-history{max-height:180px;overflow:auto;margin-top:8px}
+.ph067-history-item{border-top:1px solid var(--line);padding:7px 0;font-size:12px}
+</style>
+
+<script>
+(function(){
+  const VERSION="0.6.7";
+
+  const SCHEMA=[
+    {area:"Patient / Referral",fields:[
+      ["patientName","Patient Name","text",["patient","patient name"]],
+      ["mrn","MRN","text",["mrn","medical record number"]],
+      ["dob","Date of Birth","date",["dob","date of birth"]],
+      ["referrer","Referring Provider","text",["referrer","referring provider"]],
+      ["appointmentDate","Encounter Date","date",["encounter date","appointment date"]]
+    ]},
+    {area:"Clinical Evidence → Subjective / History",fields:[
+      ["chiefComplaint","Chief Complaint","text",["chief complaint","complaint"]],
+      ["problemStatus","Problem Status","enum",["problem status"]],
+      ["duration","Duration","enum",["duration"]],
+      ["symptomSeverity","Disease / Symptom Severity","enum",["severity","disease severity","symptom severity"]],
+      ["priorTreatments","Prior Treatments","text",["prior treatment","prior treatment history","treatment failures"]],
+      ["subjectiveNarrative","Subjective Narrative / HPI","text",["hpi","history","subjective narrative"]]
+    ]},
+    {area:"Clinical Evidence → Objective Findings",fields:[
+      ["bodyLocation","Body Location","enum",["body location","location"]],
+      ["morphology","Morphology","enum",["morphology","comedonal","inflammatory","papule","plaque","scale"]],
+      ["distribution","Distribution","enum",["distribution"]],
+      ["color","Color","enum",["color","erythematous"]],
+      ["lesionSize","Lesion Size","text",["lesion size","size"]],
+      ["lesionCount","Lesion Count","number",["lesion count","count"]],
+      ["bsa","Body Surface Area %","number",["bsa","body surface area"]],
+      ["iga","IGA / PGA","enum",["iga","pga"]],
+      ["diseaseScore","Disease Score","text",["easi","pasi","disease score"]],
+      ["photographs","Clinical Photographs","enum",["photo","photograph"]],
+      ["pathology","Pathology Status","enum",["pathology","biopsy"]],
+      ["baselineLabs","Baseline Labs","enum",["baseline labs","lab","laboratory"]],
+      ["objectiveNarrative","Objective Narrative","text",["objective","exam","physical exam"]]
+    ]},
+    {area:"Assessment / Diagnosis",fields:[
+      ["diagnosisId","Diagnosis","coded",["diagnosis"]],
+      ["icd10","ICD-10","coded",["icd-10","icd10"]],
+      ["clinicalSeverity","Clinical Severity","enum",["clinical severity","severity"]],
+      ["assessmentNarrative","Assessment Narrative","text",["assessment"]]
+    ]},
+    {area:"Treatment Plan",fields:[
+      ["planAction","Plan Action","enum",["plan action"]],
+      ["serviceId","Therapy / Procedure","coded",["therapy","procedure","planned therapy","treatment"]],
+      ["doseFrequency","Dose / Frequency / Units","text",["dose","frequency","units"]],
+      ["medicalNecessity","Medical Necessity","text",["medical necessity"]],
+      ["planNarrative","Plan Narrative","text",["plan","follow-up","counseling","planned therapy"]]
+    ]},
+    {area:"Prior Authorization Evidence",fields:[
+      ["treatmentType","Authorization Type","text",["authorization type"]],
+      ["requestedService","Requested Service","text",["requested service"]],
+      ["treatmentDiagnosis","Treatment PA Diagnosis","text",["treatment diagnosis"]],
+      ["treatmentIcd10","Treatment PA ICD-10","text",["treatment icd-10"]],
+      ["treatmentStatus","Treatment PA Status","enum",["pa status","treatment status"]]
+    ]}
+  ].map(g=>({area:g.area,fields:g.fields.map(x=>({id:x[0],label:x[1],type:x[2],concepts:x[3]}))}));
+
+  function updateVersion(){
+    document.title="PH Alpha "+VERSION;
+    document.querySelectorAll("header p").forEach(p=>{
+      if(/Intelligent Prior Authorization Engine/.test(p.textContent))
+        p.textContent="Intelligent Prior Authorization Engine — Alpha "+VERSION;
+    });
+    document.querySelectorAll(".portal-sub").forEach(x=>x.textContent="Clinical Workflow Edition · Alpha "+VERSION);
+    document.querySelectorAll(".portal-foot").forEach(x=>x.textContent="Reviewer Build · Synthetic Data Only · Build "+VERSION);
+  }
+
+  function loadLearning(){
+    try{return JSON.parse(localStorage.getItem("ph067-mapping-learning")||"[]")}catch{return[]}
+  }
+  function saveLearning(v){localStorage.setItem("ph067-mapping-learning",JSON.stringify(v))}
+  function norm(s){return String(s||"").toLowerCase().replace(/[^a-z0-9]+/g," ").trim()}
+  function scoreText(a,b){
+    const A=new Set(norm(a).split(/\s+/).filter(Boolean)),B=new Set(norm(b).split(/\s+/).filter(Boolean));
+    if(!A.size||!B.size)return 0;
+    let hit=0;A.forEach(x=>{if(B.has(x))hit++});
+    return hit/Math.max(A.size,B.size);
+  }
+
+  function currentItem(){
+    return {
+      concept:document.getElementById("ph066Concept")?.value||"",
+      value:document.getElementById("ph066Value")?.value||"",
+      field:document.getElementById("ph066CurrentField")?.value||""
+    };
+  }
+
+  function inferArea(item){
+    const text=norm(item.concept+" "+item.value);
+    return SCHEMA.map(g=>{
+      let s=0;
+      g.fields.forEach(f=>s=Math.max(s,scoreText(text,[f.label,...f.concepts].join(" "))));
+      return {area:g.area,score:s};
+    }).sort((a,b)=>b.score-a.score)[0]||{area:"Clinical Evidence",score:0};
+  }
+
+  function candidateFields(item){
+    const area=inferArea(item).area;
+    const learning=loadLearning();
+    const concept=norm(item.concept);
+
+    const rows=[];
+    SCHEMA.forEach(g=>g.fields.forEach(f=>{
+      let s=scoreText(item.concept,[f.label,...f.concepts].join(" "))*0.65;
+      s+=scoreText(item.value,[f.label,...f.concepts].join(" "))*0.10;
+      if(g.area===area)s+=0.20;
+
+      const prior=learning.filter(r=>norm(r.sourceConcept)===concept && r.fieldId===f.id);
+      if(prior.some(r=>r.status==="Validated"))s+=0.20;
+      else if(prior.some(r=>r.status==="Experimental"))s+=0.08;
+
+      rows.push({...f,area:g.area,score:Math.min(1,s)});
+    }));
+    return rows.sort((a,b)=>b.score-a.score).slice(0,5);
+  }
+
+  function ensureUI(){
+    const select=document.getElementById("ph066FieldSelect");
+    if(!select||document.getElementById("ph067SchemaBox"))return;
+
+    const box=document.createElement("div");
+    box.id="ph067SchemaBox";
+    box.innerHTML=`
+      <div class="ph066-field">
+        <label>PH suggested prior-authorization schema area</label>
+        <input id="ph067Area" readonly>
+      </div>
+
+      <div class="ph066-field">
+        <label>Ranked candidate PH fields</label>
+        <div id="ph067Candidates"></div>
+      </div>
+
+      <div class="ph066-field">
+        <label>Mapping hypothesis status</label>
+        <select id="ph067HypothesisStatus">
+          <option>Experimental</option>
+          <option>Validated</option>
+          <option>Deprecated</option>
+        </select>
+      </div>
+
+      <div class="ph066-field">
+        <label>Propose a new PH field (optional)</label>
+        <input id="ph067NewField" placeholder="Example: Acne morphology">
+      </div>
+
+      <button id="ph067SaveHypothesis" type="button" class="btn secondary">Save Mapping Hypothesis</button>
+      <div class="ph067-small" style="margin-top:8px">
+        A saved hypothesis is a reusable test rule, not a permanent schema change.
+      </div>
+
+      <div id="ph067History" class="ph067-history"></div>
+    `;
+    select.parentElement.insertAdjacentElement("afterend",box);
+    document.getElementById("ph067SaveHypothesis").onclick=saveHypothesis;
+  }
+
+  function renderSuggestions(){
+    ensureUI();
+    const item=currentItem();
+    const area=inferArea(item);
+    document.getElementById("ph067Area").value=area.area;
+
+    const candidates=candidateFields(item);
+    document.getElementById("ph067Candidates").innerHTML=candidates.map((f,i)=>`
+      <div class="ph067-candidate ${i===0?"best":""}">
+        <div class="row between">
+          <div><b>${f.label}</b><div class="ph067-small">${f.area} · ${f.type}</div></div>
+          <div><b>${Math.round(f.score*100)}%</b></div>
+        </div>
+        <button type="button" class="btn secondary ph067Pick" data-field="${f.id}" style="margin-top:8px">Use this PH field</button>
+      </div>`).join("");
+
+    document.querySelectorAll(".ph067Pick").forEach(b=>b.onclick=()=>{
+      const sel=document.getElementById("ph066FieldSelect");
+      if([...sel.options].some(o=>o.value===b.dataset.field)) sel.value=b.dataset.field;
+      document.getElementById("ph066DecisionNote").textContent=
+        "Candidate selected: "+b.dataset.field+". Map it now or save it first as an Experimental mapping hypothesis.";
+    });
+
+    renderHistory(item);
+  }
+
+  function saveHypothesis(){
+    const item=currentItem();
+    const records=loadLearning();
+    const fieldId=document.getElementById("ph066FieldSelect")?.value||"";
+    const proposedNewField=document.getElementById("ph067NewField")?.value.trim()||"";
+    const status=document.getElementById("ph067HypothesisStatus")?.value||"Experimental";
+
+    records.unshift({
+      id:"MAP-"+Date.now(),
+      sourceConcept:item.concept,
+      sampleValue:item.value,
+      schemaArea:document.getElementById("ph067Area")?.value||"",
+      fieldId,
+      proposedNewField,
+      status,
+      createdAt:new Date().toISOString()
+    });
+    saveLearning(records);
+
+    document.getElementById("ph066DecisionNote").textContent=
+      "Mapping hypothesis saved as "+status+". It remains testable and can later be validated, corrected, or deprecated.";
+    renderHistory(item);
+  }
+
+  function renderHistory(item){
+    const history=loadLearning()
+      .filter(r=>norm(r.sourceConcept)===norm(item.concept))
+      .slice(0,8);
+
+    document.getElementById("ph067History").innerHTML=history.length
+      ? "<b>Prior hypotheses for this concept</b>"+history.map(r=>`
+          <div class="ph067-history-item">
+            <b>${r.status}</b> · ${r.schemaArea} → ${r.fieldId||r.proposedNewField||"Unassigned"}
+            <div class="ph067-small">${new Date(r.createdAt).toLocaleString()}</div>
+          </div>`).join("")
+      : '<div class="ph067-small">No prior mapping hypothesis exists for this concept yet.</div>';
+  }
+
+  function hook(){
+    ensureUI();
+    const overlay=document.getElementById("ph066Adjudicator");
+    if(!overlay)return;
+    const obs=new MutationObserver(()=>{
+      if(overlay.classList.contains("open"))setTimeout(renderSuggestions,50);
+    });
+    obs.observe(overlay,{attributes:true,attributeFilter:["class"]});
+  }
+
+  window.addEventListener("load",()=>{
+    updateVersion();
+    hook();
+  });
+})();
+</script>
 </body>
 </html>
