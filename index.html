@@ -2571,5 +2571,95 @@ function install(){
 window.addEventListener("load",()=>{version();install();const b=$("extractMapBtn");if(b)b.addEventListener("click",()=>setTimeout(()=>{try{scan()}catch(e){}},700))});
 })();
 </script>
+ <!-- PH Alpha 0.6.9 — Interval Change + SOAP Mapping Lab
+Paste this entire block immediately above the final </body> tag in ph-reviewer/index.html.
+Additive patch on top of Alpha 0.6.8. -->
+<style>
+#ph069{margin-top:14px}#ph069 .g2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+#ph069 .card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+#ph069 .mini{font-size:11px;color:var(--muted)}#ph069 textarea{min-height:120px}
+#ph069 .item{border-top:1px solid var(--line);padding:8px 0}#ph069 .item:first-child{border-top:0}
+#ph069 .tag{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;margin-left:6px}
+@media(max-width:900px){#ph069 .g2{grid-template-columns:1fr}}
+</style>
+<script>
+(function(){
+"use strict";
+const V="0.6.9",$=id=>document.getElementById(id),N=s=>String(s||"").toLowerCase(),E=s=>String(s??"").replace(/[&<>"]/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;"}[m]));
+function version(){
+ document.title="PH Alpha "+V;
+ document.querySelectorAll("header p").forEach(x=>{if(/Intelligent Prior Authorization Engine/.test(x.textContent))x.textContent="Intelligent Prior Authorization Engine — Alpha "+V});
+ document.querySelectorAll(".portal-sub").forEach(x=>x.textContent="Clinical Workflow Edition · Alpha "+V);
+ document.querySelectorAll(".portal-foot").forEach(x=>x.textContent="Reviewer Build · Synthetic Data Only · Build "+V);
+ document.querySelectorAll("body *").forEach(x=>{if(x.children.length===0&&x.textContent&&x.textContent.includes("Alpha 0.6.4"))x.textContent=x.textContent.replace(/Alpha 0\.6\.4/g,"Alpha "+V)});
+}
+function source(){
+ let a=[];try{if(window.ingestState){["text","sourceText","rawText","extractedText","transcript"].forEach(k=>{if(typeof ingestState[k]==="string")a.push(ingestState[k])});if(Array.isArray(ingestState.mappings))ingestState.mappings.forEach(m=>a.push([m.concept,m.value,m.evidence,m.section].filter(Boolean).join(" | ")))}}catch(e){}
+ ["sourceText","externalSourceText","ph066SourceText","ph064HpiDraft"].forEach(id=>{let x=$(id);if(x)a.push("value"in x?x.value:x.textContent)});
+ return a.filter(Boolean).join("\n");
+}
+function sentences(t){return String(t||"").replace(/\r/g," ").split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>8)}
+function hits(s,terms){let q=terms.split("|");return s.filter(x=>q.some(t=>N(x).includes(N(t))))}
+const MEDS=["doxycycline","minocycline","tretinoin","adapalene","clindamycin","benzoyl peroxide","isotretinoin","dupixent","dupilumab","humira","adalimumab","cosentyx","secukinumab","methotrexate","cyclosporine","tacrolimus","pimecrolimus","clobetasol","triamcinolone","otezla","apremilast","rinvoq","upadacitinib","cibinqo","abrocitinib","sotyktu","deucravacitinib","xolair","omalizumab"];
+function meds(t){
+ let out=[];sentences(t).forEach(s=>MEDS.forEach(m=>{if(N(s).includes(m)){let n=N(s),st="Mentioned";
+ if(/start|initiate|begin|plan to start|recommend/.test(n))st="Proposed / Start";
+ else if(/discontinue|stop|hold/.test(n))st="Discontinue";
+ else if(/failed|previously|prior|history of|tried/.test(n))st="Historical / Failed";
+ else if(/continue|currently|taking|using| on /.test(n))st="Current / Continue";
+ if(!out.some(x=>x.med===m&&x.s===s))out.push({med:m,s:s,status:st})}}));return out;
+}
+function parse(t){
+ let s=sentences(t);return{
+ response:hits(s,"improved|better|worse|persistent|unchanged|partial response|inadequate response|failed|flare|flaring|progressed|progression"),
+ objective:hits(s,"papule|pustule|nodule|plaque|scale|erythema|lichenif|comedone|cyst|scar|excoriation|vesicle|bullae|crust"),
+ severity:hits(s,"mild|moderate|severe|moderate-to-severe|moderate to severe|bsa|pasi|easi|iga|pga"),
+ plan:hits(s,"start|initiate|discontinue|stop|continue|increase|decrease|refer|follow up|follow-up|recommend")
+ }}
+function render(id,a,msg){$(id).innerHTML=a.length?[...new Set(a)].map(x=>'<div class="item">'+E(x)+'</div>').join(""):'<div class="notice">'+E(msg)+'</div>'}
+function run(){
+ let mode=$("ph069Mode").value,prior=$("ph069Prior").value.trim(),cur=$("ph069Current").value.trim()||source();$("ph069Current").value=cur;
+ let p=parse(prior),c=parse(cur),pm=meds(prior),cm=meds(cur);
+ let hpi=[...c.response,...cm.filter(x=>["Current / Continue","Historical / Failed"].includes(x.status)).map(x=>x.s)];
+ render("ph069HPI",hpi,"No HPI/current-treatment evidence detected.");
+ render("ph069Obj",c.objective,mode==="initial"?"No confident objective mapping; initial-visit jargon may need provider confirmation.":"No objective change detected.");
+ render("ph069Assess",c.severity,"No explicit disease-severity language detected.");
+ render("ph069Plan",c.plan,"No plan language detected.");
+ $("ph069Meds").innerHTML=cm.length?cm.map(x=>'<div class="item"><b>'+E(x.med)+'</b><span class="tag">'+E(x.status)+'</span><div class="mini">'+E(x.s)+'</div></div>').join(""):'<div class="notice">No medication concepts detected.</div>';
+ if(mode==="initial"){
+   $("ph069Interval").value="Initial visit baseline: establish disease state, prior therapies, medication exposure, treatment response, and outside-source provenance. Ambiguous outside terminology remains a candidate mapping until confirmed.";
+ }else{
+   let parts=[];if(c.response[0])parts.push(c.response[0]);if(c.objective[0])parts.push(c.objective[0]);if(c.severity[0])parts.push(c.severity[0]);
+   let proposed=cm.filter(x=>x.status==="Proposed / Start").map(x=>x.med),stopped=cm.filter(x=>x.status==="Discontinue").map(x=>x.med);
+   if(stopped.length)parts.push("Medication change: discontinue "+[...new Set(stopped)].join(", ")+".");
+   if(proposed.length)parts.push("Proposed treatment: "+[...new Set(proposed)].join(", ")+".");
+   $("ph069Interval").value=parts.length?parts.join(" "):"No reliable interval-change statement generated from the loaded text.";
+ }
+ let priorSet=[...new Set(pm.map(x=>x.med))],curSet=[...new Set(cm.map(x=>x.med))],add=curSet.filter(x=>!priorSet.includes(x)),gone=priorSet.filter(x=>!curSet.includes(x));
+ $("ph069Compare").innerHTML=mode==="initial"?'<div class="notice">Initial-visit mode: PH establishes a baseline rather than claiming interval change.</div>':
+   '<div class="item"><b>Newly mentioned medications</b>: '+E(add.join(", ")||"None detected")+'</div><div class="item"><b>Prior medications not seen in current source</b>: '+E(gone.join(", ")||"None detected")+'</div>';
+ let proposed=cm.filter(x=>x.status==="Proposed / Start");
+ $("ph069PA").innerHTML=proposed.length?proposed.map(x=>'<div class="item"><b>Potential PA trigger: '+E(x.med)+'</b><div class="mini">Use interval response, prior treatment history, objective findings, diagnosis, FDA baseline, and payer-specific requirements as supporting evidence.</div></div>').join(""):'<div class="notice">No proposed/start medication identified.</div>';
+ localStorage.setItem("ph069-last",JSON.stringify({mode,prior,current:cur,at:new Date().toISOString()}));
+}
+function install(){
+ if($("ph069"))return;let s=document.createElement("section");s.id="ph069";s.className="panel";
+ s.innerHTML='<div class="row between"><div><h2 style="margin-bottom:4px">Clinical Interval Change & SOAP Mapping Lab</h2><div class="mini">Alpha '+V+' · initial baseline vs follow-up interval change</div></div><button id="ph069Run" class="btn primary">Parse & Compare</button></div>'+
+ '<div class="notice" style="margin-top:10px">PH separates HPI/current therapy, medication status, objective findings, assessment, proposed treatment changes, and plan. Follow-up visits emphasize interval change; initial visits establish baseline from outside/referral records.</div>'+
+ '<div style="margin-top:12px"><label>Visit type<select id="ph069Mode"><option value="followup">Follow-up / interval visit</option><option value="initial">Initial visit / baseline</option></select></label></div>'+
+ '<div class="g2" style="margin-top:12px"><div class="card"><h3>Prior Encounter / Baseline Source</h3><textarea id="ph069Prior" placeholder="Paste prior visit note here for follow-up comparison. Leave blank for initial visit."></textarea></div><div class="card"><h3>Current / Imported Source</h3><textarea id="ph069Current" placeholder="Loaded source text will populate here, or paste a synthetic current note."></textarea></div></div>'+
+ '<div class="g2" style="margin-top:12px"><div class="card"><h3>Interval Change Summary</h3><textarea id="ph069Interval" readonly></textarea><div id="ph069Compare"></div></div><div class="card"><h3>Medication State Table</h3><div class="mini">Current / Continue · Historical / Failed · Discontinue · Proposed / Start</div><div id="ph069Meds"></div></div></div>'+
+ '<div class="g2" style="margin-top:12px"><div class="card"><h3>HPI / Current Treatment & Response</h3><div id="ph069HPI"></div></div><div class="card"><h3>Objective / Physical Examination</h3><div id="ph069Obj"></div></div></div>'+
+ '<div class="g2" style="margin-top:12px"><div class="card"><h3>Assessment / Disease Status</h3><div id="ph069Assess"></div></div><div class="card"><h3>Plan / Treatment Changes</h3><div id="ph069Plan"></div></div></div>'+
+ '<div class="card" style="margin-top:12px"><h3>Prior Authorization Escalation Signal</h3><div id="ph069PA"></div></div>';
+ let anchor=$("ph068Panel"),m=document.getElementById("mappingRows")?.closest(".panel");
+ if(anchor?.parentNode)anchor.parentNode.insertBefore(s,anchor.nextSibling);else if(m?.parentNode)m.parentNode.insertBefore(s,m.nextSibling);else(document.querySelector("main")||document.body).appendChild(s);
+ $("ph069Run").onclick=run;$("ph069Mode").onchange=run;
+ try{let z=JSON.parse(localStorage.getItem("ph069-last")||"{}");if(z.prior)$("ph069Prior").value=z.prior;if(z.current)$("ph069Current").value=z.current;if(z.mode)$("ph069Mode").value=z.mode}catch(e){}
+ let b=$("extractMapBtn");if(b)b.addEventListener("click",()=>setTimeout(()=>{let t=source();if(t)$("ph069Current").value=t;run()},900));
+}
+window.addEventListener("load",()=>{version();install()});
+})();
+</script>
 </body>
 </html>
