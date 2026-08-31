@@ -2661,5 +2661,287 @@ function install(){
 window.addEventListener("load",()=>{version();install()});
 })();
 </script>
+ <!-- ============================================================
+PH Alpha 0.6.10 — Streamlined Clinical Semantic Mapping
+ONE-PASTE ADDITIVE PATCH
+Paste immediately ABOVE the final </body> tag in ph-reviewer/index.html.
+Designed to supersede the visible legacy generic mapping workflow without
+deleting prior audit/history code.
+=============================================================== -->
+
+<style>
+#ph0610Panel{margin-top:14px}
+#ph0610Panel .g2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+#ph0610Panel .g3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+#ph0610Panel .card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}
+#ph0610Panel .mini{font-size:11px;color:var(--muted)}
+#ph0610Panel .item{border-top:1px solid var(--line);padding:9px 0}
+#ph0610Panel .item:first-child{border-top:0}
+#ph0610Panel .mapline{display:flex;gap:8px;align-items:flex-start;justify-content:space-between}
+#ph0610Panel .pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;margin:2px}
+#ph0610Panel .auto{background:#f0fdf4}
+#ph0610Panel .review{background:#fff7ed}
+#ph0610Panel .unmapped{background:#fef2f2}
+#ph0610Panel textarea{min-height:120px}
+#ph0610LegacyNote{margin-top:10px}
+.ph0610-hide-legacy{display:none !important}
+@media(max-width:900px){#ph0610Panel .g2,#ph0610Panel .g3{grid-template-columns:1fr}}
+</style>
+
+<script>
+(function(){
+"use strict";
+const VERSION="0.6.10";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
+
+function updateVersion(){
+ document.title="PH Alpha "+VERSION;
+ document.querySelectorAll("header p").forEach(x=>{
+   if(/Intelligent Prior Authorization Engine/.test(x.textContent))
+     x.textContent="Intelligent Prior Authorization Engine — Alpha "+VERSION;
+ });
+ document.querySelectorAll(".portal-sub").forEach(x=>x.textContent="Clinical Workflow Edition · Alpha "+VERSION);
+ document.querySelectorAll(".portal-foot").forEach(x=>x.textContent="Reviewer Build · Synthetic Data Only · Build "+VERSION);
+
+ document.querySelectorAll("body *").forEach(x=>{
+   if(x.children.length===0 && x.textContent && /Alpha 0\.6\.[4-9]/.test(x.textContent)){
+     x.textContent=x.textContent.replace(/Alpha 0\.6\.[4-9]/g,"Alpha "+VERSION);
+   }
+ });
+}
+
+function sourceText(){
+ const parts=[];
+ try{
+   if(window.ingestState){
+     ["text","sourceText","rawText","extractedText","transcript"].forEach(k=>{
+       if(typeof ingestState[k]==="string")parts.push(ingestState[k]);
+     });
+     if(Array.isArray(ingestState.mappings)){
+       ingestState.mappings.forEach(m=>parts.push([m.concept,m.value,m.evidence,m.section].filter(Boolean).join(" | ")));
+     }
+   }
+ }catch(e){}
+ ["sourceText","externalSourceText","ph066SourceText","ph064HpiDraft","ph069Current"].forEach(id=>{
+   const e=$(id); if(e)parts.push("value" in e?e.value:e.textContent);
+ });
+ return parts.filter(Boolean).join("\n");
+}
+
+function sentences(t){
+ return String(t||"").replace(/\r/g," ").split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>8);
+}
+
+const MEDS=["doxycycline","minocycline","tretinoin","adapalene","clindamycin","benzoyl peroxide","isotretinoin",
+"dupixent","dupilumab","humira","adalimumab","cosentyx","secukinumab","methotrexate","cyclosporine","tacrolimus",
+"pimecrolimus","crisaborole","clobetasol","triamcinolone","hydrocortisone","otezla","apremilast","rinvoq",
+"upadacitinib","cibinqo","abrocitinib","sotyktu","deucravacitinib","xolair","omalizumab","zoryve","roflumilast",
+"vtama","tapinarof","adbry","tralokinumab","ebglyss","lebrikizumab"];
+
+function classifyMedication(sentence,med){
+ const n=norm(sentence);
+ if(/discontinue|stop|hold/.test(n))return {status:"Discontinue",dest:["Medication Table","Plan"]};
+ if(/start|initiate|begin|plan to start|recommend/.test(n))return {status:"Proposed / Pending",dest:["Medication Table","Plan","PA Evaluation"]};
+ if(/failed|previously|prior|history of|tried|inadequate response|intolerant/.test(n))return {status:"Historical / Failed",dest:["Medication Table","HPI / Treatment History","PA Evidence"]};
+ if(/continue|currently|taking|using| on /.test(n))return {status:"Current / Continue",dest:["Medication Table","HPI / Current Treatment"]};
+ return {status:"Mentioned",dest:["Medication Table"],review:true};
+}
+
+function detectConcepts(txt){
+ const s=sentences(txt),out=[];
+
+ s.forEach(sent=>{
+   const n=norm(sent);
+
+   MEDS.forEach(m=>{
+     if(n.includes(m)){
+       const c=classifyMedication(sent,m);
+       out.push({concept:"Medication",value:m,evidence:sent,dest:c.dest,status:c.review?"Review":"Auto-mapped",substatus:c.status});
+     }
+   });
+
+   if(/acne vulgaris|plaque psoriasis|atopic dermatitis|hidradenitis suppurativa|prurigo nodularis|bullous pemphigoid|chronic spontaneous urticaria|seborrheic dermatitis/.test(n)){
+     out.push({concept:"Diagnosis",value:sent,evidence:sent,dest:["Assessment / Diagnosis"],status:"Auto-mapped"});
+   }
+   if(/\b[a-z][0-9]{2}(?:\.[0-9a-z]+)?\b/i.test(sent)){
+     out.push({concept:"ICD-10",value:(sent.match(/\b[A-Z][0-9]{2}(?:\.[0-9A-Z]+)?\b/i)||[""])[0],evidence:sent,dest:["Diagnosis Coding"],status:"Auto-mapped"});
+   }
+   if(/improved|better|worse|persistent|unchanged|partial response|inadequate response|failed|flare|flaring|progressed|progression/.test(n)){
+     out.push({concept:"Interval response",value:sent,evidence:sent,dest:["HPI / Treatment Response","Interval Change"],status:"Auto-mapped"});
+   }
+   if(/papule|pustule|nodule|plaque|scale|erythema|comedone|cyst|scar|excoriation|vesicle|bullae|crust/.test(n)){
+     out.push({concept:"Objective finding",value:sent,evidence:sent,dest:["Objective / Physical Examination"],status:"Auto-mapped"});
+   }
+   if(/mild|moderate|severe|moderate-to-severe|moderate to severe|bsa|pasi|easi|iga|pga/.test(n)){
+     out.push({concept:"Severity / metric",value:sent,evidence:sent,dest:["Assessment / Disease Status","PA Evidence"],status:"Auto-mapped"});
+   }
+   if(/start|initiate|discontinue|stop|continue|increase|decrease|refer|follow up|follow-up|recommend/.test(n)){
+     out.push({concept:"Plan action",value:sent,evidence:sent,dest:["Plan"],status:"Auto-mapped"});
+   }
+ });
+
+ const seen=new Set();
+ return out.filter(x=>{
+   const k=[x.concept,x.value,x.dest.join("|")].join("::");
+   if(seen.has(k))return false;seen.add(k);return true;
+ });
+}
+
+function render(){
+ const txt=$("ph0610Source").value.trim()||sourceText();
+ $("ph0610Source").value=txt;
+ const rows=detectConcepts(txt);
+ window.ph0610Rows=rows;
+
+ $("ph0610Map").innerHTML=rows.length?rows.map((r,i)=>`
+   <div class="item ${r.status==="Auto-mapped"?"auto":r.status==="Review"?"review":"unmapped"}">
+    <div class="mapline">
+      <div>
+        <b>${esc(r.concept)}</b>${r.substatus?`<span class="pill">${esc(r.substatus)}</span>`:""}
+        <div style="font-size:12px;margin-top:4px">${esc(r.value)}</div>
+        <div class="mini" style="margin-top:4px">Source: ${esc(r.evidence)}</div>
+        <div style="margin-top:6px">${r.dest.map(d=>`<span class="pill">→ ${esc(d)}</span>`).join("")}</div>
+      </div>
+      <b>${r.status==="Auto-mapped"?"✓ AUTO":r.status==="Review"?"REVIEW":"UNMAPPED"}</b>
+    </div>
+   </div>`).join("")
+   :'<div class="notice warn">No clinical concepts detected in the loaded source.</div>';
+
+ const buckets={
+   "HPI / Current Treatment":[],
+   "HPI / Treatment History":[],
+   "HPI / Treatment Response":[],
+   "Objective / Physical Examination":[],
+   "Assessment / Diagnosis":[],
+   "Assessment / Disease Status":[],
+   "Plan":[],
+   "Medication Table":[],
+   "PA Evidence":[],
+   "PA Evaluation":[]
+ };
+ rows.forEach(r=>r.dest.forEach(d=>{if(buckets[d])buckets[d].push(r)}));
+
+ const box=(id,key,empty)=>{
+   const a=buckets[key]||[];
+   $(id).innerHTML=a.length?a.map(r=>`<div class="item"><b>${esc(r.concept)}</b>${r.substatus?`<span class="pill">${esc(r.substatus)}</span>`:""}<div style="font-size:12px">${esc(r.value)}</div></div>`).join(""):`<div class="notice">${esc(empty)}</div>`;
+ };
+ box("ph0610HPI","HPI / Current Treatment","No current-treatment mapping.");
+ box("ph0610Hx","HPI / Treatment History","No prior-treatment mapping.");
+ box("ph0610Resp","HPI / Treatment Response","No treatment-response mapping.");
+ box("ph0610Obj","Objective / Physical Examination","No objective findings mapped.");
+ box("ph0610Dx","Assessment / Diagnosis","No diagnosis mapping.");
+ box("ph0610Assess","Assessment / Disease Status","No disease-status mapping.");
+ box("ph0610Plan","Plan","No plan actions mapped.");
+ box("ph0610Meds","Medication Table","No medication-table entries.");
+ box("ph0610PA","PA Evidence","No PA-supporting evidence detected.");
+ box("ph0610PAEval","PA Evaluation","No proposed medication requiring PA evaluation detected.");
+
+ const auto=rows.filter(r=>r.status==="Auto-mapped").length;
+ const rev=rows.filter(r=>r.status==="Review").length;
+ $("ph0610Stats").textContent=`${auto} auto-mapped · ${rev} review · ${rows.length} total concepts`;
+}
+
+function suppressLegacy(){
+ /* Hide only the old generic adjudication UI if it is present.
+    We do not delete it, so prior code/history remains intact. */
+ const selectors=[
+   "#mappingAdjudicationModal",
+   "#ph066MappingModal",
+   "#ph067LearningPanel"
+ ];
+ selectors.forEach(sel=>document.querySelectorAll(sel).forEach(x=>x.classList.add("ph0610-hide-legacy")));
+
+ /* Generic destination selects from 0.6.6/0.6.7: hide the closest legacy card/modal section,
+    but not the main Mapping Review table itself. */
+ document.querySelectorAll("select").forEach(sel=>{
+   const opts=[...sel.options].map(o=>o.textContent.trim());
+   if(opts.includes("Objective Narrative") && opts.includes("Prior Treatments") && opts.includes("Plan Narrative")){
+     const parent=sel.closest(".modal-content,.modal,.card,.panel");
+     if(parent && !parent.closest("#ph0610Panel"))parent.classList.add("ph0610-hide-legacy");
+   }
+ });
+}
+
+function install(){
+ if($("ph0610Panel"))return;
+ const p=document.createElement("section");
+ p.id="ph0610Panel";p.className="panel";
+ p.innerHTML=`
+  <div class="row between">
+   <div>
+    <h2 style="margin-bottom:4px">Clinical Semantic Mapping Workbench</h2>
+    <div class="mini">Alpha ${VERSION} · automatic clinical destinations first, human review only for ambiguity</div>
+   </div>
+   <button id="ph0610Run" class="btn primary">Run Semantic Mapping</button>
+  </div>
+
+  <div class="notice" style="margin-top:10px">
+   This view replaces the old generic “select a PH destination field” workflow. PH now maps obvious clinical concepts directly to HPI, medication status, Objective, Assessment, Plan, and PA evidence destinations. Review is reserved for ambiguous concepts.
+  </div>
+
+  <div id="ph0610LegacyNote" class="notice">
+   Legacy 0.6.6/0.6.7 adjudication controls are hidden from the primary workflow in this build; their prior data/history are not deleted.
+  </div>
+
+  <div class="card" style="margin-top:12px">
+   <h3>Loaded Source Text</h3>
+   <textarea id="ph0610Source" placeholder="Imported source text will populate here. You can also paste one of the synthetic template notes."></textarea>
+   <div id="ph0610Stats" class="mini" style="margin-top:6px"></div>
+  </div>
+
+  <div class="g2" style="margin-top:12px">
+   <div class="card"><h3>PH Interpretation & Automatic Destinations</h3><div id="ph0610Map"></div></div>
+   <div class="card"><h3>Medication Table</h3><div id="ph0610Meds"></div></div>
+  </div>
+
+  <div class="g3" style="margin-top:12px">
+   <div class="card"><h3>HPI · Current Treatment</h3><div id="ph0610HPI"></div></div>
+   <div class="card"><h3>HPI · Prior Treatment</h3><div id="ph0610Hx"></div></div>
+   <div class="card"><h3>HPI · Treatment Response</h3><div id="ph0610Resp"></div></div>
+  </div>
+
+  <div class="g2" style="margin-top:12px">
+   <div class="card"><h3>Objective / Physical Examination</h3><div id="ph0610Obj"></div></div>
+   <div class="card"><h3>Assessment / Diagnosis</h3><div id="ph0610Dx"></div><div id="ph0610Assess"></div></div>
+  </div>
+
+  <div class="g2" style="margin-top:12px">
+   <div class="card"><h3>Plan / Treatment Changes</h3><div id="ph0610Plan"></div></div>
+   <div class="card"><h3>PA Evidence / Escalation</h3><div id="ph0610PA"></div><div id="ph0610PAEval"></div></div>
+  </div>
+ `;
+
+ const anchor=$("ph069"),pa=$("ph068Panel"),m=document.getElementById("mappingRows")?.closest(".panel");
+ if(anchor?.parentNode)anchor.parentNode.insertBefore(p,anchor.nextSibling);
+ else if(pa?.parentNode)pa.parentNode.insertBefore(p,pa.nextSibling);
+ else if(m?.parentNode)m.parentNode.insertBefore(p,m.nextSibling);
+ else (document.querySelector("main")||document.body).appendChild(p);
+
+ $("ph0610Run").onclick=render;
+
+ try{
+   const t=sourceText();
+   if(t)$("ph0610Source").value=t;
+ }catch(e){}
+
+ const extract=$("extractMapBtn");
+ if(extract)extract.addEventListener("click",()=>setTimeout(()=>{
+   try{
+     const t=sourceText();if(t)$("ph0610Source").value=t;render();
+   }catch(e){}
+ },1000));
+
+ suppressLegacy();
+}
+
+window.addEventListener("load",()=>{
+ updateVersion();
+ install();
+ setTimeout(suppressLegacy,600);
+});
+})();
+</script>
 </body>
 </html>
