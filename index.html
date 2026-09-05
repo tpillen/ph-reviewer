@@ -70,7 +70,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="documentIntake" class="view">
  <div class="panel">
-  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.12 · consolidated clinical document intelligence + interval change + PA evidence</div></div><span class="badge">Consolidated Build</span></div>
+  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.12 · consolidated clinical document intelligence + encounter-directed authorization routing</div></div><span class="badge">Consolidated Build</span></div>
   <div class="notice">This build replaces the stacked 0.6.4–0.6.10 mapping patches. There is no generic “choose a PH destination field” popup. Obvious clinical concepts map directly to HPI, Medication Table, Objective, Assessment, Plan, and PA evidence. Outside records remain separate from the legal encounter until intentionally accepted.</div>
  </div>
 
@@ -140,12 +140,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </div>
 
  <div id="paEvidencePanel" class="panel">
-  <div class="row between"><div><h3>6. FDA / Payer Prior Authorization Evidence Workbench</h3><div class="source">Medication + diagnosis → baseline requirements → source evidence → gaps → payer learning</div></div><button id="scanPA" class="btn primary">Search PA Evidence</button></div>
-  <div class="grid three">
-   <label>Medication<select id="paDrug"></select></label>
-   <label>Diagnosis / indication<select id="paDx"></select></label>
+  <div class="row between"><div><h3>6. Encounter-Directed Authorization Evidence Workbench</h3><div class="source">Encounter → authorization pathway → requirement set → source evidence → gaps → payer learning</div></div><button id="scanPA" class="btn primary">Search Authorization Evidence</button></div>
+  <div class="grid four">
+   <label>Authorization pathway
+    <select id="paPathway">
+     <option value="auto">Auto-detect from encounter</option>
+     <option value="biopsy">Diagnostic skin biopsy / pathology</option>
+     <option value="medication">Medication prior authorization</option>
+    </select>
+   </label>
+   <label id="paDrugLabel">Medication<select id="paDrug"></select></label>
+   <label id="paDxLabel">Diagnosis / indication<select id="paDx"></select></label>
    <label>Payer / Plan<input id="paPayer" value="Example Payer"></label>
   </div>
+  <div id="paRouteNotice" class="notice" style="margin-top:10px">Authorization pathway will be selected from the loaded encounter.</div>
   <div class="grid three" style="margin-top:10px">
    <div class="card"><div class="mini">Supported</div><div id="paSupported" class="kpi">0/0</div></div>
    <div class="card"><div class="mini">Missing</div><div id="paMissing" class="kpi">0</div></div>
@@ -193,7 +201,52 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </section>
 
 <section id="queue" class="view hidden"><div class="panel"><h2>Work Queue</h2><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div></section>
-\n<section id="biopsy" class="view hidden">\n <div class="panel">\n  <div class="row between"><div><h2>Biopsy Differential & Pathology Reconciliation</h2><div class="source">Alpha 0.6.12 · pre-biopsy working diagnosis → ordered differential → pathology final → resolved diagnosis</div></div><span class="badge">Diagnostic Safety Rule</span></div>\n  <div class="notice warn"><b>Pre-biopsy rule:</b> a differential such as “AK vs SCC,” “nevus vs melanoma,” or “psoriasis vs atopic dermatitis” must not be promoted to the active definitive diagnosis before pathology finalization. PH preserves the working diagnosis and ordered differential, then reconciles to the final diagnosis when pathology returns.</div>\n </div>\n <div class="panel">\n  <h3>1. Biopsy Episode</h3>\n  <div class="biopsy-grid">\n   <label>Biopsy Episode ID<input id="biopsyEpisodeId" readonly></label>\n   <label>Specimen label<input id="biopsySpecimen" value="A"></label>\n   <label>Anatomic site<input id="biopsySite" placeholder="e.g. right dorsal hand"></label>\n   <label>Working diagnosis<select id="biopsyWorkingDx">\n    <option value="Neoplasm of uncertain behavior of skin|D48.5">Neoplasm of uncertain behavior of skin — D48.5</option>\n    <option value="Melanocytic neoplasm of uncertain behavior|D48.5">Melanocytic neoplasm of uncertain behavior — D48.5</option>\n    <option value="Spongiotic dermatitis, undetermined|">Spongiotic dermatitis, undetermined</option>\n    <option value="Psoriasiform dermatitis, undetermined|">Psoriasiform dermatitis, undetermined</option>\n    <option value="Interface dermatitis, undetermined|">Interface dermatitis, undetermined</option>\n    <option value="Vesiculobullous disorder, undetermined|">Vesiculobullous disorder, undetermined</option>\n    <option value="Vasculopathic / vasculitic disorder, undetermined|">Vasculopathic / vasculitic disorder, undetermined</option>\n    <option value="Granulomatous dermatitis, undetermined|">Granulomatous dermatitis, undetermined</option>\n    <option value="Panniculitis, undetermined|">Panniculitis, undetermined</option>\n    <option value="Cutaneous lymphoproliferative disorder, undetermined|">Cutaneous lymphoproliferative disorder, undetermined</option>\n    <option value="Infectious process, undetermined|">Infectious process, undetermined</option>\n   </select></label>\n   <label>Working ICD-10<input id="biopsyWorkingIcd" value="D48.5"></label>\n   <label>Biopsy technique<select id="biopsyTechnique"><option value="">— select —</option><option>Tangential / shave biopsy</option><option>Punch biopsy</option><option>Incisional biopsy</option><option>Excisional / broad shave</option></select></label>\n  </div>\n  <label>Clinical lesion / rash description<textarea id="biopsyClinicalDescription"></textarea></label>\n  <label>Ordered differential diagnoses<textarea id="biopsyDifferential" placeholder="One per line, e.g.&#10;Actinic keratosis&#10;Squamous cell carcinoma"></textarea></label>\n  <label>Clinical question to pathologist<textarea id="biopsyQuestion" placeholder="e.g. AK vs SCC; psoriasis vs atopic dermatitis"></textarea></label>\n  <div class="grid two"><label>Special handling / ancillary consideration<input id="biopsyHandling" placeholder="e.g. separate perilesional DIF specimen, tissue culture, IHC if needed"></label><label>Pathology status<select id="pathStatus"><option>Ordered</option><option>Collected</option><option selected>Pending</option><option>Final</option><option>Amended</option></select></label></div>\n  <div class="row"><button id="detectBiopsyBtn" class="btn secondary">Detect From Loaded Note</button><button id="saveBiopsyBtn" class="btn primary">Save Biopsy Episode</button></div>\n </div>\n <div class="panel"><h3>2. Pre-Pathology Diagnostic State</h3><div id="biopsyPreState" class="notice">No biopsy episode saved yet.</div></div>\n <div class="panel">\n  <h3>3. Pathology Final / Reconciliation</h3><div class="notice">The original working diagnosis and differential remain in the audit history. Final pathology adds a resolved diagnosis; it does not overwrite the pre-biopsy clinical impression.</div>\n  <label>Final pathology report / impression<textarea id="pathFinalText"></textarea></label>\n  <div class="grid two"><label>Resolved final diagnosis<input id="pathFinalDx"></label><label>Resolved ICD-10<input id="pathFinalIcd" placeholder="site-specific definitive code when available"></label></div>\n  <label>Ancillary studies / comments<input id="pathAncillary"></label><label>Downstream follow-up action<input id="pathFollowup"></label>\n  <div class="row"><button id="extractFinalBtn" class="btn secondary">Extract Final Diagnosis</button><button id="finalizePathBtn" class="btn success">Finalize Pathology Reconciliation</button></div><div id="pathResolvedState" style="margin-top:10px"></div>\n </div>\n <div class="panel"><h3>4. Diagnostic History</h3><div id="biopsyHistory" class="biopsy-history">No biopsy/pathology history yet.</div></div>\n</section>\n
+
+<section id="biopsy" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Biopsy Differential & Pathology Reconciliation</h2><div class="source">Alpha 0.6.12 · Objective morphology → working diagnosis → ordered differential → pathology final → resolved diagnosis</div></div><span class="badge">Diagnostic Safety Rule</span></div>
+  <div class="notice warn"><b>Pre-biopsy rule:</b> a differential such as “AK vs SCC,” “nevus vs melanoma,” or “psoriasis vs atopic dermatitis” must not be promoted to the active definitive diagnosis before pathology finalization. PH preserves the working diagnosis and ordered differential, then reconciles to the final diagnosis when pathology returns.</div>
+ </div>
+ <div class="panel">
+  <h3>1. Biopsy Episode</h3>
+  <div class="biopsy-grid">
+   <label>Biopsy Episode ID<input id="biopsyEpisodeId" readonly></label>
+   <label>Specimen label<input id="biopsySpecimen" value="A"></label>
+   <label>Anatomic site<input id="biopsySite" placeholder="e.g. right dorsal hand"></label>
+   <label>Working diagnosis<select id="biopsyWorkingDx">
+    <option value="Neoplasm of uncertain behavior of skin|D48.5">Neoplasm of uncertain behavior of skin — D48.5</option>
+    <option value="Melanocytic neoplasm of uncertain behavior|D48.5">Melanocytic neoplasm of uncertain behavior — D48.5</option>
+    <option value="Spongiotic dermatitis, undetermined|">Spongiotic dermatitis, undetermined</option>
+    <option value="Psoriasiform dermatitis, undetermined|">Psoriasiform dermatitis, undetermined</option>
+    <option value="Interface dermatitis, undetermined|">Interface dermatitis, undetermined</option>
+    <option value="Vesiculobullous disorder, undetermined|">Vesiculobullous disorder, undetermined</option>
+    <option value="Vasculopathic / vasculitic disorder, undetermined|">Vasculopathic / vasculitic disorder, undetermined</option>
+    <option value="Granulomatous dermatitis, undetermined|">Granulomatous dermatitis, undetermined</option>
+    <option value="Panniculitis, undetermined|">Panniculitis, undetermined</option>
+    <option value="Cutaneous lymphoproliferative disorder, undetermined|">Cutaneous lymphoproliferative disorder, undetermined</option>
+    <option value="Infectious process, undetermined|">Infectious process, undetermined</option>
+   </select></label>
+   <label>Working ICD-10<input id="biopsyWorkingIcd" value="D48.5"></label>
+   <label>Biopsy technique<select id="biopsyTechnique"><option value="">— select —</option><option>Tangential / shave biopsy</option><option>Punch biopsy</option><option>Incisional biopsy</option><option>Excisional / broad shave</option></select></label>
+  </div>
+  <label>Clinical lesion / rash description<textarea id="biopsyClinicalDescription" placeholder="Document only findings actually observed or present in the source note."></textarea></label>
+  <div class="notice"><b>Objective ↔ Differential correlation:</b> PH compares the documented physical exam against the reference morphology for each differential. Reference descriptors never auto-populate the legal Objective exam; they are used only to organize documented findings and identify possible support or gaps.</div>
+  <div id="biopsyMorphologyCorrelation" class="biopsy-history">Enter a lesion/rash description and differential to see correlation.</div>
+  <label>Ordered differential diagnoses<textarea id="biopsyDifferential" placeholder="One per line, e.g.&#10;Actinic keratosis&#10;Squamous cell carcinoma"></textarea></label>
+  <label>Clinical question to pathologist<textarea id="biopsyQuestion" placeholder="e.g. AK vs SCC; psoriasis vs atopic dermatitis"></textarea></label>
+  <div class="grid two"><label>Special handling / ancillary consideration<input id="biopsyHandling" placeholder="e.g. separate perilesional DIF specimen, tissue culture, IHC if needed"></label><label>Pathology status<select id="pathStatus"><option>Ordered</option><option>Collected</option><option selected>Pending</option><option>Final</option><option>Amended</option></select></label></div>
+  <div class="row"><button id="detectBiopsyBtn" class="btn secondary">Detect From Loaded Note</button><button id="saveBiopsyBtn" class="btn primary">Save Biopsy Episode</button></div>
+ </div>
+ <div class="panel"><h3>2. Pre-Pathology Diagnostic State</h3><div id="biopsyPreState" class="notice">No biopsy episode saved yet.</div></div>
+ <div class="panel">
+  <h3>3. Pathology Final / Reconciliation</h3><div class="notice">The original working diagnosis and differential remain in the audit history. Final pathology adds a resolved diagnosis; it does not overwrite the pre-biopsy clinical impression.</div>
+  <label>Final pathology report / impression<textarea id="pathFinalText"></textarea></label>
+  <div class="grid two"><label>Resolved final diagnosis<input id="pathFinalDx"></label><label>Resolved ICD-10<input id="pathFinalIcd" placeholder="site-specific definitive code when available"></label></div>
+  <label>Ancillary studies / comments<input id="pathAncillary"></label><label>Downstream follow-up action<input id="pathFollowup"></label>
+  <div class="row"><button id="extractFinalBtn" class="btn secondary">Extract Final Diagnosis</button><button id="finalizePathBtn" class="btn success">Finalize Pathology Reconciliation</button></div><div id="pathResolvedState" style="margin-top:10px"></div>
+ </div>
+ <div class="panel"><h3>4. Diagnostic History</h3><div id="biopsyHistory" class="biopsy-history">No biopsy/pathology history yet.</div></div>
+</section>\n
 <section id="audit" class="view hidden"><div class="panel"><h2>Audit Trail</h2><div id="auditList"></div></div></section>
 </main>
 </div>
@@ -274,9 +327,32 @@ function parseSemantic(t){
  const text=norm(t);
 
  // Identity / diagnosis / coding
- const dxPatterns=[["Acne vulgaris",/\bacne vulgaris\b/i],["Atopic dermatitis",/\batopic dermatitis\b/i],["Plaque psoriasis",/\bplaque psoriasis\b/i],["Hidradenitis suppurativa",/\bhidradenitis suppurativa\b/i]];
+ const dxPatterns=[["Acne vulgaris",/\bacne vulgaris\b/i],["Atopic dermatitis",/\batopic dermatitis\b/i],["Plaque psoriasis",/\bplaque psoriasis\b/i],["Hidradenitis suppurativa",/\bhidradenitis suppurativa\b/i],["Neoplasm of uncertain behavior of skin",/\bneoplasm of uncertain behavior(?: of skin)?\b/i]];
  dxPatterns.forEach(([v,re])=>{const ev=all.find(s=>re.test(s));if(ev)addConcept(rows,"Diagnosis",v,"current",["Assessment / Diagnosis"],ev)});
- const icd=(t.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0];if(icd)addConcept(rows,"ICD-10",icd.toUpperCase(),"current",["Diagnosis Coding"],all.find(s=>s.includes(icd))||icd,"Auto-mapped",.99);
+ const icd=(t.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0];
+ if(icd){
+   addConcept(rows,"ICD-10",icd.toUpperCase(),"current",["Diagnosis Coding"],all.find(s=>s.includes(icd))||icd,"Auto-mapped",.99);
+   if(icd.toUpperCase()==="D48.5" && !rows.some(r=>r.concept==="Diagnosis")){
+     addConcept(rows,"Diagnosis","Neoplasm of uncertain behavior of skin","current",["Assessment / Diagnosis"],all.find(s=>/D48\.5/i.test(s))||"D48.5","Auto-mapped",.99);
+   }
+ }
+
+ // Biopsy episode site and differential are specimen-specific and do not promote malignancy to a definitive diagnosis.
+ const biopsyContext=all.find(s=>/biopsy|patholog|clinical concern|rule out|r\/o|\bvs\b|versus/i.test(s))||"";
+ const siteMatch=(t.match(/\b(?:left|right)?\s*(?:dorsal\s+)?(?:hand|forearm|arm|cheek|nose|ear|scalp|neck|chest|back|leg|foot)\b/i)||[])[0];
+ if(siteMatch && /biopsy|D48\.5|neoplasm of uncertain behavior|squamous cell carcinoma|SCC|patholog/i.test(t)){
+   addConcept(rows,"Biopsy site",siteMatch.replace(/\s+/g," ").trim(),"current",["Objective / Biopsy Site","Biopsy Episode"],all.find(s=>norm(s).includes(norm(siteMatch)))||biopsyContext,"Auto-mapped",.97);
+ }
+ const diffTerms=[];
+ if(/\bactinic keratosis(?:es)?\b|\bAK\b/i.test(t))diffTerms.push("Actinic keratosis");
+ if(/\bsquamous cell carcinoma in situ\b|\bSCC in situ\b/i.test(t))diffTerms.push("Squamous cell carcinoma in situ");
+ if(/\bsquamous cell carcinoma\b|\bSCC\b/i.test(t))diffTerms.push("Squamous cell carcinoma");
+ if(/\bbasal cell carcinoma\b|\bBCC\b/i.test(t))diffTerms.push("Basal cell carcinoma");
+ if(/\bmelanoma\b/i.test(t))diffTerms.push("Melanoma");
+ const uniqDiff=[...new Set(diffTerms)];
+ if(uniqDiff.length && /D48\.5|neoplasm of uncertain behavior|clinical concern|rule out|r\/o|\bvs\b|versus|biopsy/i.test(t)){
+   addConcept(rows,"Differential diagnosis",uniqDiff.join(" vs "),"differential-only",["Assessment / Differential","Biopsy Episode"],all.find(s=>/squamous cell carcinoma|SCC|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma/i.test(s))||biopsyContext,"Auto-mapped",.95,{diagnosticLock:true});
+ }
 
  // Severity
  const sev=all.find(s=>/\b(mild|moderate|severe|moderate-to-severe|moderate to severe)\b/i.test(s) && /assessment|diagnos|acne|dermatitis|psoriasis|severity/i.test(s));
@@ -377,7 +453,7 @@ function acceptMappings(){
  if(!ingestState.mappings.length){alert("Run Extract, Map & Compare first.");return}
  const rows=ingestState.mappings;
  const get=c=>rows.find(r=>r.concept===c)?.value;
- $("diagnosis").value=get("Diagnosis")||"";$("icd10").value=get("ICD-10")||"";$("clinicalSeverity").value=get("Disease severity")||"";$("morphology").value=get("Morphology")||"";$("bodyLocation").value=get("Body location")||"";$("lesionTypes").value=get("Lesion types")||"";
+ $("diagnosis").value=get("Diagnosis")||"";$("icd10").value=get("ICD-10")||"";$("clinicalSeverity").value=get("Disease severity")||"";$("morphology").value=get("Morphology")||"";$("bodyLocation").value=get("Biopsy site")||get("Body location")||"";$("lesionTypes").value=get("Lesion types")||"";
  $("bsa").value=(get("BSA")||"").replace("%","");$("iga").value=get("IGA/PGA")||"";
  $("objectiveNarrative").value=rows.filter(r=>r.dest.includes("Objective / Physical Examination")).map(r=>r.value).join(" ");
  $("subjectiveNarrative").value=[...rows.filter(r=>r.dest.includes("HPI / Current Treatment")||r.dest.includes("HPI / Treatment Response")).map(r=>r.evidence)].filter((v,i,a)=>a.indexOf(v)===i).join(" ");
@@ -394,11 +470,77 @@ function loadOutcomes(){try{return JSON.parse(localStorage.getItem(OUTCOME_KEY)|
 function saveOutcomes(a){localStorage.setItem(OUTCOME_KEY,JSON.stringify(a))}
 function selectedPA(){const drug=PA_DRUGS.find(d=>d.id===$("paDrug").value)||PA_DRUGS[0],dx=drug.dx[Number($("paDx").value||0)]||drug.dx[0];return{drug,dx}}
 function fillPADx(){const d=PA_DRUGS.find(x=>x.id===$("paDrug").value)||PA_DRUGS[0];$("paDx").innerHTML=d.dx.map((x,i)=>`<option value="${i}">${esc(x.name)} · ${esc(x.icd)}</option>`).join("");renderKnownRules();updatePAStats()}
-function findEvidence(pattern,src){const low=norm(src);for(const t of pattern.split("|").map(x=>x.trim()).filter(Boolean)){const n=norm(t),i=low.indexOf(n);if(i>=0)return src.slice(Math.max(0,i-90),Math.min(src.length,i+n.length+160)).replace(/\s+/g," ").trim()}return""}
+function findEvidence(pattern,src){const low=norm(src);for(const t of pattern.split("|").map(x=>x.trim()).filter(Boolean)){const n=norm(t),i=low.indexOf(n);if(i>=0)return src.slice(Math.max(0,i-90),Math.min(src.length,i+n.length+180)).replace(/\s+/g," ").trim()}return""}
 function relevantRules(){const {drug,dx}=selectedPA(),p=norm($("paPayer").value);return loadRules().filter(r=>r.active!==false&&r.drugId===drug.id&&r.diagnosis===dx.name&&norm(r.payer)===p)}
+
+function detectedAuthorizationPathway(){
+ const forced=$("paPathway")?.value||"auto";
+ if(forced!=="auto")return forced;
+ const src=norm([ingestState.raw,$("planNarrative").value,$("objectiveNarrative").value,$("assessmentNarrative").value].join("\n"));
+ if(/\bbiopsy\b|punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|pathology results|D48\.5|neoplasm of uncertain behavior/.test(src))return"biopsy";
+ return"medication";
+}
+function biopsyEvidenceProfile(){
+ const rows=ingestState.mappings||[];
+ const get=c=>rows.find(r=>r.concept===c)?.value||"";
+ const site=get("Biopsy site")||get("Body location");
+ const workingDx=get("Diagnosis")||(/D48\.5/i.test(ingestState.raw)?"Neoplasm of uncertain behavior of skin":"");
+ const differential=get("Differential diagnosis")||"";
+ return{
+  service:"Diagnostic skin biopsy / pathology",
+  workingDx:workingDx||"Clinically indeterminate cutaneous lesion",
+  icd:get("ICD-10")||"",
+  site:site||"",
+  differential,
+  req:[
+   {label:"Working diagnosis / diagnostic uncertainty",pattern:"D48.5|neoplasm of uncertain behavior|uncertain behavior",type:"Biopsy baseline"},
+   {label:"Lesion morphology supporting biopsy",pattern:"hyperkeratotic|erythematous|plaque|papule|nodule|crust|scale|indurat|ulcer|bleed|nonhealing|persistent|growing|changing|scaly",type:"Biopsy baseline"},
+   {label:"Anatomic site documented",pattern:site||"right hand|left hand|hand|forearm|arm|face|scalp|chest|back|leg|foot|nose|ear|neck",type:"Biopsy baseline"},
+   {label:"Clinical differential / concern documented",pattern:"squamous cell carcinoma|SCC|SCC in situ|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma|clinical concern|rule out|r/o|versus",type:"Biopsy baseline"},
+   {label:"Biopsy procedure documented or planned",pattern:"punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|biopsy performed|biopsy planned|biopsy of",type:"Biopsy baseline"},
+   {label:"Pathology / tissue diagnosis intent",pattern:"pathology results|pathology pending|histopathology|tissue diagnosis|definitive diagnosis|guide definitive therapy",type:"Biopsy baseline"}
+  ]
+ };
+}
+function renderAuthorizationRoute(){
+ const route=detectedAuthorizationPathway();
+ const notice=$("paRouteNotice"),drugLabel=$("paDrugLabel"),dxLabel=$("paDxLabel");
+ if(route==="biopsy"){
+   const p=biopsyEvidenceProfile();
+   notice.className="notice ok";
+   notice.innerHTML=`<b>Detected pathway:</b> Diagnostic skin biopsy / pathology<br><b>Working diagnosis:</b> ${esc(p.workingDx)}${p.icd?` (${esc(p.icd)})`:""}${p.site?`<br><b>Biopsy site:</b> ${esc(p.site)}`:""}${p.differential?`<br><b>Differential:</b> ${esc(p.differential)} <span class="pill">differential-only until pathology final</span>`:""}`;
+   drugLabel.classList.add("hidden");dxLabel.classList.add("hidden");
+ }else{
+   notice.className="notice";
+   notice.innerHTML="<b>Detected pathway:</b> Medication prior authorization. FDA baseline and payer-specific medication requirements are evaluated separately.";
+   drugLabel.classList.remove("hidden");dxLabel.classList.remove("hidden");
+ }
+ return route;
+}
 function scanPAEvidence(){
+ const route=renderAuthorizationRoute();
+ const src=[ingestState.raw,$("priorSource").value,$("subjectiveNarrative").value,$("objectiveNarrative").value,$("assessmentNarrative").value,$("planNarrative").value,$("priorTreatments").value].join("\n");
+
+ if(route==="biopsy"){
+   const p=biopsyEvidenceProfile();
+   const rows=p.req.map((r,i)=>{const e=findEvidence(r.pattern,src);return{id:"BX-"+i,...r,status:e?"Found":"Missing",evidence:e}});
+   window.ph0612PA=rows;
+   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}</div>`).join("");
+   const f=rows.filter(r=>r.status==="Found").length;$("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=rows.length-f;$("paRate").textContent="—";
+   const lines=["PH DIAGNOSTIC BIOPSY AUTHORIZATION EVIDENCE SUMMARY","Service: "+p.service,"Working diagnosis: "+p.workingDx+(p.icd?" ["+p.icd+"]":""),p.site?"Site: "+p.site:"",p.differential?"Clinical differential: "+p.differential+" (differential only; pathology pending)":"","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"].filter(Boolean);
+   rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
+   if(!rows.some(r=>r.status==="Found"))lines.push("• None located.");
+   lines.push("","MISSING / PROVIDER OR STAFF REVIEW:");
+   rows.filter(r=>r.status==="Missing").forEach(r=>lines.push("• "+r.label+": not located in available documentation."));
+   if(!rows.some(r=>r.status==="Missing"))lines.push("• None.");
+   lines.push("","Diagnostic safety: suspected SCC/BCC/melanoma remains a differential diagnosis until pathology finalization. PH does not promote a malignancy differential to the active definitive diagnosis.");
+   $("paSummary").value=lines.join("\n");$("treatmentSummary").value=$("paSummary").value;
+   const missing=rows.filter(r=>r.status==="Missing");$("workQueue").innerHTML=missing.length?missing.map(r=>`<div class="map-item"><b>Missing biopsy authorization evidence:</b> ${esc(r.label)}<div class="mini">Provider/staff review required if this criterion applies for the payer.</div></div>`).join(""):'<div class="notice ok">No currently detected biopsy-evidence gaps in the loaded encounter.</div>';
+   return;
+ }
+
  if(!$("paDrug").value)return;
- const {drug,dx}=selectedPA(),src=[ingestState.raw,$("priorSource").value,$("subjectiveNarrative").value,$("objectiveNarrative").value,$("assessmentNarrative").value,$("planNarrative").value,$("priorTreatments").value].join("\n");
+ const {drug,dx}=selectedPA();
  const req=dx.req.map((r,i)=>({id:"FDA-"+i,type:"FDA baseline",label:r[0],pattern:r[1],source:"Seed FDA indication profile"})).concat(relevantRules().map(r=>({id:r.id,type:"Payer learned",label:r.requirement,pattern:r.searchTerms||r.requirement,source:r.payer+" denial"})));
  const rows=req.map(r=>{const e=findEvidence(r.pattern,src);return{...r,status:e?"Found":"Missing",evidence:e}});window.ph0612PA=rows;
  $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}</div>`).join("");
@@ -416,6 +558,51 @@ function renderKnownRules(){const r=relevantRules();$("knownRules").innerHTML=r.
 function recordOutcome(status){const {drug,dx}=selectedPA(),rows=window.ph0612PA||[],o=loadOutcomes();o.unshift({status,drugId:drug.id,diagnosis:dx.name,payer:$("paPayer").value,at:new Date().toISOString(),found:rows.filter(r=>r.status==="Found").map(r=>r.label),missing:rows.filter(r=>r.status==="Missing").map(r=>r.label)});saveOutcomes(o);const rules=loadRules();rules.forEach(r=>{if(r.drugId===drug.id&&r.diagnosis===dx.name&&norm(r.payer)===norm($("paPayer").value)){r.uses=(r.uses||0)+1;if(status==="Approved"){r.approvals=(r.approvals||0)+1;r.confidence=Math.min(.95,(r.confidence||.5)+.05);if(r.approvals>=3)r.status="Confirmed"}else r.denials=(r.denials||0)+1}});saveRules(rules);updatePAStats();renderKnownRules();addAudit("PA outcome recorded",status)}
 function updatePAStats(){const {drug,dx}=selectedPA(),p=norm($("paPayer").value),o=loadOutcomes().filter(x=>x.drugId===drug.id&&x.diagnosis===dx.name&&norm(x.payer)===p),ap=o.filter(x=>x.status==="Approved").length;$("paRate").textContent=o.length?Math.round(100*ap/o.length)+"%":"—"}
 
+
+const BIOPSY_MORPHOLOGY_LIBRARY={
+ "basal cell carcinoma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["shiny","pearly","translucent","papule","nodule","rolled border","telangiectasia","bleed","ulcer","pigmented","scar-like","indurated plaque","sun-exposed","head","neck"]},
+ "squamous cell carcinoma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed","sun-exposed","head","neck","upper extremity"]},
+ "squamous cell carcinoma, invasive":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed"]},
+ "scc":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed"]},
+ "scc in situ":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["well-demarcated","erythematous","scaly","plaque","slowly enlarging","sun-exposed","fails topical therapy"]},
+ "bowen disease":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["well-demarcated","erythematous","scaly","plaque","slowly enlarging","sun-exposed"]},
+ "actinic keratosis":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["rough","scaly","gritty","papule","erythematous base","sun-exposed","indurated","tender","growing","ulcerated","fails treatment"]},
+ "ak":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["rough","scaly","gritty","papule","erythematous","sun-exposed","indurated","tender","growing","ulcerated"]},
+ "malignant melanoma":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","color variegation","diameter","evolution","ugly duckling","rapid growth","raised","firm","growing","bleeding","itch","ulceration"]},
+ "melanoma":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","color variegation","evolution","ugly duckling","rapid growth","raised","firm","bleeding","itch","ulceration"]},
+ "melanoma in situ":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["flat","pigmented","macule","patch","irregular border","irregular color","sun-damaged","enlarging","changing pigmentation"]},
+ "benign melanocytic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["symmetric","uniformly pigmented","well-defined","macule","papule","stable","change","symptomatic","ugly duckling"]},
+ "dysplastic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","ill-defined border","color variegation","fried-egg","evolution","atypical"]},
+ "seborrheic keratosis":{working:"Benign neoplasm (working)",icd:"",features:["well-demarcated","stuck-on","waxy","verrucous","brown","papule","plaque","inflamed","bleeding","rapidly changing"]},
+ "bullous pemphigoid":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense bullae","bullae","urticarial","erythematous plaques","pruritic","trunk","flexures"]},
+ "pemphigus":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["flaccid bullae","erosions","nikolsky","oral","mucosal","scaly crusted erosions"]},
+ "linear iga bullous dermatosis":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense vesicles","bullae","annular","cluster of jewels","string of pearls"]},
+ "cutaneous lupus":{working:"Interface / connective tissue disorder",icd:"",features:["erythematous","scaly plaques","follicular plugging","atrophy","dyspigmentation","scarring","photodistributed","annular","psoriasiform"]},
+ "lichen planus":{working:"Interface / lichenoid disorder",icd:"",features:["pruritic","polygonal","flat-topped","violaceous","papules","wickham striae","flexor wrists","ankles","oral"]},
+ "pyoderma gangrenosum":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["painful ulcer","violaceous","undermined border","rapidly enlarging","pathergy"]},
+ "sweet syndrome":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["tender","edematous","juicy","erythematous","papules","plaques","pseudovesicles"]},
+ "mycosis fungoides":{working:"Cutaneous lymphoproliferative, undetermined",icd:"",features:["persistent","treatment-refractory","scaly","erythematous","patches","plaques","sun-protected","bathing-trunk","poikiloderma","indurated","evolving"]},
+ "atopic dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural","refractory"]},
+ "eczema":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural"]},
+ "contact dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["sharply demarcated","eczematous","geometric","linear","contact site","chronic","refractory"]},
+ "psoriasis":{working:"Psoriasiform dermatitis, undetermined",icd:"",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "psoriasis vulgaris":{working:"Psoriasiform dermatitis, undetermined",icd:"",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "drug eruption":{working:"Interface dermatitis, undetermined",icd:"",features:["symmetric","blanching","erythematous","macules","papules","morbilliform","new drug"]},
+ "sjs":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
+ "ten":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
+ "leukocytoclastic vasculitis":{working:"Vasculopathic / vasculitic disorder, undetermined",icd:"",features:["palpable purpura","dependent","lower extremities","vesicles","ulcers","necrosis"]},
+ "granuloma annulare":{working:"Granulomatous dermatitis, undetermined",icd:"",features:["asymptomatic","skin-colored","erythematous","annular plaques","raised border","central clearing","dorsal hands","feet"]},
+ "erythema nodosum":{working:"Panniculitis, undetermined",icd:"",features:["tender","poorly demarcated","erythematous","subcutaneous nodules","anterior shins","no ulceration"]},
+ "dermatofibroma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperpigmented","dermal papule","nodule","leg","dimple sign","enlarging","atypical"]},
+ "pyogenic granuloma":{working:"Benign skin neoplasm (working)",icd:"",features:["rapidly growing","friable","red","pedunculated","papule","bleeds"]},
+ "hidradenitis suppurativa":{working:"Inflammatory nodular disorder",icd:"",features:["recurrent","painful","inflammatory nodules","abscesses","sinus tracts","scarring","intertriginous","axillae","groin","inframammary"]},
+ "infectious":{working:"Infectious process, undetermined",icd:"",features:["nonhealing","papule","plaque","ulcer","verrucous nodule","draining lesion","immunosuppressed","exposure"]}
+};
+function normalizeFeature(s){return norm(String(s||"")).replace(/[^a-z0-9% -]/g," ").replace(/\s+/g," ").trim()}
+function morphologyProfileFor(diff){const key=normalizeFeature(diff);if(BIOPSY_MORPHOLOGY_LIBRARY[key])return BIOPSY_MORPHOLOGY_LIBRARY[key];const hit=Object.keys(BIOPSY_MORPHOLOGY_LIBRARY).find(k=>key.includes(k)||k.includes(key));return hit?BIOPSY_MORPHOLOGY_LIBRARY[hit]:null}
+function correlateObjectiveToDifferential(){const objective=normalizeFeature($("biopsyClinicalDescription")?.value||"");const diffs=splitDiff($("biopsyDifferential")?.value||"");if(!$("biopsyMorphologyCorrelation"))return [];if(!objective&&!diffs.length){$("biopsyMorphologyCorrelation").textContent="Enter a lesion/rash description and differential to see correlation.";return []}const results=diffs.map(d=>{const ref=morphologyProfileFor(d);if(!ref)return {d,matched:[],reference:[],status:"No reference profile"};const matched=ref.features.filter(f=>objective.includes(normalizeFeature(f))||normalizeFeature(f).split(" ").some(tok=>tok.length>4&&objective.includes(tok)));return {d,matched:[...new Set(matched)],reference:ref.features,status:matched.length?"Documented support found":"No matching descriptor documented"}});$("biopsyMorphologyCorrelation").innerHTML=results.length?results.map(r=>`<div class="map-item"><b>${esc(r.d)}</b> · ${r.status}<br>${r.matched.length?`<span class="source">Documented supporting features:</span> ${r.matched.map(x=>`<span class="biopsy-chip biopsy-final">${esc(x)}</span>`).join("")}`:`<span class="source">PH did not find a reference descriptor in the documented exam. This does not exclude the differential.</span>`}<br>${r.reference.length?`<details><summary class="source">Reference morphology (not inserted into Objective)</summary>${r.reference.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join("")}</details>`:""}</div>`).join(""):"No differential diagnoses entered.";return results}
+function applyWorkingDxFromDifferential(){const diffs=splitDiff($("biopsyDifferential").value);const profiles=diffs.map(morphologyProfileFor).filter(Boolean);if(!profiles.length)return;const malignantOrMelanocytic=diffs.some(d=>/carcinoma|\bscc\b|\bbcc\b|melanoma|merkel|actinic keratosis|\bak\b/i.test(d));if(malignantOrMelanocytic){const isMel=diffs.some(d=>/melanoma|nevus|melanocytic/i.test(d));$("biopsyWorkingDx").value=isMel?"Melanocytic neoplasm of uncertain behavior|D48.5":"Neoplasm of uncertain behavior of skin|D48.5";$("biopsyWorkingIcd").value="D48.5";return}const first=profiles[0];const option=[...$("biopsyWorkingDx").options].find(o=>o.value.split("|")[0]===first.working);if(option){$("biopsyWorkingDx").value=option.value;setWorkingDx()}}
+
 const BIOPSY_KEY="ph0612-biopsy-episodes";
 let biopsyEpisodes=[];
 try{biopsyEpisodes=JSON.parse(localStorage.getItem(BIOPSY_KEY)||"[]")}catch{biopsyEpisodes=[]}
@@ -431,10 +618,10 @@ function detectBiopsyFromLoadedNote(){
  const siteLine=s.find(x=>/site[:\-]|left |right |forehead|cheek|nose|ear|scalp|neck|chest|back|arm|forearm|hand|leg|foot/i.test(x));if(siteLine&&!$("biopsySite").value)$("biopsySite").value=siteLine;
  if(/shave|tangential/i.test(biopsyLine))$("biopsyTechnique").value="Tangential / shave biopsy";else if(/punch/i.test(biopsyLine))$("biopsyTechnique").value="Punch biopsy";else if(/incisional/i.test(biopsyLine))$("biopsyTechnique").value="Incisional biopsy";else if(/excisional/i.test(biopsyLine))$("biopsyTechnique").value="Excisional / broad shave";
  const hasCancerDiff=/squamous cell carcinoma|basal cell carcinoma|melanoma|merkel cell carcinoma|carcinoma/i.test($("biopsyDifferential").value);if(hasCancerDiff){$("biopsyWorkingDx").value="Neoplasm of uncertain behavior of skin|D48.5";$("biopsyWorkingIcd").value="D48.5"}
- $("biopsyClinicalDescription").value=$("biopsyClinicalDescription").value||biopsyLine;renderBiopsyPreState();addAudit("Biopsy differential detected","Loaded note reviewed. Differential malignancy terms remain differential only before pathology finalization.")
+ $("biopsyClinicalDescription").value=$("biopsyClinicalDescription").value||biopsyLine;applyWorkingDxFromDifferential();correlateObjectiveToDifferential();renderBiopsyPreState();addAudit("Biopsy differential detected","Loaded note reviewed. Objective findings were correlated with differential reference morphology; differential malignancy terms remain differential only before pathology finalization.")
 }
-function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved.")}
-function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("biopsyDifferential").value);$("biopsyPreState").innerHTML=`<b>Working diagnosis:</b> ${esc(w.dx)}${$("biopsyWorkingIcd").value?` (${esc($("biopsyWorkingIcd").value)})`:""}<br><b>Differential:</b> ${diff.length?diff.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join(""):"None entered"}<br><b>Diagnostic lock:</b> <span class="biopsy-chip biopsy-locked">Differential terms are not active definitive diagnoses until pathology finalizes</span>`}
+function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),morphologyCorrelation:correlateObjectiveToDifferential(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved.")}
+function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("biopsyDifferential").value);$("biopsyPreState").innerHTML=`<b>Objective description:</b> ${esc($("biopsyClinicalDescription").value.trim()||"Not documented")}<br><b>Working diagnosis:</b> ${esc(w.dx)}${$("biopsyWorkingIcd").value?` (${esc($("biopsyWorkingIcd").value)})`:""}<br><b>Differential:</b> ${diff.length?diff.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join(""):"None entered"}<br><b>Diagnostic lock:</b> <span class="biopsy-chip biopsy-locked">Differential terms are not active definitive diagnoses until pathology finalizes</span>`;correlateObjectiveToDifferential()}
 function inferFinalDx(text){const low=norm(text),candidates=[["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/],["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/],["Melanoma in situ",/\bmelanoma in situ\b/],["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/],["Actinic keratosis",/\bactinic keratosis\b/],["Seborrheic keratosis",/\bseborrheic keratosis\b/],["Psoriasis vulgaris",/\bpsoriasis vulgaris\b|\bpsoriasis\b/],["Atopic dermatitis",/\batopic dermatitis\b|\beczema\b/],["Bullous pemphigoid",/\bbullous pemphigoid\b/],["Lichen planus",/\blichen planus\b/],["Granuloma annulare",/\bgranuloma annulare\b/],["Dermatofibroma",/\bdermatofibroma\b/]];for(const [name,re] of candidates)if(re.test(low))return name;return""}
 function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx)$("pathFinalDx").value=dx;$("pathStatus").value="Final"}
 function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}</div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved.")}
@@ -444,14 +631,15 @@ $("loadSyntheticBtn").onclick=()=>loadSource(SYNTHETIC,"Established_Patient_Enco
 $("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value=""};
 $("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name)}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
 $("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
-$("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
+$("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
 
 $("feedbackBtn").onclick=()=>$("feedbackModal").classList.remove("hidden");$("closeFeedback").onclick=()=>$("feedbackModal").classList.add("hidden");$("submitFeedback").onclick=async()=>{const comment=$("feedbackComment").value.trim();if(!comment)return;const record={id:"CO-"+Date.now(),reviewer:"Todd Pillen, PA-C/SA",type:"Reviewer feedback",module:"Alpha 0.6.12",priority:"Routine",comment,caseId:"Synthetic reviewer",url:location.href,appVersion:VERSION,environment:"Reviewer",createdAt:new Date().toISOString(),status:"New"};try{const res=await fetch("https://ph-feedback.tpillen104.workers.dev/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});if(!res.ok)throw new Error("Server "+res.status);$("feedbackStatus").className="notice ok";$("feedbackStatus").textContent="Feedback submitted.";$("feedbackComment").value=""}catch(e){$("feedbackStatus").className="notice warn";$("feedbackStatus").textContent="Feedback could not be submitted: "+e.message}};
 $("resetBtn").onclick=()=>{if(confirm("Reset the synthetic 0.6.12 reviewer session?"))location.reload()};
 
 $("biopsyEpisodeId").value=newBiopsyId();
 $("biopsyWorkingDx").onchange=()=>{setWorkingDx();renderBiopsyPreState()};
-$("biopsyDifferential").oninput=renderBiopsyPreState;
+$("biopsyDifferential").oninput=()=>{applyWorkingDxFromDifferential();renderBiopsyPreState();correlateObjectiveToDifferential()};
+$("biopsyClinicalDescription").oninput=()=>{renderBiopsyPreState();correlateObjectiveToDifferential()};
 $("detectBiopsyBtn").onclick=detectBiopsyFromLoadedNote;
 $("saveBiopsyBtn").onclick=saveBiopsyEpisode;
 $("extractFinalBtn").onclick=extractFinalDiagnosis;
