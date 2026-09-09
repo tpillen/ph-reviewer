@@ -215,7 +215,30 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <div class="panel"><h2>Treatment Prior Authorization</h2><div class="notice">Use the FDA/Payer Evidence Workbench in Document Intake to assemble requirement-by-requirement evidence. Denials add payer-specific candidate rules rather than modifying FDA baseline rules.</div><label>Authorization Summary<textarea id="treatmentSummary" style="min-height:350px"></textarea></label></div>
 </section>
 
-<section id="queue" class="view hidden"><div class="panel"><h2>Work Queue</h2><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div></section>
+<section id="queue" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.13.6 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
+  <div class="notice">Import several clinic documents at once below. Each is extracted, mapped, and scanned for missing PA evidence automatically — the results accumulate here as a persistent worklist instead of being overwritten by the next document, so a coordinator or provider can work through them and record each outcome.</div>
+ </div>
+ <div class="panel">
+  <h3>Batch Import Documents</h3>
+  <label>Select multiple clinic documents (referral letters, new-patient, established-patient notes) — .txt, .rtf, .docx, .pdf, .png, .jpg
+   <input id="batchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg">
+  </label>
+  <div id="batchProgress" class="notice" style="margin-top:8px;display:none"></div>
+ </div>
+ <div class="panel">
+  <div class="row between"><h3>Team</h3></div>
+  <div class="mini" style="margin-bottom:6px">Named individuals available for assignment, in addition to the fixed roles (Coordinator, Provider, Nursing, Unassigned).</div>
+  <div class="row"><input id="teamMemberInput" placeholder="Add a person's name..." style="flex:2"><button id="teamMemberAdd" class="btn secondary">Add</button></div>
+  <div id="teamMemberList" style="margin-top:8px"></div>
+ </div>
+ <div class="panel">
+  <div class="row between"><h3>Worklist</h3><div class="row"><span class="badge" id="queueCountBadge">0 items</span><button id="clearQueueBtn" class="btn secondary" style="min-height:36px;padding:7px 12px">Clear worklist</button></div></div>
+  <div id="workQueueTable"><div class="notice">No documents imported yet — use Batch Import above.</div></div>
+ </div>
+ <div class="panel"><h3>Current Single-Document Gaps</h3><div class="mini" style="margin-bottom:6px">From the document currently loaded in the Document Intake Lab (tab 0) — separate from the batch worklist above.</div><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div>
+</section>
 
 <section id="biopsy" class="view hidden">
  <div class="panel">
@@ -383,6 +406,14 @@ function addLearnedMapping(phrase,dxLabel,icd,source,stage){
  if(i>=0)learnedMap[i]=entry; else learnedMap.unshift(entry);
  saveLearnedMap(learnedMap);
  renderLearnedMapTable();updateLearnedBadge();
+ // 0.6.13.5: a taught label now joins the picker's own reference list, so the next person
+ // teaching a mapping sees it as a selectable option (and the type-ahead check catches it)
+ // instead of it only living invisibly in the background matching logic.
+ if(!icdReference.some(e=>norm(e[0])===norm(dxLabel))){
+   icdReference.push([dxLabel,icd||""]);
+   saveIcdReference(icdReference);
+   renderIcdReferenceTable();
+ }
  return {ok:true};
 }
 function bumpLearnedHit(phrase){const i=learnedMap.findIndex(e=>norm(e.phrase)===norm(phrase));if(i>=0){learnedMap[i].hits=(learnedMap[i].hits||0)+1;saveLearnedMap(learnedMap)}}
@@ -712,7 +743,137 @@ function buildPrevisit(){
  lines.push("Interval context: "+buildInterval());
  return lines.join("\n");
 }
-function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source first.");return}ingestState.raw=$("rawSource").value;ingestState.mappings=parseSemantic(ingestState.raw);renderConcepts();$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit();$("extractStatus").className="notice ok";const unmapped=ingestState.mappings.filter(x=>x.status==="Unmapped").length;$("extractStatus").textContent=`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`;$("sourcePane").textContent=ingestState.raw;addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.`);scanPAEvidence()}
+/* 0.6.13.4: detect likely multiple-document contamination in the loaded source — a common
+   testing mistake where a new note is pasted into the Original Source Document box without
+   clearing the previous one first. Counts recurring document-boundary markers; 2+ of the same
+   marker means the box almost certainly contains more than one encounter concatenated together. */
+function detectMultiDocumentContamination(t){
+ const markers=[
+  /NEW PATIENT DERMATOLOGY ENCOUNTER NOTE/gi,
+  /ESTABLISHED PATIENT DERMATOLOGY FOLLOW-UP NOTE/gi,
+  /Referral for Dermatology Evaluation/gi,
+  /Electronically signed by:/gi,
+  /\bDate of Service:/gi
+ ];
+ for(const re of markers){const hits=(t.match(re)||[]).length; if(hits>=2) return {contaminated:true,marker:re.source,count:hits}}
+ const assessHits=(t.match(/ASSESSMENT\s*\/\s*DIAGNOSIS/gi)||[]).length;
+ if(assessHits>=2) return {contaminated:true,marker:"ASSESSMENT / DIAGNOSIS",count:assessHits};
+ return {contaminated:false};
+}
+function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source first.");return}ingestState.raw=$("rawSource").value;ingestState.mappings=parseSemantic(ingestState.raw);renderConcepts();$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit();const unmapped=ingestState.mappings.filter(x=>x.status==="Unmapped").length;const contam=detectMultiDocumentContamination(ingestState.raw);if(contam.contaminated){$("extractStatus").className="notice warn";$("extractStatus").innerHTML=`<b>⚠ Possible multiple documents detected</b> — the source text contains ${contam.count} occurrences of "${esc(contam.marker)}", which usually means more than one encounter/letter got pasted or loaded into this box without clearing it first. Extraction assumes a single document; click <b>Clear</b> and reload just one source, or results below may mix content from different visits.<br>${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping.`:""}`}else{$("extractStatus").className="notice ok";$("extractStatus").textContent=`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`}$("sourcePane").textContent=ingestState.raw;addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.${contam.contaminated?" WARNING: possible multi-document contamination detected.":""}`);scanPAEvidence()}
+/* ================= 0.6.13.6: Batch import + persistent Work Queue ================= */
+const WORK_QUEUE_KEY="ph0613-work-queue", TEAM_KEY="ph0613-team-members";
+const FIXED_ROLES=["Coordinator","Provider","Nursing","Unassigned"];
+function loadWorkQueue(){try{return JSON.parse(localStorage.getItem(WORK_QUEUE_KEY)||"[]")}catch{return[]}}
+function saveWorkQueue(a){localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}
+let workQueueItems=loadWorkQueue();
+function loadTeamMembers(){try{return JSON.parse(localStorage.getItem(TEAM_KEY)||"[]")}catch{return[]}}
+function saveTeamMembers(a){localStorage.setItem(TEAM_KEY,JSON.stringify(a))}
+let teamMembers=loadTeamMembers();
+
+function detectPathwayFromText(rawText){
+ const src=norm(rawText);
+ if(/\bbiopsy\b|punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|pathology results|d48\.5|neoplasm of uncertain behavior/.test(src))return"biopsy";
+ return"medication";
+}
+function batchBiopsyRequirements(rows,rawText){
+ const get=c=>rows.find(r=>r.concept===c)?.value||"";
+ const site=get("Biopsy site")||get("Body location");
+ const req=[
+  {label:"Working diagnosis / diagnostic uncertainty",pattern:"D48.5|neoplasm of uncertain behavior|uncertain behavior"},
+  {label:"Lesion morphology supporting biopsy",pattern:"hyperkeratotic|erythematous|plaque|papule|nodule|crust|scale|indurat|ulcer|bleed|nonhealing|persistent|growing|changing|scaly"},
+  {label:"Anatomic site documented",pattern:site||"right hand|left hand|hand|forearm|arm|face|scalp|chest|back|leg|foot|nose|ear|neck"},
+  {label:"Clinical differential / concern documented",pattern:"squamous cell carcinoma|SCC|SCC in situ|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma|clinical concern|rule out|r/o|versus"},
+  {label:"Biopsy procedure documented or planned",pattern:"punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|biopsy performed|biopsy planned|biopsy of"},
+  {label:"Pathology / tissue diagnosis intent",pattern:"pathology results|pathology pending|histopathology|tissue diagnosis|definitive diagnosis|guide definitive therapy"}
+ ];
+ const reqRows=req.map(r=>{const e=findEvidence(r.pattern,rawText);return{...r,status:e?"Found":"Missing",evidence:e}});
+ return{serviceLabel:"Diagnostic skin biopsy / pathology",rows:reqRows};
+}
+function batchMedicationRequirements(rawText){
+ const src=norm(rawText);
+ let matched=null;
+ for(const d of PA_DRUGS){if(src.includes(norm(d.name.split("(")[0].trim()))){matched={drug:d,dx:d.dx[0]};break}}
+ if(!matched){for(const d of PA_DRUGS){for(const dx of d.dx){if(src.includes(norm(dx.name))){matched={drug:d,dx};break}}if(matched)break}}
+ if(!matched)return null;
+ const reqRows=matched.dx.req.map(r=>{const e=findEvidence(r[1],rawText);return{label:r[0],status:e?"Found":"Missing",evidence:e}});
+ return{serviceLabel:matched.drug.name+" — "+matched.dx.name,rows:reqRows};
+}
+function runBatchDocument(filename,rawText){
+ const rows=parseSemantic(rawText);
+ const dxRow=rows.find(r=>r.concept==="Diagnosis");
+ const icdRow=rows.find(r=>r.concept==="ICD-10");
+ const pathway=detectPathwayFromText(rawText);
+ let serviceLabel="",missing=[],supported=[];
+ if(pathway==="biopsy"){
+   const p=batchBiopsyRequirements(rows,rawText);
+   serviceLabel=p.serviceLabel;missing=p.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=p.rows.filter(r=>r.status==="Found").map(r=>r.label);
+ }else{
+   const m=batchMedicationRequirements(rawText);
+   if(m){serviceLabel=m.serviceLabel;missing=m.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=m.rows.filter(r=>r.status==="Found").map(r=>r.label)}
+   else{serviceLabel="Medication prior authorization (specific drug not auto-detected — needs manual review)"}
+ }
+ return{
+  id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000),
+  filename,importedAt:new Date().toISOString(),
+  diagnosis:dxRow?dxRow.value:"(no diagnosis detected — needs review)",
+  diagnosisStage:dxRow?dxRow.stage:"",
+  icd:icdRow?icdRow.value:"",
+  pathway,serviceLabel,missing,supported,
+  assignedType:"role",assignedTo:"Unassigned",
+  status:"Pending",
+  history:[{at:new Date().toISOString(),note:"Imported via batch and scanned for PA evidence."}]
+ };
+}
+function renderTeamMembers(){
+ const box=$("teamMemberList");if(!box)return;
+ box.innerHTML=teamMembers.length?teamMembers.map((n,i)=>`<span class="pill">${esc(n)} <button class="rmTeam" data-i="${i}" style="border:0;background:transparent;cursor:pointer;color:var(--bad);font-weight:700">×</button></span>`).join(" "):'<div class="mini">No named individuals added yet — roles (Coordinator, Provider, Nursing) are always available.</div>';
+ document.querySelectorAll(".rmTeam").forEach(b=>b.onclick=()=>{teamMembers.splice(Number(b.dataset.i),1);saveTeamMembers(teamMembers);renderTeamMembers();renderWorkQueueTable()});
+}
+function assignOptionsHtml(selectedType,selectedValue){
+ const roleOpts=FIXED_ROLES.map(r=>`<option value="role::${esc(r)}"${selectedType==="role"&&selectedValue===r?" selected":""}>${esc(r)} (role)</option>`).join("");
+ const personOpts=teamMembers.map(n=>`<option value="person::${esc(n)}"${selectedType==="person"&&selectedValue===n?" selected":""}>${esc(n)}</option>`).join("");
+ return roleOpts+personOpts;
+}
+function renderWorkQueueTable(){
+ const box=$("workQueueTable");if(!box)return;
+ $("queueCountBadge").textContent=workQueueItems.length+" item"+(workQueueItems.length===1?"":"s");
+ if(!workQueueItems.length){box.innerHTML='<div class="notice">No documents imported yet — use Batch Import above.</div>';return}
+ box.innerHTML='<table><thead><tr><th>Document</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
+  workQueueItems.map((it,i)=>`<tr>
+   <td>${esc(it.filename)}<div class="mini">${new Date(it.importedAt).toLocaleString()}</div></td>
+   <td>${esc(it.diagnosis)}${it.icd?` (${esc(it.icd)})`:""}${it.diagnosisStage?`<div class="mini"><span class="pill">${esc(it.diagnosisStage)}</span></div>`:""}</td>
+   <td>${esc(it.serviceLabel)}</td>
+   <td>${it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>'}</td>
+   <td><select class="wqAssign" data-i="${i}">${assignOptionsHtml(it.assignedType,it.assignedTo)}</select></td>
+   <td><select class="wqStatus" data-i="${i}">${["Pending","Submitted","Approved","Denied","Completed"].map(s=>`<option value="${s}"${it.status===s?" selected":""}>${s}</option>`).join("")}</select></td>
+   <td><button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></td>
+  </tr>`).join("")+'</tbody></table>';
+ document.querySelectorAll(".wqAssign").forEach(sel=>sel.onchange=()=>{const [type,value]=sel.value.split("::");const it=workQueueItems[Number(sel.dataset.i)];it.assignedType=type;it.assignedTo=value;it.history.push({at:new Date().toISOString(),note:`Assigned to ${value} (${type}).`});saveWorkQueue(workQueueItems);addAudit("Work queue item assigned",`${it.filename} → ${value}`)});
+ document.querySelectorAll(".wqStatus").forEach(sel=>sel.onchange=()=>{const it=workQueueItems[Number(sel.dataset.i)];const prev=it.status;it.status=sel.value;it.history.push({at:new Date().toISOString(),note:`Status changed ${prev} → ${sel.value}.`});saveWorkQueue(workQueueItems);addAudit("Work queue status updated",`${it.filename}: ${prev} → ${sel.value}`)});
+ document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue item removed",it.filename)});
+}
+async function handleBatchImport(fileList){
+ const files=[...fileList];
+ if(!files.length)return;
+ const prog=$("batchProgress");prog.style.display="";prog.className="notice";
+ let done=0,failed=[];
+ for(const file of files){
+   prog.textContent=`Processing ${done+1} of ${files.length}: ${file.name}…`;
+   try{
+     const text=await extractFile(file);
+     const item=runBatchDocument(file.name,text);
+     workQueueItems.unshift(item);
+   }catch(err){failed.push(file.name+" ("+err.message+")")}
+   done++;
+ }
+ saveWorkQueue(workQueueItems);
+ renderWorkQueueTable();
+ prog.className=failed.length?"notice warn":"notice ok";
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added to the worklist.`+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
+}
+
 function acceptMappings(){
  if(!ingestState.mappings.length){alert("Run Extract, Map & Compare first.");return}
  const rows=ingestState.mappings;
@@ -910,6 +1071,10 @@ $("extractFinalBtn").onclick=extractFinalDiagnosis;
 $("finalizePathBtn").onclick=finalizePathology;
 $("learnManualStage").innerHTML=DIAGNOSIS_STAGES.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
 $("learnManualAdd").onclick=()=>{const p=$("learnManualPhrase").value,d=$("learnManualDx").value,i=$("learnManualIcd").value,st=$("learnManualStage").value;const r=addLearnedMapping(p,d,i,"manual",st);if(r.ok){$("learnManualPhrase").value="";$("learnManualDx").value="";$("learnManualIcd").value="";addAudit("Learned mapping added manually",`"${p}" → ${d}${i?` (${i})`:""} [${st}]`)}else if(r.reason==="generic"){alert(`"${p}" is too generic (a bare body site or common word) to save — it would likely misfire on unrelated documents. Please use a more specific phrase.`)}};
+$("batchFileInput").onchange=(e)=>{handleBatchImport(e.target.files);e.target.value=""};
+$("teamMemberAdd").onclick=()=>{const n=$("teamMemberInput").value.trim();if(!n)return;if(!teamMembers.some(x=>norm(x)===norm(n))){teamMembers.push(n);saveTeamMembers(teamMembers);renderTeamMembers();renderWorkQueueTable();addAudit("Team member added",n)}$("teamMemberInput").value=""};
+$("clearQueueBtn").onclick=()=>{if(confirm("Clear the entire batch worklist? This cannot be undone.")){workQueueItems=[];saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue cleared","Manual clear from Work Queue tab.")}};
+renderTeamMembers();renderWorkQueueTable();
 renderBiopsyPreState();renderBiopsyHistory();renderLearnedMapTable();renderIcdReferenceTable();updateLearnedBadge();
 renderAudit();addAudit("PH Alpha 0.6.13 initialized","Consolidated build loaded with learned diagnosis/lesion mapping (right-click to teach), expanded dx pattern set (lipoma, epidermal inclusion cyst, verruca vulgaris), referral-letter section detection, and biopsy differential/pathology reconciliation.");
 </script>
