@@ -100,7 +100,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
    <div class="card"><div class="mini">Source preservation</div><div id="preserved" class="kpi">Not loaded</div><div class="source">Filename, import time, SHA-256 fingerprint, normalized text, and source evidence are retained in the active browser session.</div></div>
   </div>
   <label>Original Source Document<textarea id="rawSource" class="raw-source"></textarea></label>
-  <div class="row"><button id="extractBtn" class="btn primary">Extract, Map & Compare</button><button id="acceptBtn" class="btn success">Accept Auto-Mapped Clinical Fields</button></div>
+  <div id="linkedQueueNotice" class="notice hidden" style="margin-bottom:10px"></div>
+  <div class="row"><button id="extractBtn" class="btn primary">Extract, Map & Compare</button><button id="acceptBtn" class="btn success">Accept Auto-Mapped Clinical Fields</button><button id="syncQueueBtn" class="btn secondary">Update Work Queue Item</button></div>
  </div>
 
  <div class="panel">
@@ -321,7 +322,7 @@ const VERSION="0.6.13", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
-let ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false};
+let ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null};
 let audit=[];
 
 const SYNTHETIC=`ESTABLISHED PATIENT DERMATOLOGY FOLLOW-UP
@@ -815,6 +816,7 @@ function runBatchDocument(filename,rawText){
  }
  return{
   id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000),
+  rawText,
   filename,importedAt:new Date().toISOString(),
   diagnosis:dxRow?dxRow.value:"(no diagnosis detected — needs review)",
   diagnosisStage:dxRow?dxRow.stage:"",
@@ -847,11 +849,12 @@ function renderWorkQueueTable(){
    <td>${it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>'}</td>
    <td><select class="wqAssign" data-i="${i}">${assignOptionsHtml(it.assignedType,it.assignedTo)}</select></td>
    <td><select class="wqStatus" data-i="${i}">${["Pending","Submitted","Approved","Denied","Completed"].map(s=>`<option value="${s}"${it.status===s?" selected":""}>${s}</option>`).join("")}</select></td>
-   <td><button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></td>
+   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></div></td>
   </tr>`).join("")+'</tbody></table>';
  document.querySelectorAll(".wqAssign").forEach(sel=>sel.onchange=()=>{const [type,value]=sel.value.split("::");const it=workQueueItems[Number(sel.dataset.i)];it.assignedType=type;it.assignedTo=value;it.history.push({at:new Date().toISOString(),note:`Assigned to ${value} (${type}).`});saveWorkQueue(workQueueItems);addAudit("Work queue item assigned",`${it.filename} → ${value}`)});
  document.querySelectorAll(".wqStatus").forEach(sel=>sel.onchange=()=>{const it=workQueueItems[Number(sel.dataset.i)];const prev=it.status;it.status=sel.value;it.history.push({at:new Date().toISOString(),note:`Status changed ${prev} → ${sel.value}.`});saveWorkQueue(workQueueItems);addAudit("Work queue status updated",`${it.filename}: ${prev} → ${sel.value}`)});
  document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue item removed",it.filename)});
+ document.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
 }
 async function handleBatchImport(fileList){
  const files=[...fileList];
@@ -872,6 +875,35 @@ async function handleBatchImport(fileList){
  prog.className=failed.length?"notice warn":"notice ok";
  prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added to the worklist.`+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
+}
+/* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
+   item loads its original text back into the interactive editor (right-click mapping, biopsy
+   module, everything already built), and a linked "sync back" updates the worklist row with
+   whatever was corrected, without losing the assignment/status/history already recorded. */
+function openWorkQueueItem(i){
+ const it=workQueueItems[i];
+ if(!it.rawText){alert("Original document text wasn't stored for this item (it may have been imported before this feature was added) — nothing to reopen.");return}
+ loadSource(it.rawText,it.filename).then(()=>{
+   ingestState.linkedQueueId=it.id;
+   extractAndMap();
+   showView("documentIntake");
+   $("linkedQueueNotice").classList.remove("hidden");
+   $("linkedQueueNotice").innerHTML=`Opened from Work Queue: <b>${esc(it.filename)}</b>. Make corrections below, then click <b>Update Work Queue Item</b> to save them back to the worklist.`;
+   addAudit("Opened from Work Queue",it.filename);
+ });
+}
+function syncCurrentDocumentToQueue(){
+ if(!ingestState.linkedQueueId){alert("This document wasn't opened from the Work Queue, so there's no worklist item to update. Use the Work Queue tab's Batch Import, or click Open on an existing item, to link one.");return}
+ const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);
+ if(!it){alert("The linked Work Queue item could not be found (it may have been removed).");return}
+ const rescanned=runBatchDocument(it.filename,ingestState.raw);
+ Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported});
+ it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document Intake Lab."});
+ saveWorkQueue(workQueueItems);
+ renderWorkQueueTable();
+ $("linkedQueueNotice").className="notice ok";
+ $("linkedQueueNotice").innerHTML=`Work Queue item for <b>${esc(it.filename)}</b> updated — diagnosis, pathway, and missing-evidence list refreshed. Assignment and status were kept as-is.`;
+ addAudit("Work queue item synced",it.filename);
 }
 
 function acceptMappings(){
@@ -1053,9 +1085,9 @@ function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
 $("loadSyntheticBtn").onclick=()=>loadSource(SYNTHETIC,"Established_Patient_Encounter_acne_synthetic.txt");
-$("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value=""};
+$("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
 $("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name)}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
-$("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
+$("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("syncQueueBtn").onclick=syncCurrentDocumentToQueue;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
 $("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
 
 $("feedbackBtn").onclick=()=>$("feedbackModal").classList.remove("hidden");$("closeFeedback").onclick=()=>$("feedbackModal").classList.add("hidden");$("submitFeedback").onclick=async()=>{const comment=$("feedbackComment").value.trim();if(!comment)return;const record={id:"CO-"+Date.now(),reviewer:"Todd Pillen, PA-C/SA",type:"Reviewer feedback",module:"Alpha 0.6.13",priority:"Routine",comment,caseId:"Synthetic reviewer",url:location.href,appVersion:VERSION,environment:"Reviewer",createdAt:new Date().toISOString(),status:"New"};try{const res=await fetch("https://ph-feedback.tpillen104.workers.dev/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});if(!res.ok)throw new Error("Server "+res.status);$("feedbackStatus").className="notice ok";$("feedbackStatus").textContent="Feedback submitted.";$("feedbackComment").value=""}catch(e){$("feedbackStatus").className="notice warn";$("feedbackStatus").textContent="Feedback could not be submitted: "+e.message}};
