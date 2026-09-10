@@ -266,7 +266,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
     <option value="Infectious process, undetermined|">Infectious process, undetermined</option>
    </select></label>
    <label>Working ICD-10<input id="biopsyWorkingIcd" value="D48.5"></label>
-   <label>Biopsy technique<select id="biopsyTechnique"><option value="">— select —</option><option>Tangential / shave biopsy</option><option>Punch biopsy</option><option>Incisional biopsy</option><option>Excisional / broad shave</option></select></label>
+   <label>Biopsy technique<select id="biopsyTechnique"><option value="">— select —</option><option>Tangential / shave biopsy</option><option>Punch biopsy</option><option>Incisional biopsy</option><option>Excisional / broad shave</option></select><span id="biopsyCptHint" class="mini" style="display:block;margin-top:4px"></span></label>
   </div>
   <label>Clinical lesion / rash description<textarea id="biopsyClinicalDescription" placeholder="Document only findings actually observed or present in the source note."></textarea></label>
   <div class="notice"><b>Objective ↔ Differential correlation:</b> PH compares the documented physical exam against the reference morphology for each differential. Reference descriptors never auto-populate the legal Objective exam; they are used only to organize documented findings and identify possible support or gaps.</div>
@@ -364,14 +364,33 @@ const PA_DRUGS=[
 ];
 
 /* ---- 0.6.13: default ICD-10 dermatology reference list, seeds the right-click picker and can be extended in the Mapping Memory tab ---- */
+/* 0.6.13.8: replaced with the clinically reviewed, frequency-trimmed reference (approved
+   09/2026) — high-frequency general-practice diagnoses (~85% of visits per NAMCS/JAMA Derm
+   referral data) plus lower-frequency diagnoses kept specifically for their PA/biopsy-workflow
+   relevance (skin cancer differentials, biologic-eligible diagnoses) rather than raw frequency
+   alone. BCC/SCC/melanoma/melanoma-in-situ/SCC-in-situ intentionally carry a descriptive
+   site-specific placeholder rather than one fixed code, since ICD-10-CM requires a site (and
+   sometimes laterality) subcode for these selected at the time of coding — do not hardcode a
+   single C43/C44/D03/D04 code for these five. Anything not on this list is added by teaching
+   PH via the right-click mapping menu; it then joins this list automatically (see
+   addLearnedMapping) rather than needing another bulk import.
+*/
 const DEFAULT_ICD_REFERENCE=[
- ["Acne vulgaris","L70.0"],["Atopic dermatitis","L20.9"],["Plaque psoriasis","L40.0"],["Hidradenitis suppurativa","L73.2"],
- ["Neoplasm of uncertain behavior of skin","D48.5"],["Melanocytic neoplasm of uncertain behavior","D48.5"],
- ["Lipoma","D17.9"],["Epidermal inclusion cyst","L72.0"],["Verruca vulgaris (common warts)","B07.9"],
- ["Basal cell carcinoma","C44.91"],["Squamous cell carcinoma","C44.92"],["Squamous cell carcinoma in situ (Bowen disease)","D04.9"],
- ["Malignant melanoma","C43.9"],["Actinic keratosis","L57.0"],["Seborrheic keratosis","L82.1"],
- ["Contact dermatitis","L25.9"],["Rosacea","L71.9"],["Tinea corporis","B35.4"],["Onychomycosis","B35.1"],
- ["Alopecia areata","L63.9"],["Vitiligo","L80"],["Urticaria","L50.9"],["Cellulitis","L03.90"],["Molluscum contagiosum","B08.1"]
+ ["Acne vulgaris","L70.0"],["Contact dermatitis (allergic/irritant/unspecified)","L25.9"],
+ ["Atopic dermatitis","L20.9"],["Seborrheic dermatitis","L21.9"],["Plaque psoriasis","L40.0"],
+ ["Actinic keratosis","L57.0"],["Benign melanocytic nevus","D22.9 (site-specific)"],
+ ["Seborrheic keratosis","L82.1"],["Epidermal inclusion cyst","L72.0"],
+ ["Verruca vulgaris (common warts)","B07.9"],["Lipoma","D17.9"],["Rosacea","L71.9"],
+ ["Xerosis cutis","L85.3"],["Tinea corporis","B35.4"],["Non-scarring alopecia","L65.9"],
+ ["Urticaria","L50.9"],["Vitiligo","L80"],["Cellulitis","L03.90"],["Impetigo","L01.00"],
+ ["Hidradenitis suppurativa","L73.2"],
+ ["Neoplasm of uncertain behavior of skin","D48.5"],
+ ["Basal cell carcinoma (confirmed)","C44.- (site-specific — select exact code at coding time)"],
+ ["Squamous cell carcinoma, invasive (confirmed)","C44.- (site-specific — select exact code at coding time)"],
+ ["Squamous cell carcinoma in situ (Bowen disease)","D04.- (site-specific — select exact code at coding time)"],
+ ["Malignant melanoma (confirmed)","C43.- (site-specific — select exact code at coding time)"],
+ ["Melanoma in situ","D03.- (site-specific — select exact code at coding time)"],
+ ["Melanocytic neoplasm of uncertain behavior","D48.5"]
 ];
 function loadIcdReference(){try{const stored=JSON.parse(localStorage.getItem("ph0613-icd-reference")||"null");return stored&&stored.length?stored:DEFAULT_ICD_REFERENCE.slice()}catch{return DEFAULT_ICD_REFERENCE.slice()}}
 function saveIcdReference(a){localStorage.setItem("ph0613-icd-reference",JSON.stringify(a))}
@@ -1030,7 +1049,7 @@ const BIOPSY_MORPHOLOGY_LIBRARY={
  "melanoma in situ":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["flat","pigmented","macule","patch","irregular border","irregular color","sun-damaged","enlarging","changing pigmentation"]},
  "benign melanocytic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["symmetric","uniformly pigmented","well-defined","macule","papule","stable","change","symptomatic","ugly duckling"]},
  "dysplastic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","ill-defined border","color variegation","fried-egg","evolution","atypical"]},
- "seborrheic keratosis":{working:"Benign neoplasm (working)",icd:"",features:["well-demarcated","stuck-on","waxy","verrucous","brown","papule","plaque","inflamed","bleeding","rapidly changing"]},
+ "seborrheic keratosis":{working:"Benign neoplasm (working)",icd:"L82.1",features:["well-demarcated","stuck-on","waxy","verrucous","brown","papule","plaque","inflamed","bleeding","rapidly changing"]},
  "bullous pemphigoid":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense bullae","bullae","urticarial","erythematous plaques","pruritic","trunk","flexures"]},
  "pemphigus":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["flaccid bullae","erosions","nikolsky","oral","mucosal","scaly crusted erosions"]},
  "linear iga bullous dermatosis":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense vesicles","bullae","annular","cluster of jewels","string of pearls"]},
@@ -1039,11 +1058,11 @@ const BIOPSY_MORPHOLOGY_LIBRARY={
  "pyoderma gangrenosum":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["painful ulcer","violaceous","undermined border","rapidly enlarging","pathergy"]},
  "sweet syndrome":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["tender","edematous","juicy","erythematous","papules","plaques","pseudovesicles"]},
  "mycosis fungoides":{working:"Cutaneous lymphoproliferative, undetermined",icd:"",features:["persistent","treatment-refractory","scaly","erythematous","patches","plaques","sun-protected","bathing-trunk","poikiloderma","indurated","evolving"]},
- "atopic dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural","refractory"]},
- "eczema":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural"]},
+ "atopic dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"L20.9",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural","refractory"]},
+ "eczema":{working:"Spongiotic dermatitis, undetermined",icd:"L20.9",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural"]},
  "contact dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["sharply demarcated","eczematous","geometric","linear","contact site","chronic","refractory"]},
- "psoriasis":{working:"Psoriasiform dermatitis, undetermined",icd:"",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
- "psoriasis vulgaris":{working:"Psoriasiform dermatitis, undetermined",icd:"",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "psoriasis":{working:"Psoriasiform dermatitis, undetermined",icd:"L40.0",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "psoriasis vulgaris":{working:"Psoriasiform dermatitis, undetermined",icd:"L40.0",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
  "drug eruption":{working:"Interface dermatitis, undetermined",icd:"",features:["symmetric","blanching","erythematous","macules","papules","morbilliform","new drug"]},
  "sjs":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
  "ten":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
@@ -1052,7 +1071,7 @@ const BIOPSY_MORPHOLOGY_LIBRARY={
  "erythema nodosum":{working:"Panniculitis, undetermined",icd:"",features:["tender","poorly demarcated","erythematous","subcutaneous nodules","anterior shins","no ulceration"]},
  "dermatofibroma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperpigmented","dermal papule","nodule","leg","dimple sign","enlarging","atypical"]},
  "pyogenic granuloma":{working:"Benign skin neoplasm (working)",icd:"",features:["rapidly growing","friable","red","pedunculated","papule","bleeds"]},
- "hidradenitis suppurativa":{working:"Inflammatory nodular disorder",icd:"",features:["recurrent","painful","inflammatory nodules","abscesses","sinus tracts","scarring","intertriginous","axillae","groin","inframammary"]},
+ "hidradenitis suppurativa":{working:"Inflammatory nodular disorder",icd:"L73.2",features:["recurrent","painful","inflammatory nodules","abscesses","sinus tracts","scarring","intertriginous","axillae","groin","inframammary"]},
  "infectious":{working:"Infectious process, undetermined",icd:"",features:["nonhealing","papule","plaque","ulcer","verrucous nodule","draining lesion","immunosuppressed","exposure"]}
 };
 function normalizeFeature(s){return norm(String(s||"")).replace(/[^a-z0-9% -]/g," ").replace(/\s+/g," ").trim()}
@@ -1079,8 +1098,31 @@ function detectBiopsyFromLoadedNote(){
 }
 function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),morphologyCorrelation:correlateObjectiveToDifferential(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved.")}
 function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("biopsyDifferential").value);$("biopsyPreState").innerHTML=`<b>Objective description:</b> ${esc($("biopsyClinicalDescription").value.trim()||"Not documented")}<br><b>Working diagnosis:</b> ${esc(w.dx)}${$("biopsyWorkingIcd").value?` (${esc($("biopsyWorkingIcd").value)})`:""}<br><b>Differential:</b> ${diff.length?diff.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join(""):"None entered"}<br><b>Diagnostic lock:</b> <span class="biopsy-chip biopsy-locked">Differential terms are not active definitive diagnoses until pathology finalizes</span>`;correlateObjectiveToDifferential()}
-function inferFinalDx(text){const low=norm(text),candidates=[["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/],["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/],["Melanoma in situ",/\bmelanoma in situ\b/],["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/],["Actinic keratosis",/\bactinic keratosis\b/],["Seborrheic keratosis",/\bseborrheic keratosis\b/],["Psoriasis vulgaris",/\bpsoriasis vulgaris\b|\bpsoriasis\b/],["Atopic dermatitis",/\batopic dermatitis\b|\beczema\b/],["Bullous pemphigoid",/\bbullous pemphigoid\b/],["Lichen planus",/\blichen planus\b/],["Granuloma annulare",/\bgranuloma annulare\b/],["Dermatofibroma",/\bdermatofibroma\b/]];for(const [name,re] of candidates)if(re.test(low))return name;return""}
-function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx)$("pathFinalDx").value=dx;$("pathStatus").value="Final"}
+/* 0.6.13.8: now returns {name, icd} instead of a bare name string, so a recognized pathology
+   diagnosis auto-fills its ICD-10 code too — reducing hand-entry to just the cases genuinely not
+   yet taught, per the reviewed coding-integrity table. Skin cancers get a site-specific
+   placeholder rather than a guessed fixed code, consistent with that same review. */
+function inferFinalDx(text){
+ const low=norm(text);
+ const candidates=[
+  ["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/,"C44.- (site-specific — select exact code)"],
+  ["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/,"C44.- (site-specific — select exact code)"],
+  ["Squamous cell carcinoma in situ (Bowen disease)",/\bscc in situ\b|\bbowen('?s)? disease\b/,"D04.- (site-specific — select exact code)"],
+  ["Melanoma in situ",/\bmelanoma in situ\b/,"D03.- (site-specific — select exact code)"],
+  ["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/,"C43.- (site-specific — select exact code)"],
+  ["Actinic keratosis",/\bactinic keratosis\b/,"L57.0"],
+  ["Seborrheic keratosis",/\bseborrheic keratosis\b/,"L82.1"],
+  ["Psoriasis vulgaris",/\bpsoriasis vulgaris\b|\bpsoriasis\b/,"L40.0"],
+  ["Atopic dermatitis",/\batopic dermatitis\b|\beczema\b/,"L20.9"],
+  ["Bullous pemphigoid",/\bbullous pemphigoid\b/,""],
+  ["Lichen planus",/\blichen planus\b/,""],
+  ["Granuloma annulare",/\bgranuloma annulare\b/,""],
+  ["Dermatofibroma",/\bdermatofibroma\b/,""]
+ ];
+ for(const [name,re,icd] of candidates) if(re.test(low)) return {name,icd};
+ return {name:"",icd:""};
+}
+function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}$("pathStatus").value="Final"}
 function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}</div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved.")}
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
@@ -1094,6 +1136,10 @@ $("feedbackBtn").onclick=()=>$("feedbackModal").classList.remove("hidden");$("cl
 $("resetBtn").onclick=()=>{if(confirm("Reset the synthetic 0.6.13 reviewer session?"))location.reload()};
 
 $("biopsyEpisodeId").value=newBiopsyId();
+/* 0.6.13.8: informational CPT hint only — technique-based biopsy codes are stable regardless of
+   diagnosis, per the reviewed CPT reference. Excision is size-dependent so no single code is shown. */
+const BIOPSY_CPT_HINT={"Tangential / shave biopsy":"CPT 11102 (tangential/shave biopsy, single lesion)","Punch biopsy":"CPT 11104 (punch biopsy, single lesion)","Incisional biopsy":"CPT 11106 (incisional biopsy, single lesion)","Excisional / broad shave":"Size-dependent — see excision CPT reference (11400–11406 benign / 11600–11606 malignant)"};
+$("biopsyTechnique").onchange=(e)=>{$("biopsyCptHint").textContent=BIOPSY_CPT_HINT[e.target.value]||""};
 $("biopsyWorkingDx").onchange=()=>{setWorkingDx();renderBiopsyPreState()};
 $("biopsyDifferential").oninput=()=>{applyWorkingDxFromDifferential();renderBiopsyPreState();correlateObjectiveToDifferential()};
 $("biopsyClinicalDescription").oninput=()=>{renderBiopsyPreState();correlateObjectiveToDifferential()};
