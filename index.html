@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.17</title>
+<title>PH Alpha 0.6.13.18</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.17</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.18</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -318,7 +318,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.17", $=id=>document.getElementById(id);
+const VERSION="0.6.13.18", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -857,7 +857,8 @@ function classifyDocumentRelevance(t){
   [/\bcopay\b|\bpolicy number\b|\bgroup number\b|\bsubscriber\b|explanation of benefits|\beob\b/,"Insurance/EOB language"],
   [/driver'?s licen[cs]e|\bpassport\b|date of issue/,"Identity document language"],
   [/\bclaim number\b|\bpayment\b.{0,15}(due|received)/,"Claims/payment language"],
-  [/\bLLC\b|\bP\.?O\.? Box\b/,"Business/vendor correspondence marker"]
+  [/\bLLC\b|\bP\.?O\.? Box\b/,"Business/vendor correspondence marker"],
+  [/curriculum vitae|\bcv\b.{0,10}(summary|update)|\bpublications?\b.{0,15}(list|peer-reviewed)|peer-reviewed|\bet al\.?\b|\bdoi\s*:|h-index|i10-index|\bjournal of\b/,"Academic/bibliographic document marker"]
  ];
  const clinicalHits=clinicalSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
  const adminHits=adminSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
@@ -932,6 +933,7 @@ function runBatchDocument(filename,rawText){
  const dxRow=rows.find(r=>r.concept==="Diagnosis");
  const icdRow=rows.find(r=>r.concept==="ICD-10");
  const pathway=detectPathwayFromText(rawText);
+ const relevance=classifyDocumentRelevance(rawText);
  let serviceLabel="",missing=[],supported=[];
  if(pathway==="biopsy"){
    const p=batchBiopsyRequirements(rows,rawText);
@@ -949,6 +951,7 @@ function runBatchDocument(filename,rawText){
   diagnosisStage:dxRow?dxRow.stage:"",
   icd:icdRow?icdRow.value:"",
   pathway,serviceLabel,missing,supported,
+  relevanceVerdict:relevance.verdict,relevanceHits:{clinical:relevance.clinicalHits,admin:relevance.adminHits},
   assignedType:"role",assignedTo:"Unassigned",
   status:"Pending",
   history:[{at:new Date().toISOString(),note:"Imported via batch and scanned for PA evidence."}]
@@ -964,23 +967,32 @@ function assignOptionsHtml(selectedType,selectedValue){
  const personOpts=teamMembers.map(n=>`<option value="person::${esc(n)}"${selectedType==="person"&&selectedValue===n?" selected":""}>${esc(n)}</option>`).join("");
  return roleOpts+personOpts;
 }
+function relevanceBadge(verdict){
+ const styles={"clinical":"background:#dcfce7;color:#166534","non-clinical":"background:#fee2e2;color:#991b1b","mixed":"background:#fef3c7;color:#92400e","undetermined":"background:#fef3c7;color:#92400e"};
+ const labels={"clinical":"Clinical","non-clinical":"Non-clinical","mixed":"Mixed signals","undetermined":"Undetermined"};
+ return `<span class="pill" style="${styles[verdict]||''}">${esc(labels[verdict]||verdict)}</span>`;
+}
 function renderWorkQueueTable(){
  const box=$("workQueueTable");if(!box)return;
  $("queueCountBadge").textContent=workQueueItems.length+" item"+(workQueueItems.length===1?"":"s");
  if(!workQueueItems.length){box.innerHTML='<div class="notice">No documents imported yet — use Batch Import above.</div>';return}
- box.innerHTML='<table><thead><tr><th>Document</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
-  workQueueItems.map((it,i)=>`<tr>
+ box.innerHTML='<table><thead><tr><th>Document</th><th>Relevance</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
+  workQueueItems.map((it,i)=>{
+   const flagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";
+   const purgeBtn=flagged?`<button class="btn danger wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Purge</button>`:`<button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button>`;
+   return `<tr${flagged?' style="background:#fffbeb"':""}>
    <td>${esc(it.filename)}<div class="mini">${new Date(it.importedAt).toLocaleString()}</div></td>
+   <td>${it.relevanceVerdict?relevanceBadge(it.relevanceVerdict):'<span class="mini">—</span>'}</td>
    <td>${esc(it.diagnosis)}${it.icd?` (${esc(it.icd)})`:""}${it.diagnosisStage?`<div class="mini"><span class="pill">${esc(it.diagnosisStage)}</span></div>`:""}</td>
    <td>${esc(it.serviceLabel)}</td>
    <td>${it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>'}</td>
    <td><select class="wqAssign" data-i="${i}">${assignOptionsHtml(it.assignedType,it.assignedTo)}</select></td>
    <td><select class="wqStatus" data-i="${i}">${["Pending","Submitted","Approved","Denied","Completed"].map(s=>`<option value="${s}"${it.status===s?" selected":""}>${s}</option>`).join("")}</select></td>
-   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></div></td>
-  </tr>`).join("")+'</tbody></table>';
+   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button>${purgeBtn}</div></td>
+  </tr>`;}).join("")+'</tbody></table>';
  document.querySelectorAll(".wqAssign").forEach(sel=>sel.onchange=()=>{const [type,value]=sel.value.split("::");const it=workQueueItems[Number(sel.dataset.i)];it.assignedType=type;it.assignedTo=value;it.history.push({at:new Date().toISOString(),note:`Assigned to ${value} (${type}).`});saveWorkQueue(workQueueItems);addAudit("Work queue item assigned",`${it.filename} → ${value}`)});
  document.querySelectorAll(".wqStatus").forEach(sel=>sel.onchange=()=>{const it=workQueueItems[Number(sel.dataset.i)];const prev=it.status;it.status=sel.value;it.history.push({at:new Date().toISOString(),note:`Status changed ${prev} → ${sel.value}.`});saveWorkQueue(workQueueItems);addAudit("Work queue status updated",`${it.filename}: ${prev} → ${sel.value}`)});
- document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue item removed",it.filename)});
+ document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];const wasFlagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit(wasFlagged?"Work queue item purged (non-clinical)":"Work queue item removed",it.filename+(wasFlagged?` [relevance: ${it.relevanceVerdict}]`:""))});
  document.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
 }
 async function handleBatchImport(fileList){
