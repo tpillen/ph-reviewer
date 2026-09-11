@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.18</title>
+<title>PH Alpha 0.6.13.19</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.18</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.19</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -207,6 +207,11 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <label>Severity<input id="clinicalSeverity"></label>
   <label>BSA %<input id="bsa"></label>
   <label>IGA/PGA<input id="iga"></label>
+  <label>PASI (psoriasis)<input id="pasi" placeholder="Psoriasis Area & Severity Index"></label>
+  <label>EASI (atopic dermatitis)<input id="easi" placeholder="Eczema Area & Severity Index"></label>
+  <label>DLQI<input id="dlqi" placeholder="Dermatology Life Quality Index"></label>
+  <label>Itch NRS<input id="itchNrs" placeholder="0-10 numeric rating scale"></label>
+  <label>Hurley stage (HS)<input id="hurleyStage" placeholder="I / II / III"></label>
  </div><label>Objective Narrative<textarea id="objectiveNarrative"></textarea></label></div>
  <div class="panel"><h3>A/P — Assessment and Plan</h3><div class="grid two"><label>Diagnosis<input id="diagnosis"></label><label>ICD-10<input id="icd10"></label></div><label>Assessment Narrative<textarea id="assessmentNarrative"></textarea></label><label>Plan Narrative<textarea id="planNarrative"></textarea></label></div>
  <div class="panel"><h3>Medication Table</h3><div id="soapMedTable"></div></div>
@@ -318,7 +323,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.18", $=id=>document.getElementById(id);
+const VERSION="0.6.13.19", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -350,17 +355,17 @@ PLAN
 const MEDS=["doxycycline","minocycline","tretinoin","adapalene","clindamycin","benzoyl peroxide","isotretinoin","dupixent","dupilumab","humira","adalimumab","cosentyx","secukinumab","methotrexate","cyclosporine","tacrolimus","pimecrolimus","crisaborole","clobetasol","triamcinolone","hydrocortisone","otezla","apremilast","rinvoq","upadacitinib","cibinqo","abrocitinib","sotyktu","deucravacitinib","xolair","omalizumab","zoryve","roflumilast","vtama","tapinarof","adbry","tralokinumab","ebglyss","lebrikizumab"];
 
 const PA_DRUGS=[
- {id:"isotretinoin",name:"Isotretinoin",dx:[{name:"Severe recalcitrant nodular acne",icd:"L70.0 / L70.1",req:[
+ {id:"isotretinoin",name:"Isotretinoin",dx:[{name:"Severe recalcitrant nodular acne",icd:"L70.0 / L70.1",scoreHint:"No single standardized score is FDA-required — document qualitative severity (nodular/cystic/scarring), lesion counts, and psychosocial impact instead.",req:[
   ["Diagnosis","acne|acne vulgaris|nodular acne|severe acne"],["Severity / recalcitrance","severe|recalcitrant|nodular|scarring|psychosocial"],["Conventional therapy failure","failed conventional therapy|failed systemic therapy|treatment failure|therapy failure|medication failure|inadequate response|unresponsive to treatment|unresponsive to therapy|systemic antibiotic|doxycycline|minocycline|topical retinoid"]]}]},
- {id:"dupilumab",name:"Dupilumab (Dupixent)",dx:[{name:"Atopic dermatitis",icd:"L20.x",req:[
-  ["Diagnosis","atopic dermatitis|atopic eczema|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","easi|iga|bsa|body surface area"],["Topical therapy response","failed|inadequate response|not controlled|topical corticosteroid|tacrolimus|pimecrolimus|crisaborole"]]}]},
- {id:"secukinumab",name:"Secukinumab (Cosentyx)",dx:[{name:"Plaque psoriasis",icd:"L40.0",req:[
-  ["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga"],["Prior therapy / candidacy","failed|phototherapy|systemic therapy|methotrexate|cyclosporine"]]}]},
+ {id:"dupilumab",name:"Dupilumab (Dupixent)",dx:[{name:"Atopic dermatitis",icd:"L20.x",scoreHint:"EASI score, BSA%, and/or Itch NRS are the standard measures payers request for atopic dermatitis.",req:[
+  ["Diagnosis","atopic dermatitis|atopic eczema|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","easi|iga|bsa|body surface area|itch nrs|pruritus nrs"],["Topical therapy response","failed|inadequate response|not controlled|topical corticosteroid|tacrolimus|pimecrolimus|crisaborole"]]}]},
+ {id:"secukinumab",name:"Secukinumab (Cosentyx)",dx:[{name:"Plaque psoriasis",icd:"L40.0",scoreHint:"PASI score, BSA%, and/or DLQI are the standard measures payers request for plaque psoriasis.",req:[
+  ["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga|dlqi"],["Prior therapy / candidacy","failed|phototherapy|systemic therapy|methotrexate|cyclosporine"]]}]},
  {id:"adalimumab",name:"Adalimumab (Humira)",dx:[
-  {name:"Plaque psoriasis",icd:"L40.0",req:[["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga"],["Prior therapy / candidacy","failed|inadequate response|intolerant|contraindicated|phototherapy|methotrexate|cyclosporine"]]},
-  {name:"Hidradenitis suppurativa",icd:"L73.2",req:[["Diagnosis","hidradenitis suppurativa|hidradenitis|hs"],["Severity","moderate to severe|moderate-to-severe|severe"],["Prior therapy / response","failed|inadequate response|antibiotic|clindamycin|rifampin|doxycycline"]]}
+  {name:"Plaque psoriasis",icd:"L40.0",scoreHint:"PASI score, BSA%, and/or DLQI are the standard measures payers request for plaque psoriasis.",req:[["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga|dlqi"],["Prior therapy / candidacy","failed|inadequate response|intolerant|contraindicated|phototherapy|methotrexate|cyclosporine"]]},
+  {name:"Hidradenitis suppurativa",icd:"L73.2",scoreHint:"Hurley stage (I/II/III) is the standard severity classification payers request for hidradenitis suppurativa.",req:[["Diagnosis","hidradenitis suppurativa|hidradenitis|hs"],["Severity","moderate to severe|moderate-to-severe|severe|hurley"],["Prior therapy / response","failed|inadequate response|antibiotic|clindamycin|rifampin|doxycycline"]]}
  ]},
- {id:"upadacitinib",name:"Upadacitinib (Rinvoq)",dx:[{name:"Atopic dermatitis",icd:"L20.x",req:[["Diagnosis","atopic dermatitis|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Prior systemic therapy","failed systemic|other systemic therapy|biologic|dupilumab|cyclosporine|methotrexate|inadequate response|intolerant"]]}]}
+ {id:"upadacitinib",name:"Upadacitinib (Rinvoq)",dx:[{name:"Atopic dermatitis",icd:"L20.x",scoreHint:"EASI score, BSA%, and/or Itch NRS are the standard measures payers request for atopic dermatitis.",req:[["Diagnosis","atopic dermatitis|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Prior systemic therapy","failed systemic|other systemic therapy|biologic|dupilumab|cyclosporine|methotrexate|inadequate response|intolerant"]]}]}
 ];
 
 /* ---- 0.6.13: default ICD-10 dermatology reference list, seeds the right-click picker and can be extended in the Mapping Memory tab ---- */
@@ -621,6 +626,10 @@ function parseSemantic(t){
  // Measurements
  let m=t.match(/\bBSA\s*[:=]?\s*(\d+(?:\.\d+)?)\s*%/i);if(m)addConcept(rows,"BSA",m[1]+"%","current",["Objective / BSA","PA Evidence"],all.find(s=>/BSA/i.test(s))||m[0],"Auto-mapped",.99);
  m=t.match(/\bEASI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"EASI","EASI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/EASI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bPASI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"PASI","PASI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/PASI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bDLQI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"DLQI","DLQI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/DLQI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\b(?:itch|pruritus)\s*NRS\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"Itch NRS","Itch NRS "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/(itch|pruritus)\s*nrs/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bHurley\s*stage\s*[:=]?\s*(I{1,3}|1|2|3)\b/i);if(m)addConcept(rows,"Hurley stage","Hurley stage "+m[1].toUpperCase(),"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/hurley/i.test(s))||m[0],"Auto-mapped",.99);
  m=t.match(/\b(?:IGA|PGA)\s*[:=]?\s*([^\n.;]+)/i);if(m)addConcept(rows,"IGA/PGA",m[1].trim(),"current",["Objective / IGA-PGA","PA Evidence"],all.find(s=>/\bIGA\b|\bPGA\b/i.test(s))||m[0],"Auto-mapped",.99);
 
  // Medications with temporal state
@@ -1051,6 +1060,7 @@ function acceptMappings(){
  const get=c=>rows.find(r=>r.concept===c)?.value;
  $("diagnosis").value=get("Diagnosis")||"";$("icd10").value=get("ICD-10")||"";$("clinicalSeverity").value=get("Disease severity")||"";$("morphology").value=get("Morphology")||"";$("bodyLocation").value=get("Biopsy site")||get("Body location")||"";$("lesionTypes").value=get("Lesion types")||"";
  $("bsa").value=(get("BSA")||"").replace("%","");$("iga").value=get("IGA/PGA")||"";
+ $("pasi").value=(get("PASI")||"").replace(/^PASI\s*/i,"");$("easi").value=(get("EASI")||"").replace(/^EASI\s*/i,"");$("dlqi").value=(get("DLQI")||"").replace(/^DLQI\s*/i,"");$("itchNrs").value=(get("Itch NRS")||"").replace(/^Itch NRS\s*/i,"");$("hurleyStage").value=(get("Hurley stage")||"").replace(/^Hurley stage\s*/i,"");
  $("objectiveNarrative").value=rows.filter(r=>r.dest.includes("Objective / Physical Examination")).map(r=>r.value).join(" ");
  $("subjectiveNarrative").value=[...rows.filter(r=>r.dest.includes("HPI / Current Treatment")||r.dest.includes("HPI / Treatment Response")).map(r=>r.evidence)].filter((v,i,a)=>a.indexOf(v)===i).join(" ");
  $("assessmentNarrative").value=[get("Diagnosis"),get("Disease severity"),get("Morphology")].filter(Boolean).join(" · ");
@@ -1155,7 +1165,7 @@ function scanPAEvidence(){
    const p=biopsyEvidenceProfile();
    const rows=p.req.map((r,i)=>{const e=findEvidence(r.pattern,src);return{id:"BX-"+i,...r,status:e?"Found":"Missing",evidence:e}});
    window.ph0613PA=rows;
-   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}</div>`).join("");
+   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status!=="Found"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
    const f=rows.filter(r=>r.status==="Found").length;$("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=rows.length-f;$("paRate").textContent="—";
    const lines=["PH DIAGNOSTIC BIOPSY AUTHORIZATION EVIDENCE SUMMARY","Service: "+p.service,"Working diagnosis: "+p.workingDx+(p.icd?" ["+p.icd+"]":""),p.site?"Site: "+p.site:"",p.differential?"Clinical differential: "+p.differential+" (differential only; pathology pending)":"","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"].filter(Boolean);
    rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
