@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.13</title>
+<title>PH Alpha 0.6.13.14</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.13</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.14</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -318,7 +318,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.13", $=id=>document.getElementById(id);
+const VERSION="0.6.13.14", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1070,6 +1070,7 @@ function scanPAEvidence(){
  // Workbench now explicitly refuses to evaluate when there's nothing clinical to evaluate,
  // instead of silently reporting "0/3 supported" as if that meant something.
  if(ingestState.mappings.length===0 && (ingestState.relevanceVerdict==="non-clinical"||ingestState.relevanceVerdict==="undetermined")){
+   $("paDrugLabel").classList.add("hidden");$("paDxLabel").classList.add("hidden");
    $("paRouteNotice").className="notice warn";
    $("paRouteNotice").innerHTML="<b>⚠ No authorization pathway evaluated.</b> The loaded document produced zero clinical concepts and did not look clinical. Running a medication or biopsy requirement check against it would be meaningless — load a genuine clinical encounter first.";
    $("paResults").innerHTML='<div class="notice">Nothing to evaluate — no clinical content was found in the loaded document.</div>';
