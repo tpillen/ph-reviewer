@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.16</title>
+<title>PH Alpha 0.6.13.17</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.16</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.17</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -92,8 +92,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <h3>1. Source Document Intake</h3>
   <div class="grid two">
    <div>
-    <label>Import synthetic/de-identified source file<input id="clinicalFileInput" type="file" accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
-    <div class="row"><button id="loadSyntheticBtn" class="btn secondary">Load Built-in Acne Follow-up</button><button id="clearBtn" class="btn secondary">Clear</button></div>
+    <label>Load document for data extraction and mapping (synthetic/de-identified only)<input id="clinicalFileInput" type="file" accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
+    <div class="row"><button id="clearBtn" class="btn secondary">Clear</button></div>
     <div id="sourceMeta" class="source" style="margin-top:8px">No source loaded.</div>
     <div id="extractStatus" class="notice" style="margin-top:8px">Select a file or load the synthetic note.</div>
    </div>
@@ -318,7 +318,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.16", $=id=>document.getElementById(id);
+const VERSION="0.6.13.17", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -636,7 +636,21 @@ function parseSemantic(t){
  ingestState.meds=meds;
 
  // Plan actions/counseling/follow-up
- lines.filter(x=>/PLAN|COUNSELING|RECOMMENDATIONS/.test(x.section)).forEach(x=>addConcept(rows,"Plan",x.text,"planned",["Plan"],x.text,"Auto-mapped",.9));
+ // 0.6.13.17: same PDF-flattening problem as the Assessment section, now confirmed for the Plan/
+ // Recommendations section too — "Recommendations / Plan" glued directly to its numbered list with
+ // no real line break means the line-based detection finds nothing, silently dropping real,
+ // actionable treatment content (cryotherapy, home therapy instructions, etc.) from the Plan panel.
+ const planLines=lines.filter(x=>/PLAN|COUNSELING|RECOMMENDATIONS/.test(x.section));
+ if(planLines.length){
+   planLines.forEach(x=>addConcept(rows,"Plan",x.text,"planned",["Plan"],x.text,"Auto-mapped",.9));
+ }else{
+   const planMatch=t.match(/\b(?:recommendations\s*\/\s*plan|plan)\b\s*[:\-]?\s*([\s\S]{1,700}?)(?=\bsincerely\b|\bwe will continue to manage\b|\bpatient education\b|\bfollow-?up\b\s*[:\-]|$)/i);
+   if(planMatch){
+     const chunk=planMatch[1].trim();
+     const items=chunk.split(/(?=\d+\.\s)/).map(s=>s.trim()).filter(s=>s.length>3);
+     (items.length?items:[chunk]).forEach(item=>addConcept(rows,"Plan",item,"planned",["Plan"],item,"Auto-mapped",.9));
+   }
+ }
  return rows;
 }
 
@@ -1276,7 +1290,6 @@ function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){
 function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}</div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved.")}
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
-$("loadSyntheticBtn").onclick=()=>loadSource(SYNTHETIC,"Established_Patient_Encounter_acne_synthetic.txt");
 $("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
 $("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name)}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
 $("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("syncQueueBtn").onclick=syncCurrentDocumentToQueue;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
