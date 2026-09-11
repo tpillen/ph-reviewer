@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.8</title>
+<title>PH Alpha 0.6.13.11</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.8</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.11</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -318,7 +318,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.8", $=id=>document.getElementById(id);
+const VERSION="0.6.13.11", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -478,8 +478,15 @@ function addConcept(arr,concept,value,context,dest,evidence,status="Auto-mapped"
    Confirmed (pathology) (pathology report language), or
    Confirmed (clinical) (a diagnosis made on exam alone, the normal case for most derm visits). */
 function classifyDiagnosisStage(evidence,fullText){
- const e=norm(evidence||""), fHead=norm((fullText||"").slice(0,600));
- if(/referred for|referring (provider|physician|md)|outside (record|note)|per referral|primary care note|prior primary care|pcp note/.test(e)||/referred for|referring provider|referring physician/.test(fHead))return"Historical / Outside";
+ const e=norm(evidence||"");
+ // 0.6.13.9: stage is now judged from the evidence sentence itself only, not the document's
+ // opening framing. A referral letter's own Assessment section can (and often should) state a
+ // diagnosis that differs from what the referring provider suspected — that assessment is the
+ // dermatologist's current finding, not "historical," even though it lives inside a referral
+ // letter. Checking the document's first ~600 characters previously mislabeled every such case
+ // as Historical/Outside just for being a referral letter, regardless of whose diagnosis was
+ // actually extracted.
+ if(/referred for|referring (provider|physician|md)|outside (record|note)|per referral|primary care note|prior primary care|pcp note/.test(e))return"Historical / Outside";
  if(/pathology (consistent with|confirmed|confirms|showed|demonstrates|review)|biopsy-proven|biopsy proven|margins clear on biopsy|confirmed (basal cell|squamous cell|melanoma)/.test(e))return"Confirmed (pathology)";
  if(/rule out|r\/o|\bvs\b|versus|suspicious for|pending histolog|clinical diagnosis pending|uncertain behavior|differential/.test(e))return"Preliminary / Differential";
  return"Confirmed (clinical)";
@@ -509,6 +516,14 @@ function parseSemantic(t){
    bumpLearnedHit(learnedHit.phrase);
  }
 
+ // 0.6.13.9: diagnosis and ICD-10 extraction now prefer the Assessment/Diagnosis section text
+ // over the rest of the document. Without this, a referral letter's subject line or opening
+ // ("Re: Referral for ... Verruca Vulgaris") could be picked up as the diagnosis evidence
+ // instead of the dermatologist's own actual Assessment further down — harmless when the two
+ // happen to agree, but exactly wrong when a referral's suspected diagnosis differs from what
+ // the specialist actually finds, which is the whole reason referrals exist.
+ const assessSentences = assessLines ? sentences(assessLines) : [];
+
  // Identity / diagnosis / coding
  const dxPatterns=[
   ["Acne vulgaris",/\bacne vulgaris\b/i],
@@ -520,12 +535,12 @@ function parseSemantic(t){
   ["Epidermal inclusion cyst",/\bepidermal inclusion cysts?\b|\bepidermoid cysts?\b/i],
   ["Verruca vulgaris (common warts)",/\bverruca vulgaris\b|\bcommon warts?\b/i]
  ];
- dxPatterns.forEach(([v,re])=>{if(rows.some(r=>r.concept==="Diagnosis"))return;const ev=all.find(s=>re.test(s));if(ev)addConcept(rows,"Diagnosis",v,"current",["Assessment / Diagnosis"],ev,"Auto-mapped",.95,{stage:classifyDiagnosisStage(ev,t)})});
- const icd=(t.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0];
+ dxPatterns.forEach(([v,re])=>{if(rows.some(r=>r.concept==="Diagnosis"))return;const ev=assessSentences.find(s=>re.test(s))||all.find(s=>re.test(s));if(ev)addConcept(rows,"Diagnosis",v,"current",["Assessment / Diagnosis"],ev,"Auto-mapped",.95,{stage:classifyDiagnosisStage(ev,t)})});
+ const icd=((assessLines.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0])||((t.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0]);
  if(icd){
-   addConcept(rows,"ICD-10",icd.toUpperCase(),"current",["Diagnosis Coding"],all.find(s=>s.includes(icd))||icd,"Auto-mapped",.99);
+   addConcept(rows,"ICD-10",icd.toUpperCase(),"current",["Diagnosis Coding"],assessSentences.find(s=>s.includes(icd))||all.find(s=>s.includes(icd))||icd,"Auto-mapped",.99);
    if(icd.toUpperCase()==="D48.5" && !rows.some(r=>r.concept==="Diagnosis")){
-     const ev=all.find(s=>/D48\.5/i.test(s))||"D48.5";
+     const ev=assessSentences.find(s=>/D48\.5/i.test(s))||all.find(s=>/D48\.5/i.test(s))||"D48.5";
      addConcept(rows,"Diagnosis","Neoplasm of uncertain behavior of skin","current",["Assessment / Diagnosis"],ev,"Auto-mapped",.99,{stage:classifyDiagnosisStage(ev,t)});
    }
  }
@@ -582,7 +597,13 @@ function parseSemantic(t){
  lines.filter(x=>/PHYSICAL EXAM|OBJECTIVE|EXAMINATION FINDINGS/.test(x.section) && /comedon|papule|pustule|plaque|erythema|scar|nodule|cyst|excoriat/i.test(x.text)).forEach(x=>addConcept(rows,"Objective finding",x.text,"current",["Objective / Physical Examination"],x.text,"Auto-mapped",.94));
 
  // Response / interval
- all.filter(s=>/improved|better|worse|persistent|unchanged|partial response|inadequate response|failed|flare|flaring|progressed|progression|insufficient response/i.test(s)).forEach(s=>addConcept(rows,"Treatment response",s,"current",["HPI / Treatment Response","Interval Change","PA Evidence"],s,"Auto-mapped",.93));
+ // 0.6.13.10: "better" and "worse" as bare words are far too generic — they're two of the most
+ // common adjectives in English and will fire on any text that happens to contain them for any
+ // reason (confirmed: a company name "Just Better HVAC LLC" false-triggered this on every mention
+ // of the business name in an HVAC invoice). Replaced with the actual clinical phrasings this rule
+ // is meant to catch — "getting better," "much better," etc. — which require the word to appear in
+ // a real improvement/worsening statement rather than standing alone.
+ all.filter(s=>/improved|getting better|much better|feeling better|looks? better|doing better|getting worse|much worse|feeling worse|looks? worse|persistent|unchanged|partial response|inadequate response|failed|flare|flaring|progressed|progression|insufficient response/i.test(s)).forEach(s=>addConcept(rows,"Treatment response",s,"current",["HPI / Treatment Response","Interval Change","PA Evidence"],s,"Auto-mapped",.93));
 
  // Measurements
  let m=t.match(/\bBSA\s*[:=]?\s*(\d+(?:\.\d+)?)\s*%/i);if(m)addConcept(rows,"BSA",m[1]+"%","current",["Objective / BSA","PA Evidence"],all.find(s=>/BSA/i.test(s))||m[0],"Auto-mapped",.99);
@@ -780,7 +801,54 @@ function detectMultiDocumentContamination(t){
  if(assessHits>=2) return {contaminated:true,marker:"ASSESSMENT / DIAGNOSIS",count:assessHits};
  return {contaminated:false};
 }
-function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source first.");return}ingestState.raw=$("rawSource").value;ingestState.mappings=parseSemantic(ingestState.raw);renderConcepts();$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit();const unmapped=ingestState.mappings.filter(x=>x.status==="Unmapped").length;const contam=detectMultiDocumentContamination(ingestState.raw);if(contam.contaminated){$("extractStatus").className="notice warn";$("extractStatus").innerHTML=`<b>⚠ Possible multiple documents detected</b> — the source text contains ${contam.count} occurrences of "${esc(contam.marker)}", which usually means more than one encounter/letter got pasted or loaded into this box without clearing it first. Extraction assumes a single document; click <b>Clear</b> and reload just one source, or results below may mix content from different visits.<br>${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping.`:""}`}else{$("extractStatus").className="notice ok";$("extractStatus").textContent=`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`}$("sourcePane").textContent=ingestState.raw;addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.${contam.contaminated?" WARNING: possible multi-document contamination detected.":""}`);scanPAEvidence()}
+
+/* 0.6.13.11: rule-based clinical-vs-administrative document classifier, based on the same
+   signal categories medical-records scanning workflows use (clinical section headers + medical
+   entity density vs. insurance/billing/identity-document markers). This is a lightweight rule
+   check, not a trained classifier — it's meant to catch the clear cases (an HVAC invoice, an
+   insurance card, an EOB) and flag genuine edge cases for review, not make a confident medical
+   judgment call on ambiguous text. */
+function classifyDocumentRelevance(t){
+ const n=norm(t);
+ const clinicalSignals=[
+  [/chief complaint|reason for encounter|presenting complaint/,"Chief Complaint header"],
+  [/history of present illness|\bhpi\b/,"HPI header"],
+  [/past medical history|\bpmh\b/,"PMH header"],
+  [/review of systems|\bros\b/,"ROS header"],
+  [/physical exam(ination)?|examination findings/,"Physical Exam header"],
+  [/vital signs|\bvitals\b/,"Vital Signs header"],
+  [/\bmedications?\b.{0,15}(list|current|home)/,"Medications header"],
+  [/\ballerg(y|ies)\b/,"Allergies section"],
+  [/assessment\s*\/?\s*(and\s*)?plan|\bimpression\b|\bassessment\s*\/?\s*diagnosis\b/,"Assessment/Plan header"],
+  [/discharge diagnosis|admission diagnosis/,"Discharge/Admission Diagnosis header"],
+  [/\b[a-z]\d{2}(?:\.[0-9a-z]+)?\b/i,"ICD-10-style code"],
+  [/\b(md|do|np|pa-c|rn)\b|attending physician|board-certified dermatologist/,"Provider credential"],
+  [/\bmg\/dL\b|\bmm\s?hg\b|\bbpm\b|\bbsa\b/,"Clinical measurement unit"]
+ ];
+ const adminSignals=[
+  [/\binvoice\b|\bestimate\b|\bsubtotal\b|\bamount due\b/,"Invoice/billing language"],
+  [/\bcopay\b|\bpolicy number\b|\bgroup number\b|\bsubscriber\b|explanation of benefits|\beob\b/,"Insurance/EOB language"],
+  [/driver'?s licen[cs]e|\bpassport\b|date of issue/,"Identity document language"],
+  [/\bclaim number\b|\bpayment\b.{0,15}(due|received)/,"Claims/payment language"],
+  [/\bLLC\b|\bP\.?O\.? Box\b/,"Business/vendor correspondence marker"]
+ ];
+ const clinicalHits=clinicalSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
+ const adminHits=adminSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
+ if(clinicalHits.length===0 && adminHits.length>0) return {verdict:"non-clinical",clinicalHits,adminHits};
+ if(clinicalHits.length>0 && adminHits.length>0) return {verdict:"mixed",clinicalHits,adminHits};
+ if(clinicalHits.length===0 && adminHits.length===0) return {verdict:"undetermined",clinicalHits,adminHits};
+ return {verdict:"clinical",clinicalHits,adminHits};
+}
+
+function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source first.");return}ingestState.raw=$("rawSource").value;ingestState.mappings=parseSemantic(ingestState.raw);renderConcepts();$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit();const unmapped=ingestState.mappings.filter(x=>x.status==="Unmapped").length;const contam=detectMultiDocumentContamination(ingestState.raw);const rel=classifyDocumentRelevance(ingestState.raw);let banner="";let bannerClass="notice ok";
+ if(rel.verdict==="non-clinical"){bannerClass="notice warn";banner=`<b>⚠ This does not look like a clinical document.</b> No clinical section headers or medical terminology were found (${ingestState.mappings.length} concept(s) extracted anyway may be false matches on ordinary text). Administrative/business markers found: ${esc(rel.adminHits.join(", ")||"none specific")}. Consider whether this document belongs in the clinical workflow at all before trusting anything below.<br>`}
+ else if(rel.verdict==="mixed"){bannerClass="notice warn";banner=`<b>⚠ Mixed clinical and administrative signals.</b> This document has both clinical markers (${esc(rel.clinicalHits.join(", "))}) and administrative/billing markers (${esc(rel.adminHits.join(", "))}) — review carefully, as this can happen with a registration form that includes a brief clinical note, or a referral letter with billing details attached.<br>`}
+ if(contam.contaminated){bannerClass="notice warn";banner+=`<b>⚠ Possible multiple documents detected</b> — the source text contains ${contam.count} occurrences of "${esc(contam.marker)}", which usually means more than one encounter/letter got pasted or loaded into this box without clearing it first. Extraction assumes a single document; click <b>Clear</b> and reload just one source, or results below may mix content from different visits.<br>`}
+ $("extractStatus").className=bannerClass;
+ $("extractStatus").innerHTML=banner+`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`;
+ $("sourcePane").textContent=ingestState.raw;
+ addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.${contam.contaminated?" WARNING: possible multi-document contamination detected.":""}${rel.verdict!=="clinical"?` Document relevance check: ${rel.verdict}.`:""}`);
+ scanPAEvidence()}
 /* ================= 0.6.13.6: Batch import + persistent Work Queue ================= */
 const WORK_QUEUE_KEY="ph0613-work-queue", TEAM_KEY="ph0613-team-members";
 const FIXED_ROLES=["Coordinator","Provider","Nursing","Unassigned"];
