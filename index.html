@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.15</title>
+<title>PH Alpha 0.6.13.16</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.15</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.16</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -318,7 +318,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.15", $=id=>document.getElementById(id);
+const VERSION="0.6.13.16", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -505,7 +505,20 @@ function parseSemantic(t){
  // a generic word (e.g. a body site mentioned in an unrelated sentence) to silently hijack the
  // diagnosis of a completely different encounter — this scopes the search to where a diagnosis
  // would actually be stated.
- const assessLines=lines.filter(x=>/ASSESSMENT|DIAGNOSIS/.test(x.section)).map(x=>x.text).join(" ");
+ // 0.6.13.16: line-based section detection requires a header to sit alone on its own line, which
+ // works for .docx (paragraph breaks preserved) but fails for PDF-extracted text, where pdf.js
+ // joins everything on a page into one continuous run with no real line breaks — "Assessment"
+ // ends up glued directly to the sentence that follows it, never isolated on its own line.
+ // Confirmed this exact failure against a real PDF referral letter: the line-based detection came
+ // back empty, silently falling back to a whole-document search that grabbed the referral's
+ // subject-line mention instead of the actual Assessment section content. This inline fallback
+ // finds "Assessment" as a word anywhere in the flat text and captures the content up to the next
+ // recognizable section boundary, regardless of whether real line breaks survived extraction.
+ let assessLines=lines.filter(x=>/ASSESSMENT|DIAGNOSIS/.test(x.section)).map(x=>x.text).join(" ");
+ if(!assessLines){
+   const inlineMatch=t.match(/\bassessment(?:\s*\/\s*diagnosis)?\b\s*[:\-]?\s*([\s\S]{1,400}?)(?=\brecommendations\b|\bplan\b|\bfollow-?up\b|\bsincerely\b|\bcounseling\b|$)/i);
+   if(inlineMatch)assessLines=inlineMatch[1].trim();
+ }
  const diagContextSentences=all.filter(s=>/assessment|diagnos|impression|differential|rule out|r\/o|\bvs\b|versus|patholog|biopsy/i.test(s)).join(" ");
  const learnedSearchScope=assessLines||diagContextSentences||text;
  const learnedHit=learnedMatchFor(learnedSearchScope);
@@ -849,6 +862,17 @@ function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source f
  $("extractStatus").innerHTML=banner+`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`;
  $("sourcePane").textContent=ingestState.raw;
  ingestState.relevanceVerdict=rel.verdict;
+ // 0.6.13.16: run auto-detection once per fresh load, only when this document's route is
+ // "medication" — a real diagnosis was found, but does it match any known medication indication?
+ ingestState.noMedicationMatch=false;
+ if(detectedAuthorizationPathway()==="medication"){
+   const loadedDx=ingestState.mappings.find(r=>r.concept==="Diagnosis");
+   if(loadedDx && loadedDx.status!=="Unmapped"){
+     const match=autoDetectMedicationDx(loadedDx.value+" "+(loadedDx.evidence||""));
+     if(match){$("paDrug").value=match.drugId;fillPADx();$("paDx").value=String(match.dxIndex)}
+     else{ingestState.noMedicationMatch=true;ingestState.unmatchedDiagnosis=loadedDx.value}
+   }
+ }
  addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.${contam.contaminated?" WARNING: possible multi-document contamination detected.":""}${rel.verdict!=="clinical"?` Document relevance check: ${rel.verdict}.`:""}`);
  scanPAEvidence()}
 /* ================= 0.6.13.6: Batch import + persistent Work Queue ================= */
@@ -1016,6 +1040,24 @@ function loadOutcomes(){try{return JSON.parse(localStorage.getItem(OUTCOME_KEY)|
 function saveOutcomes(a){localStorage.setItem(OUTCOME_KEY,JSON.stringify(a))}
 function selectedPA(){const drug=PA_DRUGS.find(d=>d.id===$("paDrug").value)||PA_DRUGS[0],dx=drug.dx[Number($("paDx").value||0)]||drug.dx[0];return{drug,dx}}
 function fillPADx(){const d=PA_DRUGS.find(x=>x.id===$("paDrug").value)||PA_DRUGS[0];$("paDx").innerHTML=d.dx.map((x,i)=>`<option value="${i}">${esc(x.name)} · ${esc(x.icd)}</option>`).join("");renderKnownRules();updatePAStats()}
+/* 0.6.13.16: auto-detect which PA_DRUGS medication/diagnosis pairing (if any) actually matches
+   the loaded document's own extracted diagnosis, instead of silently leaving whatever medication
+   was last selected (or the page's initial "Isotretinoin" default) selected regardless of what
+   was actually loaded. Confirmed repeatedly in testing: a wart/lipoma/cyst diagnosis has nothing
+   to do with acne, but the FDA checklist kept running the acne/isotretinoin requirements against
+   it anyway, producing a confusing "Diagnosis: MISSING" for a diagnosis that plainly IS in the
+   note — just not the diagnosis this particular checklist is checking for. */
+function autoDetectMedicationDx(diagnosisText){
+ const n=norm(diagnosisText||"");
+ if(!n)return null;
+ for(const d of PA_DRUGS){
+   for(let i=0;i<d.dx.length;i++){
+     const pattern=d.dx[i].req[0][1];
+     if(pattern.split("|").some(term=>n.includes(term.trim().toLowerCase())))return{drugId:d.id,dxIndex:i};
+   }
+ }
+ return null;
+}
 function findEvidence(pattern,src){const low=norm(src);for(const t of pattern.split("|").map(x=>x.trim()).filter(Boolean)){const n=norm(t),i=low.indexOf(n);if(i>=0)return src.slice(Math.max(0,i-90),Math.min(src.length,i+n.length+180)).replace(/\s+/g," ").trim()}return""}
 function relevantRules(){const {drug,dx}=selectedPA(),p=norm($("paPayer").value);return loadRules().filter(r=>r.active!==false&&r.drugId===drug.id&&r.diagnosis===dx.name&&norm(r.payer)===p)}
 
@@ -1101,6 +1143,17 @@ function scanPAEvidence(){
    return;
  }
 
+ if(ingestState.noMedicationMatch){
+   $("paDrugLabel").classList.add("hidden");$("paDxLabel").classList.add("hidden");
+   $("paRouteNotice").className="notice warn";
+   $("paRouteNotice").innerHTML=`<b>⚠ No matching medication for this diagnosis.</b> This encounter's diagnosis — <b>${esc(ingestState.unmatchedDiagnosis)}</b> — doesn't correspond to any medication in PH's FDA-requirement reference list. This is often correct and expected: many dermatologic conditions (biopsy/destruction/excision procedures, benign lesions like warts, cysts, or lipomas) are managed without a systemic medication requiring prior authorization at all. If this diagnosis genuinely does need a medication PA, use the dropdowns above to select one manually.`;
+   $("paResults").innerHTML='<div class="notice">No FDA-baseline checklist shown — no matching medication for this diagnosis.</div>';
+   $("paSupported").textContent="—";$("paMissing").textContent="—";$("paRate").textContent="—";
+   $("paSummary").value=`No medication authorization checklist generated: the loaded diagnosis (${ingestState.unmatchedDiagnosis}) does not match any medication in PH's reference list.`;
+   $("treatmentSummary").value=$("paSummary").value;
+   $("workQueue").innerHTML='<div class="notice">No PA evidence gaps to show — no medication requirement checklist applies to this diagnosis.</div>';
+   return;
+ }
  if(!$("paDrug").value)return;
  const {drug,dx}=selectedPA();
  const req=dx.req.map((r,i)=>({id:"FDA-"+i,type:"FDA baseline",label:r[0],pattern:r[1],source:"Seed FDA indication profile"})).concat(relevantRules().map(r=>({id:r.id,type:"Payer learned",label:r.requirement,pattern:r.searchTerms||r.requirement,source:r.payer+" denial"})));
