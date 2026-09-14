@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.22</title>
+<title>PH Alpha 0.6.13.23</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.22</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.23</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -84,8 +84,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="documentIntake" class="view">
  <div class="panel">
-  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.13 · consolidated clinical document intelligence + encounter-directed authorization routing + learned mapping</div></div><span class="badge">Consolidated Build</span></div>
-  <div class="notice">This build replaces the stacked 0.6.4–0.6.12 mapping patches. There is no generic “choose a PH destination field” popup. Obvious clinical concepts map directly to HPI, Medication Table, Objective, Assessment, Plan, and PA evidence. Outside records remain separate from the legal encounter until intentionally accepted. <b>New in 0.6.13:</b> right-click any unmapped or diagnosis field to correct/teach the mapping — PH remembers the correction for future documents.</div>
+  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.13.22 · clinical document intelligence + encounter-directed authorization routing + learned mapping + batch triage</div></div><span class="badge">Consolidated Build</span></div>
+  <div class="notice">Obvious clinical concepts map directly to HPI, Medication Table, Objective, Assessment, Plan, and PA evidence. Outside records remain separate from the legal encounter until intentionally accepted. Right-click any unmapped or diagnosis field to correct/teach the mapping — PH remembers the correction for future documents. This build also includes: multi-document contamination and non-clinical-document detection, automatic medication/diagnosis matching for the PA checklist, severity-threshold checking (BSA/PASI/EASI vs. typical payer minimums), and a batch Work Queue with PA-likelihood triage (Unlikely / Needs attention / Ready).</div>
  </div>
 
  <div class="panel">
@@ -333,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.22", $=id=>document.getElementById(id);
+const VERSION="0.6.13.23", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1355,12 +1355,19 @@ function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("
    placeholder rather than a guessed fixed code, consistent with that same review. */
 function inferFinalDx(text){
  const low=norm(text);
+ // 0.6.13.23: more specific patterns (in-situ / Bowen disease, melanoma in situ) must be checked
+ // BEFORE the bare invasive-carcinoma terms — confirmed against real de-identified pathology
+ // report language that a report reading "Squamous Cell Carcinoma in situ - Bowen's Disease Type"
+ // was being resolved to plain invasive "Squamous cell carcinoma" (C44.- code) instead of the
+ // correct in-situ entity (D04.- code) — a real and clinically significant miscoding, since in-situ
+ // vs. invasive carcinoma differ substantially in severity, treatment, and billing. Also widened
+ // the in-situ pattern to match the fully spelled-out phrase, not just the abbreviated "SCC".
  const candidates=[
-  ["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/,"C44.- (site-specific — select exact code)"],
-  ["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/,"C44.- (site-specific — select exact code)"],
-  ["Squamous cell carcinoma in situ (Bowen disease)",/\bscc in situ\b|\bbowen('?s)? disease\b/,"D04.- (site-specific — select exact code)"],
+  ["Squamous cell carcinoma in situ (Bowen disease)",/\bsquamous cell carcinoma in situ\b|\bscc in situ\b|\bbowen('?s)? disease\b/,"D04.- (site-specific — select exact code)"],
   ["Melanoma in situ",/\bmelanoma in situ\b/,"D03.- (site-specific — select exact code)"],
   ["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/,"C43.- (site-specific — select exact code)"],
+  ["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/,"C44.- (site-specific — select exact code)"],
+  ["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/,"C44.- (site-specific — select exact code)"],
   ["Actinic keratosis",/\bactinic keratosis\b/,"L57.0"],
   ["Seborrheic keratosis",/\bseborrheic keratosis\b/,"L82.1"],
   ["Psoriasis vulgaris",/\bpsoriasis vulgaris\b|\bpsoriasis\b/,"L40.0"],
