@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.19</title>
+<title>PH Alpha 0.6.13.21</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.19</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.21</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -241,6 +241,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </div>
  <div class="panel">
   <div class="row between"><h3>Worklist</h3><div class="row"><span class="badge" id="queueCountBadge">0 items</span><button id="clearQueueBtn" class="btn secondary" style="min-height:36px;padding:7px 12px">Clear worklist</button></div></div>
+  <div class="row" style="margin-bottom:8px">
+   <label style="font-weight:400;flex:1">Filter by PA likelihood
+    <select id="paLikelihoodFilter">
+     <option value="all">All items</option>
+     <option value="needs_attention">Needs attention (PA elements missing)</option>
+     <option value="ready">Ready — fully supported</option>
+     <option value="unlikely">PA unlikely — not needed</option>
+    </select>
+   </label>
+  </div>
   <div id="workQueueTable"><div class="notice">No documents imported yet — use Batch Import above.</div></div>
  </div>
  <div class="panel"><h3>Current Single-Document Gaps</h3><div class="mini" style="margin-bottom:6px">From the document currently loaded in the Document Intake Lab (tab 0) — separate from the batch worklist above.</div><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div>
@@ -323,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.19", $=id=>document.getElementById(id);
+const VERSION="0.6.13.21", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -928,14 +938,17 @@ function batchBiopsyRequirements(rows,rawText){
  const reqRows=req.map(r=>{const e=findEvidence(r.pattern,rawText);return{...r,status:e?"Found":"Missing",evidence:e}});
  return{serviceLabel:"Diagnostic skin biopsy / pathology",rows:reqRows};
 }
-function batchMedicationRequirements(rawText){
- const src=norm(rawText);
- let matched=null;
- for(const d of PA_DRUGS){if(src.includes(norm(d.name.split("(")[0].trim()))){matched={drug:d,dx:d.dx[0]};break}}
- if(!matched){for(const d of PA_DRUGS){for(const dx of d.dx){if(src.includes(norm(dx.name))){matched={drug:d,dx};break}}if(matched)break}}
- if(!matched)return null;
- const reqRows=matched.dx.req.map(r=>{const e=findEvidence(r[1],rawText);return{label:r[0],status:e?"Found":"Missing",evidence:e}});
- return{serviceLabel:matched.drug.name+" — "+matched.dx.name,rows:reqRows};
+function batchMedicationRequirements(rawText,diagnosisText){
+ // 0.6.13.21: reuse the same auto-detection the single-document flow uses, instead of the looser
+ // substring search this function had before — keeps both paths consistent, and lets batch items
+ // correctly distinguish "no medication applies to this diagnosis at all" from "a medication
+ // applies but supporting evidence is incomplete," which the Worklist can now surface directly.
+ const match=autoDetectMedicationDx(diagnosisText||rawText);
+ if(!match)return null;
+ const drug=PA_DRUGS.find(d=>d.id===match.drugId);
+ const dx=drug.dx[match.dxIndex];
+ const reqRows=dx.req.map(r=>{const e=findEvidence(r[1],rawText);return{label:r[0],status:e?"Found":"Missing",evidence:e}});
+ return{serviceLabel:drug.name+" — "+dx.name,rows:reqRows};
 }
 function runBatchDocument(filename,rawText){
  const rows=parseSemantic(rawText);
@@ -943,14 +956,20 @@ function runBatchDocument(filename,rawText){
  const icdRow=rows.find(r=>r.concept==="ICD-10");
  const pathway=detectPathwayFromText(rawText);
  const relevance=classifyDocumentRelevance(rawText);
- let serviceLabel="",missing=[],supported=[];
+ let serviceLabel="",missing=[],supported=[],paLikelihood="needs_attention";
  if(pathway==="biopsy"){
    const p=batchBiopsyRequirements(rows,rawText);
    serviceLabel=p.serviceLabel;missing=p.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=p.rows.filter(r=>r.status==="Found").map(r=>r.label);
+   paLikelihood=missing.length?"needs_attention":"ready";
  }else{
-   const m=batchMedicationRequirements(rawText);
-   if(m){serviceLabel=m.serviceLabel;missing=m.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=m.rows.filter(r=>r.status==="Found").map(r=>r.label)}
-   else{serviceLabel="Medication prior authorization (specific drug not auto-detected — needs manual review)"}
+   const m=batchMedicationRequirements(rawText,dxRow?dxRow.value:"");
+   if(m){
+     serviceLabel=m.serviceLabel;missing=m.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=m.rows.filter(r=>r.status==="Found").map(r=>r.label);
+     paLikelihood=missing.length?"needs_attention":"ready";
+   }else{
+     serviceLabel=dxRow&&dxRow.status!=="Unmapped"?"No medication prior authorization applies to this diagnosis":"Medication prior authorization (no diagnosis detected — needs manual review)";
+     paLikelihood=dxRow&&dxRow.status!=="Unmapped"?"unlikely":"needs_attention";
+   }
  }
  return{
   id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000),
@@ -959,7 +978,7 @@ function runBatchDocument(filename,rawText){
   diagnosis:dxRow?dxRow.value:"(no diagnosis detected — needs review)",
   diagnosisStage:dxRow?dxRow.stage:"",
   icd:icdRow?icdRow.value:"",
-  pathway,serviceLabel,missing,supported,
+  pathway,serviceLabel,missing,supported,paLikelihood,
   relevanceVerdict:relevance.verdict,relevanceHits:{clinical:relevance.clinicalHits,admin:relevance.adminHits},
   assignedType:"role",assignedTo:"Unassigned",
   status:"Pending",
@@ -981,17 +1000,28 @@ function relevanceBadge(verdict){
  const labels={"clinical":"Clinical","non-clinical":"Non-clinical","mixed":"Mixed signals","undetermined":"Undetermined"};
  return `<span class="pill" style="${styles[verdict]||''}">${esc(labels[verdict]||verdict)}</span>`;
 }
+function paLikelihoodBadge(likelihood){
+ const styles={"needs_attention":"background:#fee2e2;color:#991b1b","ready":"background:#dcfce7;color:#166534","unlikely":"background:#e5e7eb;color:#374151"};
+ const labels={"needs_attention":"Needs attention","ready":"Ready — supported","unlikely":"PA unlikely"};
+ return `<span class="pill" style="${styles[likelihood]||''}">${esc(labels[likelihood]||likelihood||"—")}</span>`;
+}
 function renderWorkQueueTable(){
  const box=$("workQueueTable");if(!box)return;
  $("queueCountBadge").textContent=workQueueItems.length+" item"+(workQueueItems.length===1?"":"s");
  if(!workQueueItems.length){box.innerHTML='<div class="notice">No documents imported yet — use Batch Import above.</div>';return}
- box.innerHTML='<table><thead><tr><th>Document</th><th>Relevance</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
-  workQueueItems.map((it,i)=>{
+ // 0.6.13.21: filter by PA likelihood while keeping each row's original array index intact, so
+ // assign/status/remove/open actions still target the correct underlying item after filtering.
+ const filterVal=$("paLikelihoodFilter")?$("paLikelihoodFilter").value:"all";
+ const indexed=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>filterVal==="all"||it.paLikelihood===filterVal);
+ if(!indexed.length){box.innerHTML=`<div class="notice">No items match this filter.</div>`;return}
+ box.innerHTML='<table><thead><tr><th>Document</th><th>Relevance</th><th>PA Likelihood</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
+  indexed.map(({it,i})=>{
    const flagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";
    const purgeBtn=flagged?`<button class="btn danger wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Purge</button>`:`<button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button>`;
    return `<tr${flagged?' style="background:#fffbeb"':""}>
    <td>${esc(it.filename)}<div class="mini">${new Date(it.importedAt).toLocaleString()}</div></td>
    <td>${it.relevanceVerdict?relevanceBadge(it.relevanceVerdict):'<span class="mini">—</span>'}</td>
+   <td>${paLikelihoodBadge(it.paLikelihood)}</td>
    <td>${esc(it.diagnosis)}${it.icd?` (${esc(it.icd)})`:""}${it.diagnosisStage?`<div class="mini"><span class="pill">${esc(it.diagnosisStage)}</span></div>`:""}</td>
    <td>${esc(it.serviceLabel)}</td>
    <td>${it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>'}</td>
@@ -1045,7 +1075,7 @@ function syncCurrentDocumentToQueue(){
  const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);
  if(!it){alert("The linked Work Queue item could not be found (it may have been removed).");return}
  const rescanned=runBatchDocument(it.filename,ingestState.raw);
- Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported});
+ Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported,paLikelihood:rescanned.paLikelihood,relevanceVerdict:rescanned.relevanceVerdict,relevanceHits:rescanned.relevanceHits});
  it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document Intake Lab."});
  saveWorkQueue(workQueueItems);
  renderWorkQueueTable();
@@ -1165,7 +1195,7 @@ function scanPAEvidence(){
    const p=biopsyEvidenceProfile();
    const rows=p.req.map((r,i)=>{const e=findEvidence(r.pattern,src);return{id:"BX-"+i,...r,status:e?"Found":"Missing",evidence:e}});
    window.ph0613PA=rows;
-   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status!=="Found"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
+   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}</div>`).join("");
    const f=rows.filter(r=>r.status==="Found").length;$("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=rows.length-f;$("paRate").textContent="—";
    const lines=["PH DIAGNOSTIC BIOPSY AUTHORIZATION EVIDENCE SUMMARY","Service: "+p.service,"Working diagnosis: "+p.workingDx+(p.icd?" ["+p.icd+"]":""),p.site?"Site: "+p.site:"",p.differential?"Clinical differential: "+p.differential+" (differential only; pathology pending)":"","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"].filter(Boolean);
    rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
@@ -1203,7 +1233,7 @@ function scanPAEvidence(){
  const isInitialVisit = $("visitType").value==="initial";
  const historyDependent = /failure|recalcitran|prior (therap|system)|response|candidacy/i;
  const rows=req.map(r=>{const e=findEvidence(r.pattern,src);let status=e?"Found":"Missing";if(!e && isInitialVisit && historyDependent.test(r.label))status="Not yet applicable";return{...r,status,evidence:e}});window.ph0613PA=rows;
- $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":r.status==="Not yet applicable"?"":"missing"}" ${r.status==="Not yet applicable"?'style="background:#eff6ff"':""}><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":r.status==="Not yet applicable"?"◔ NOT YET APPLICABLE (initial visit)":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status==="Not yet applicable"?'<div class="mini">Cannot be documented until treatment has been tried — reassess at a follow-up visit.</div>':""}</div>`).join("");
+ $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":r.status==="Not yet applicable"?"":"missing"}" ${r.status==="Not yet applicable"?'style="background:#eff6ff"':""}><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":r.status==="Not yet applicable"?"◔ NOT YET APPLICABLE (initial visit)":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status==="Not yet applicable"?'<div class="mini">Cannot be documented until treatment has been tried — reassess at a follow-up visit.</div>':""}${r.status==="Missing"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
  const f=rows.filter(r=>r.status==="Found").length;const trueMissing=rows.filter(r=>r.status==="Missing");const notYet=rows.filter(r=>r.status==="Not yet applicable");
  $("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=trueMissing.length;
  const lines=["PH PRIOR AUTHORIZATION EVIDENCE SUMMARY","Medication: "+drug.name,"Diagnosis: "+dx.name+" ["+dx.icd+"]","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"];
@@ -1337,6 +1367,7 @@ $("learnManualAdd").onclick=()=>{const p=$("learnManualPhrase").value,d=$("learn
 $("batchFileInput").onchange=(e)=>{handleBatchImport(e.target.files);e.target.value=""};
 $("teamMemberAdd").onclick=()=>{const n=$("teamMemberInput").value.trim();if(!n)return;if(!teamMembers.some(x=>norm(x)===norm(n))){teamMembers.push(n);saveTeamMembers(teamMembers);renderTeamMembers();renderWorkQueueTable();addAudit("Team member added",n)}$("teamMemberInput").value=""};
 $("clearQueueBtn").onclick=()=>{if(confirm("Clear the entire batch worklist? This cannot be undone.")){workQueueItems=[];saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue cleared","Manual clear from Work Queue tab.")}};
+$("paLikelihoodFilter").onchange=renderWorkQueueTable;
 renderTeamMembers();renderWorkQueueTable();
 renderBiopsyPreState();renderBiopsyHistory();renderLearnedMapTable();renderIcdReferenceTable();updateLearnedBadge();
 renderAudit();addAudit("PH Alpha 0.6.13 initialized","Consolidated build loaded with learned diagnosis/lesion mapping (right-click to teach), expanded dx pattern set (lipoma, epidermal inclusion cyst, verruca vulgaris), referral-letter section detection, and biopsy differential/pathology reconciliation.");
