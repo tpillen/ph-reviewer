@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.23</title>
+<title>PH Alpha 0.6.13.24</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.23</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.24</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -333,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.23", $=id=>document.getElementById(id);
+const VERSION="0.6.13.24", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1347,7 +1347,57 @@ function detectBiopsyFromLoadedNote(){
  const hasCancerDiff=/squamous cell carcinoma|basal cell carcinoma|melanoma|merkel cell carcinoma|carcinoma/i.test($("biopsyDifferential").value);if(hasCancerDiff){$("biopsyWorkingDx").value="Neoplasm of uncertain behavior of skin|D48.5";$("biopsyWorkingIcd").value="D48.5"}
  $("biopsyClinicalDescription").value=$("biopsyClinicalDescription").value||biopsyLine;applyWorkingDxFromDifferential();correlateObjectiveToDifferential();renderBiopsyPreState();addAudit("Biopsy differential detected","Loaded note reviewed. Objective findings were correlated with differential reference morphology; differential malignancy terms remain differential only before pathology finalization.")
 }
-function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),morphologyCorrelation:correlateObjectiveToDifferential(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved.")}
+/* 0.6.13.24: bridges the biopsy episode tracker to the separate Pathology Registry page. Both
+   pages are served from the same origin, so localStorage under the registry's own key is genuinely
+   shared between them — no messaging layer needed. Writing directly in the registry's exact data
+   shape means the registry page itself needs no changes at all; it already reads this key on load.
+*/
+const PATH_REGISTRY_KEY="ph-path-registry-011";
+function loadPathRegistry(){try{return JSON.parse(localStorage.getItem(PATH_REGISTRY_KEY)||"null")}catch{return null}}
+function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases))}
+function guessDiagnosisGroup(text){
+ const n=norm(text||"");
+ if(/basal cell/.test(n))return"Basal Cell Carcinoma";
+ if(/squamous cell/.test(n))return"Squamous Cell Carcinoma";
+ if(/melanoma/.test(n))return"Melanoma";
+ if(/sebaceous carcinoma/.test(n))return"Sebaceous Carcinoma";
+ if(/actinic keratosis/.test(n))return"Precancerous";
+ return"Other / Benign";
+}
+function syncBiopsyEpisodeToRegistry(episode){
+ // Registry may not exist yet (first-ever biopsy on this browser) — start from an empty list
+ // rather than the registry page's own demo seed data, since these are real (synthetic-test)
+ // encounters, not the registry's illustrative examples.
+ let cases=loadPathRegistry();
+ if(cases===null)cases=[];
+ const differentialText=(episode.differential||[]).join(" vs ");
+ const workingText=episode.workingDiagnosis+(differentialText?` (differential: ${differentialText})`:"");
+ const isCancerDifferential=/carcinoma|melanoma/i.test(differentialText+" "+episode.workingDiagnosis);
+ let entry=cases.find(c=>c.caseId===episode.id);
+ const isNew=!entry;
+ if(!entry){
+   entry={caseId:episode.id,patientId:ingestState.filename||"(unspecified — see linked source document)",provider:"Unassigned",biopsy:(episode.createdAt||new Date().toISOString()).slice(0,10),report:"",completion:"",completionType:"",closedBy:"",group:guessDiagnosisGroup(differentialText)||"Pending pathology",dx:workingText,site:episode.site||"",status:"Open - Pending Completion",priority:isCancerDifferential?"High":"Routine",updates:[]};
+   cases.unshift(entry);
+ }else{
+   entry.dx=workingText;entry.site=episode.site||entry.site;entry.priority=isCancerDifferential?"High":entry.priority;
+ }
+ entry.updates.push({date:new Date().toISOString().slice(0,10),type:"Procedure",enteredBy:"Provider",text:`Biopsy performed (${episode.technique||"technique not specified"}); working diagnosis: ${workingText}.`,next:"Await final pathology report."});
+ savePathRegistry(cases);
+ return isNew;
+}
+function syncPathologyFinalizationToRegistry(episode){
+ let cases=loadPathRegistry();if(cases===null)return;
+ const entry=cases.find(c=>c.caseId===episode.id);if(!entry)return;
+ entry.report=(episode.finalizedAt||new Date().toISOString()).slice(0,10);
+ entry.dx=episode.finalDiagnosis+(episode.finalIcd?` (${episode.finalIcd})`:"");
+ entry.group=guessDiagnosisGroup(episode.finalDiagnosis);
+ entry.updates.push({date:entry.report,type:"Pathology result",enteredBy:"Pathology Coordinator",text:`Final pathology: ${episode.finalDiagnosis}${episode.finalIcd?` (${episode.finalIcd})`:""}.${episode.followup?" Follow-up: "+episode.followup+".":""}`,next:"Awaiting definitive treatment/referral completion — case remains open until Completion Date is recorded in the Pathology Registry."});
+ // Status intentionally stays "Open" here — pathology being finalized is not the same as the
+ // case being closed. Closure (Completion Date/Type) is recorded directly in the registry page
+ // once the resulting procedure/referral is actually completed, matching its own existing design.
+ savePathRegistry(cases);
+}
+function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),morphologyCorrelation:correlateObjectiveToDifferential(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));const isNewRegistryCase=syncBiopsyEpisodeToRegistry(episode);$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved."+(isNewRegistryCase?" Added to Pathology Registry as an open case.":" Pathology Registry entry updated."))}
 function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("biopsyDifferential").value);$("biopsyPreState").innerHTML=`<b>Objective description:</b> ${esc($("biopsyClinicalDescription").value.trim()||"Not documented")}<br><b>Working diagnosis:</b> ${esc(w.dx)}${$("biopsyWorkingIcd").value?` (${esc($("biopsyWorkingIcd").value)})`:""}<br><b>Differential:</b> ${diff.length?diff.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join(""):"None entered"}<br><b>Diagnostic lock:</b> <span class="biopsy-chip biopsy-locked">Differential terms are not active definitive diagnoses until pathology finalizes</span>`;correlateObjectiveToDifferential()}
 /* 0.6.13.8: now returns {name, icd} instead of a bare name string, so a recognized pathology
    diagnosis auto-fills its ICD-10 code too — reducing hand-entry to just the cases genuinely not
@@ -1381,7 +1431,7 @@ function inferFinalDx(text){
  return {name:"",icd:""};
 }
 function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}$("pathStatus").value="Final"}
-function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}</div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved.")}
+function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));syncPathologyFinalizationToRegistry(ep);$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}<br><span class="mini">Pathology Registry updated — case remains open until Completion Date/Type is recorded there.</span></div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved. Pathology Registry updated.")}
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
 $("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
