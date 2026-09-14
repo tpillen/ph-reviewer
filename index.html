@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.21</title>
+<title>PH Alpha 0.6.13.22</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.21</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.22</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -333,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.21", $=id=>document.getElementById(id);
+const VERSION="0.6.13.22", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1222,6 +1222,31 @@ function scanPAEvidence(){
  }
  if(!$("paDrug").value)return;
  const {drug,dx}=selectedPA();
+/* 0.6.13.22: "Objective severity" previously only checked whether a BSA/PASI/EASI-shaped number
+   appeared anywhere — not whether that number actually clears the threshold payers use for
+   "moderate-to-severe" classification. Confirmed in testing: a note documenting BSA 5% was marked
+   "FOUND," but 5% is below the ~10% threshold commonly cited for moderate-to-severe psoriasis —
+   meaning the checklist was reporting the requirement as satisfied when the actual value likely
+   would not support the PA. These thresholds are commonly-cited clinical conventions, not a
+   universal rule — payer criteria vary, and this is a flag for review, not a denial prediction.
+*/
+function checkSeverityThreshold(evidenceText){
+ if(!evidenceText)return null;
+ let m;
+ if(m=evidenceText.match(/BSA\D{0,30}?(\d+(?:\.\d+)?)\s*%/i)){
+   const v=parseFloat(m[1]);
+   if(v<10)return{value:`BSA ${v}%`,detail:`BSA ${v}% is below the ~10% threshold commonly cited for moderate-to-severe classification.`};
+ }
+ if(m=evidenceText.match(/PASI\D{0,10}?(\d+(?:\.\d+)?)/i)){
+   const v=parseFloat(m[1]);
+   if(v<10)return{value:`PASI ${v}`,detail:`PASI ${v} is below the ~10 threshold commonly cited for moderate-to-severe classification.`};
+ }
+ if(m=evidenceText.match(/EASI\D{0,10}?(\d+(?:\.\d+)?)/i)){
+   const v=parseFloat(m[1]);
+   if(v<16)return{value:`EASI ${v}`,detail:`EASI ${v} is below the ~16 threshold commonly cited for moderate-to-severe atopic dermatitis.`};
+ }
+ return null;
+}
  const req=dx.req.map((r,i)=>({id:"FDA-"+i,type:"FDA baseline",label:r[0],pattern:r[1],source:"Seed FDA indication profile"})).concat(relevantRules().map(r=>({id:r.id,type:"Payer learned",label:r.requirement,pattern:r.searchTerms||r.requirement,source:r.payer+" denial"})));
  // 0.6.13.15: a requirement about prior treatment history (recalcitrance, therapy failure, prior
  // response/candidacy) genuinely cannot be documented on a same-day INITIAL visit — treatment is
@@ -1232,17 +1257,27 @@ function scanPAEvidence(){
  // of visit type, since those should be documented at any visit including the first one.
  const isInitialVisit = $("visitType").value==="initial";
  const historyDependent = /failure|recalcitran|prior (therap|system)|response|candidacy/i;
- const rows=req.map(r=>{const e=findEvidence(r.pattern,src);let status=e?"Found":"Missing";if(!e && isInitialVisit && historyDependent.test(r.label))status="Not yet applicable";return{...r,status,evidence:e}});window.ph0613PA=rows;
- $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":r.status==="Not yet applicable"?"":"missing"}" ${r.status==="Not yet applicable"?'style="background:#eff6ff"':""}><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":r.status==="Not yet applicable"?"◔ NOT YET APPLICABLE (initial visit)":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status==="Not yet applicable"?'<div class="mini">Cannot be documented until treatment has been tried — reassess at a follow-up visit.</div>':""}${r.status==="Missing"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
- const f=rows.filter(r=>r.status==="Found").length;const trueMissing=rows.filter(r=>r.status==="Missing");const notYet=rows.filter(r=>r.status==="Not yet applicable");
+ const rows=req.map(r=>{
+   const e=findEvidence(r.pattern,src);
+   let status=e?"Found":"Missing",thresholdNote=null;
+   if(!e && isInitialVisit && historyDependent.test(r.label))status="Not yet applicable";
+   if(e && /objective severity/i.test(r.label)){
+     const below=checkSeverityThreshold(e);
+     if(below){status="Below threshold";thresholdNote=below.detail}
+   }
+   return{...r,status,evidence:e,thresholdNote};
+ });window.ph0613PA=rows;
+ $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":r.status==="Not yet applicable"?"":r.status==="Below threshold"?"":"missing"}" ${r.status==="Not yet applicable"?'style="background:#eff6ff"':r.status==="Below threshold"?'style="background:#fff7ed"':""}><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":r.status==="Not yet applicable"?"◔ NOT YET APPLICABLE (initial visit)":r.status==="Below threshold"?"⚠ DOCUMENTED, BELOW TYPICAL THRESHOLD":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status==="Not yet applicable"?'<div class="mini">Cannot be documented until treatment has been tried — reassess at a follow-up visit.</div>':""}${r.status==="Below threshold"?`<div class="mini" style="color:#9a3412">${esc(r.thresholdNote)} Not a denial prediction — payer criteria vary — but worth a second look before submission.</div>`:""}${r.status==="Missing"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
+ const f=rows.filter(r=>r.status==="Found").length;const trueMissing=rows.filter(r=>r.status==="Missing");const notYet=rows.filter(r=>r.status==="Not yet applicable");const belowThresh=rows.filter(r=>r.status==="Below threshold");
  $("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=trueMissing.length;
  const lines=["PH PRIOR AUTHORIZATION EVIDENCE SUMMARY","Medication: "+drug.name,"Diagnosis: "+dx.name+" ["+dx.icd+"]","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"];
  rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
  if(!rows.some(r=>r.status==="Found"))lines.push("• None located.");
  lines.push("","MISSING / PROVIDER OR STAFF REVIEW:");trueMissing.forEach(r=>lines.push("• "+r.label+": not located in available documentation."));if(!trueMissing.length)lines.push("• None.");
+ if(belowThresh.length){lines.push("","DOCUMENTED BUT BELOW TYPICAL THRESHOLD (review before submission):");belowThresh.forEach(r=>lines.push("• "+r.label+": "+r.thresholdNote))}
  if(notYet.length){lines.push("","NOT YET APPLICABLE (initial visit — reassess once treatment has been tried):");notYet.forEach(r=>lines.push("• "+r.label+": cannot be documented on a same-day initial visit."))}
  lines.push("","FDA baseline and payer-specific rules are maintained separately. Missing facts are not inferred or fabricated.");$("paSummary").value=lines.join("\n");$("treatmentSummary").value=$("paSummary").value;
- $("workQueue").innerHTML=trueMissing.length?trueMissing.map(r=>`<div class="map-item"><b>Missing PA evidence:</b> ${esc(r.label)}<div class="mini">Provider/staff review required before submission if this criterion applies.</div></div>`).join(""):'<div class="notice ok">No currently loaded PA evidence gaps for this profile.</div>';
+ $("workQueue").innerHTML=(trueMissing.length||belowThresh.length)?[...trueMissing.map(r=>`<div class="map-item"><b>Missing PA evidence:</b> ${esc(r.label)}<div class="mini">Provider/staff review required before submission if this criterion applies.</div></div>`),...belowThresh.map(r=>`<div class="map-item"><b>Below typical threshold:</b> ${esc(r.label)}<div class="mini">${esc(r.thresholdNote)}</div></div>`)].join(""):'<div class="notice ok">No currently loaded PA evidence gaps for this profile.</div>';
 }
 function extractDenialRules(){const txt=$("denialText").value.trim();if(!txt){alert("Paste denial text first.");return}const s=sentences(txt),cue=/not\s+(documented|demonstrated|met|provided|submitted)|requires?|must|failure|failed|trial|duration|contraindicat|intoler|prior|step therapy|preferred|bsa|pasi|easi|iga|denied|coverage/i;window.denialCandidates=s.filter(x=>cue.test(x)).slice(0,12);$("denialCandidates").innerHTML=window.denialCandidates.length?window.denialCandidates.map((x,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-weight:normal"><input class="denChk" type="checkbox" value="${i}" checked style="width:auto;min-height:auto;margin-top:3px"><span>${esc(x)}</span></label>`).join(""):'<div class="notice warn">No requirement-like sentence detected automatically.</div>'}
 function addDenialRules(){const {drug,dx}=selectedPA(),p=$("paPayer").value,all=loadRules(),cand=window.denialCandidates||[];document.querySelectorAll(".denChk:checked").forEach(c=>{const q=cand[Number(c.value)];if(q)all.unshift({id:"PR-"+Date.now()+"-"+Math.floor(Math.random()*1000),drugId:drug.id,diagnosis:dx.name,payer:p,requirement:q,searchTerms:q,status:"Observed",confidence:.5,active:true,createdAt:new Date().toISOString()})});saveRules(all);renderKnownRules();scanPAEvidence();addAudit("Payer requirement learned","Reviewed denial requirement(s) added as payer-specific Observed rules.")}
