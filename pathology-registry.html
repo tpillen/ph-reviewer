@@ -164,10 +164,14 @@ $("bulkImportBtn").onclick=()=>{
  reader.readAsText(file);
 };
 $("purgeImportBtn").onclick=()=>{
- const toRemove=cases.filter(c=>c.source==="bulk-import").length;
+ // Recognizes bulk-imported cases two ways: the "source" tag (added going forward) and the
+ // "PATH-IMPORT-" case ID prefix (present on every bulk import regardless of tag), so this still
+ // works correctly against cases imported before the "source" field was being saved.
+ const isBulkImported=c=>c.source==="bulk-import"||String(c.caseId||"").startsWith("PATH-IMPORT-");
+ const toRemove=cases.filter(isBulkImported).length;
  if(!toRemove){$("bulkImportStatus").textContent="No bulk-imported cases found to purge.";return}
  if(!confirm(`Remove all ${toRemove} bulk-imported case(s)? Manually-entered cases are never affected. This cannot be undone.`))return;
- cases=cases.filter(c=>c.source!=="bulk-import");
+ cases=cases.filter(c=>!isBulkImported(c));
  active=null;$("casePanel").classList.add("hidden");
  save();render();
  $("bulkImportStatus").textContent=`Purged ${toRemove} bulk-imported case(s).`;
