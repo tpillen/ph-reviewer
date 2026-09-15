@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.24</title>
+<title>PH Alpha 0.6.13.26</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.24</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.26</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -333,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.24", $=id=>document.getElementById(id);
+const VERSION="0.6.13.26", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1414,6 +1414,7 @@ function inferFinalDx(text){
  // the in-situ pattern to match the fully spelled-out phrase, not just the abbreviated "SCC".
  const candidates=[
   ["Squamous cell carcinoma in situ (Bowen disease)",/\bsquamous cell carcinoma in situ\b|\bscc in situ\b|\bbowen('?s)? disease\b/,"D04.- (site-specific — select exact code)"],
+  ["Dysplastic (atypical) nevus",/\b(dysplastic|atypical)\b[^.]{0,40}\bnevus\b|\bnevus\b[^.]{0,40}\b(dysplastic|atypia|atypical)\b/i,"D22.- (site-specific) — correlate; may warrant D48.5 if severe atypia noted"],
   ["Melanoma in situ",/\bmelanoma in situ\b/,"D03.- (site-specific — select exact code)"],
   ["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/,"C43.- (site-specific — select exact code)"],
   ["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/,"C44.- (site-specific — select exact code)"],
@@ -1425,10 +1426,26 @@ function inferFinalDx(text){
   ["Bullous pemphigoid",/\bbullous pemphigoid\b/,""],
   ["Lichen planus",/\blichen planus\b/,""],
   ["Granuloma annulare",/\bgranuloma annulare\b/,""],
+  ["Benign melanocytic nevus",/\b(compound|intradermal|junctional|combined|cellular blue|congenital)\b[^.]{0,20}\bnevus\b|\bmelanocytic nevus\b/i,"D22.- (site-specific — select exact code)"],
   ["Dermatofibroma",/\bdermatofibroma\b/,""]
  ];
- for(const [name,re,icd] of candidates) if(re.test(low)) return {name,icd};
+ for(const [name,re,icd] of candidates) if(re.test(low)) return applyGradeIfPresent(name,icd,low);
  return {name:"",icd:""};
+}
+/* 0.6.13.26: dysplastic nevus specifically needs its atypia grade (mild/moderate/severe)
+   captured, not just the bare label — grade is the clinically meaningful distinction (it drives
+   re-excision margins, and severe atypia is treated closer to melanoma-in-situ territory) and the
+   ICD reference already distinguishes low-grade from severe/high-grade dysplastic nevi. Confirmed
+   directly relevant: this pathway is commonly reached from a pre-biopsy melanoma differential that
+   resolves to "just" a dysplastic nevus — a very common, expected outcome, not a rare edge case. */
+function applyGradeIfPresent(name,icd,low){
+ if(name!=="Dysplastic (atypical) nevus")return{name,icd};
+ const m=low.match(/\b(mild|moderate|severe)\b[^.]{0,60}(atypia|dysplasia)|(atypia|dysplasia)[^.]{0,60}\b(mild|moderate|severe)\b/);
+ const grade=m?(m[1]||m[4]):null;
+ if(!grade)return{name,icd};
+ const gradedName=`Dysplastic nevus, ${grade} atypia`;
+ const gradedIcd=grade==="severe"?"D48.5 (severe atypia — bordering melanoma in situ; correlate closely, site-specific)":"D22.- (site-specific) — "+grade+" atypia, low-grade dysplastic nevus";
+ return{name:gradedName,icd:gradedIcd};
 }
 function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}$("pathStatus").value="Final"}
 function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));syncPathologyFinalizationToRegistry(ep);$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}<br><span class="mini">Pathology Registry updated — case remains open until Completion Date/Type is recorded there.</span></div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved. Pathology Registry updated.")}
