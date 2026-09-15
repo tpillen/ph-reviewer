@@ -30,6 +30,16 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
  <div class="metric"><span>Update entries</span><strong id="updateCount"></strong></div>
 </div>
 
+<div class="panel">
+ <h2 style="margin-top:0">Bulk Import Cases (JSON)</h2>
+ <div class="source">Import a JSON array of case records exported from an external source (e.g. a de-identified tracking spreadsheet). Cases are added to the existing list — nothing already in the registry is overwritten. Each imported record should already be de-identified before it ever reaches this page.</div>
+ <div class="row" style="margin-top:8px">
+  <input type="file" id="bulkImportFile" accept=".json">
+  <button class="primary" id="bulkImportBtn">Import File</button>
+  <span id="bulkImportStatus" class="source"></span>
+ </div>
+</div>
+
 <div class="panel followup-panel">
  <div class="row" style="justify-content:space-between">
   <h2 style="margin:0">⚠ Pathology Audit — Needs Follow-Up</h2>
@@ -132,6 +142,26 @@ $("addUpdateBtn").onclick=()=>{if(!active)return;const text=$("newUpdateText").v
 $("saveCaseBtn").onclick=()=>{if(!active)return;active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;active.completion=$("completionDate").value;active.completionType=$("completionType").value;active.closedBy=$("closedBy").value;active.status=active.completion?"Completed / Closed":"Open - Pending Completion";save();renderCase();render()}
 function save(){localStorage.setItem("ph-path-registry-011",JSON.stringify(cases))}
 $("groupFilter").onchange=render;$("statusFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;$("resetBtn").onclick=()=>{cases=structuredClone(seed);save();active=null;$("casePanel").classList.add("hidden");render()}
+$("bulkImportBtn").onclick=()=>{
+ const file=$("bulkImportFile").files[0];
+ if(!file){$("bulkImportStatus").textContent="Choose a .json file first.";return}
+ const reader=new FileReader();
+ reader.onload=()=>{
+  let imported;
+  try{imported=JSON.parse(reader.result)}catch(e){$("bulkImportStatus").textContent="Could not parse JSON — check the file is a valid JSON array.";return}
+  if(!Array.isArray(imported)){$("bulkImportStatus").textContent="Expected a JSON array of case records.";return}
+  const existingIds=new Set(cases.map(c=>c.caseId));
+  let added=0,skipped=0;
+  imported.forEach(rec=>{
+   if(!rec.caseId||existingIds.has(rec.caseId)){skipped++;return}
+   cases.push({caseId:rec.caseId,patientId:rec.patientId||"",provider:rec.provider||"Unassigned",biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:rec.completionType||"",closedBy:rec.closedBy||"",group:rec.group||"Other / Benign",dx:rec.dx||"(diagnosis not specified)",site:rec.site||"",status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority||"Routine",updates:Array.isArray(rec.updates)?rec.updates:[]});
+   existingIds.add(rec.caseId);added++;
+  });
+  save();render();
+  $("bulkImportStatus").textContent=`Imported ${added} case(s). Skipped ${skipped} (missing/duplicate case ID).`;
+ };
+ reader.readAsText(file);
+};
 render();
 </script>
 </body></html>
