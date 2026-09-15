@@ -2,136 +2,1507 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PH Pathology Tracking Registry Alpha 0.1.1</title>
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1f3a">
+<title>PH Alpha 0.6.13.27</title>
 <style>
-:root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
-*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
-header{background:linear-gradient(120deg,var(--navy),#164e8c,var(--teal));color:#fff;padding:18px}
-header h1{margin:0 0 4px}.wrap{padding:16px;max-width:1500px;margin:auto}.panel{background:#fff;border:1px solid var(--line);border-radius:12px;padding:15px;margin-bottom:14px}
-.grid{display:grid;gap:12px}.four{grid-template-columns:repeat(4,1fr)}.two{grid-template-columns:repeat(2,1fr)}
-.metric{padding:12px;border:1px solid var(--line);border-radius:10px}.metric strong{display:block;font-size:22px}
-label{font-size:12px;font-weight:700;color:#475569}input,select,textarea{width:100%;padding:9px;border:1px solid #cbd5e1;border-radius:7px;margin-top:4px}textarea{min-height:70px}
-button{border:0;border-radius:8px;padding:9px 12px;font-weight:700;cursor:pointer}.primary{background:var(--blue);color:#fff}.secondary{background:#e2e8f0}.success{background:var(--ok);color:#fff}
-table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc;position:sticky;top:0}
-.badge{display:inline-block;padding:4px 7px;border-radius:999px;font-size:11px;font-weight:700}.open{background:#fef3c7;color:#92400e}.closed{background:#dcfce7;color:#166534}.high{background:#fee2e2;color:#991b1b}.stale{background:#fee2e2;color:#991b1b}
-.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}.hidden{display:none}.source{font-size:11px;color:var(--muted)}
-.followup-panel{border:2px solid var(--warn);background:#fffbeb}
-@media(max-width:900px){.four,.two{grid-template-columns:1fr}.wrap{padding:10px}}
+:root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
+*{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
+button,input,select,textarea{font:inherit}button{touch-action:manipulation}
+header{position:sticky;top:0;z-index:20;background:linear-gradient(120deg,var(--navy),#164e8c 58%,var(--teal));color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{margin:0;font-size:24px}header p{margin:3px 0 0;opacity:.9;font-size:14px}
+.shell{display:grid;grid-template-columns:250px 1fr;min-height:calc(100vh - 78px)}
+aside{background:#0f172a;color:#dbeafe;padding:12px;overflow:auto}
+aside h3{font-size:11px;text-transform:uppercase;letter-spacing:.12em;color:#93c5fd;margin:12px 10px 7px}
+.nav{width:100%;text-align:left;border:0;background:transparent;color:#dbeafe;padding:11px 12px;border-radius:8px;margin:2px 0;cursor:pointer}
+.nav:hover,.nav.active{background:#1e3a8a;color:#fff}
+main{padding:18px;overflow:auto}.view.hidden,.hidden{display:none!important}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:13px;box-shadow:var(--shadow);padding:16px;margin-bottom:14px}
+.panel h2,.panel h3,.panel h4{margin-top:0}.grid{display:grid;gap:12px}.two{grid-template-columns:repeat(2,minmax(0,1fr))}.three{grid-template-columns:repeat(3,minmax(0,1fr))}.four{grid-template-columns:repeat(4,minmax(0,1fr))}
+label{display:block;font-size:12px;font-weight:700;color:#475569}input,select,textarea{width:100%;padding:11px;border:1px solid #cbd5e1;border-radius:9px;margin-top:5px;background:#fff;color:#0f172a;min-height:44px}textarea{min-height:90px;resize:vertical}
+.row{display:flex;gap:9px;align-items:center;flex-wrap:wrap}.between{justify-content:space-between}.btn{border:0;border-radius:9px;padding:11px 14px;font-weight:700;cursor:pointer;min-height:44px}.primary{background:var(--blue);color:#fff}.secondary{background:#e2e8f0}.success{background:var(--ok);color:#fff}.danger{background:var(--bad);color:#fff}
+.badge{display:inline-flex;padding:5px 9px;border-radius:999px;font-size:12px;font-weight:700;background:#e8eefc;color:#24428f}.badge.ok{background:#dcfce7;color:#166534}.badge.warn{background:#fef3c7;color:#92400e}.badge.bad{background:#fee2e2;color:#991b1b}
+.notice{padding:12px 13px;border-radius:9px;border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a}.notice.ok{border-color:#bbf7d0;background:#f0fdf4;color:#166534}.notice.warn{border-color:#fed7aa;background:#fff7ed;color:#9a3412}
+.card{border:1px solid var(--line);border-radius:10px;padding:12px;background:#fff}.mini,.source{font-size:11px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;border-bottom:1px solid var(--line);text-align:left;vertical-align:top}th{background:#f8fafc;font-size:11px;text-transform:uppercase;color:#475569}
+.raw-source{min-height:320px;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px}
+.source-pane{min-height:420px;max-height:70vh;overflow:auto;white-space:pre-wrap;font-family:ui-monospace,SFMono-Regular,Consolas,monospace;font-size:12px;line-height:1.5;background:#fbfdff;border:1px solid var(--line);border-radius:9px;padding:12px}
+.map-item{border-top:1px solid var(--line);padding:10px 0}.map-item:first-child{border-top:0}.pill{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:2px 7px;font-size:11px;margin:2px}.auto{background:#f0fdf4}.review{background:#fff7ed}.missing{background:#fef2f2}
+.kpi{font-size:23px;font-weight:800}.workflow-ribbon{display:flex;gap:6px;overflow-x:auto;padding:8px 0 14px}.ribbon-step{min-width:150px;border-radius:999px;padding:9px 12px;text-align:center;font-size:12px;font-weight:700;border:1px solid var(--line);background:#e2e8f0;color:#475569}.ribbon-step.complete{background:#dcfce7;color:#166534}.ribbon-step.current{background:#dbeafe;color:#1e40af}
+.floating-feedback{position:fixed;right:18px;bottom:18px;z-index:50;border-radius:999px;box-shadow:0 10px 25px rgba(0,0,0,.2)}
+.modal-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.65);z-index:110;display:flex;align-items:center;justify-content:center;padding:18px}.modal-card{width:min(760px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;padding:20px}
+@media(max-width:900px){.shell{grid-template-columns:1fr}.two,.three,.four{grid-template-columns:1fr}aside{position:sticky;top:76px;z-index:15;display:flex;overflow-x:auto;gap:6px;padding:8px}.nav{min-width:max-content;width:auto}main{padding:12px}}
+@media(max-width:600px){.btn{width:100%}.row .btn{flex:1 1 100%}}
+
+/* Alpha 0.6.12 biopsy/pathology reconciliation */
+.biopsy-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+.biopsy-chip{display:inline-block;border:1px solid var(--line);border-radius:999px;padding:3px 8px;font-size:11px;margin:2px;background:#f8fafc}
+.biopsy-locked{background:#fff7ed;border-color:#fed7aa}.biopsy-final{background:#f0fdf4;border-color:#bbf7d0}.biopsy-pending{background:#eff6ff;border-color:#bfdbfe}
+.biopsy-history{font-size:12px;white-space:pre-wrap;background:#fbfdff;border:1px solid var(--line);border-radius:9px;padding:10px}
+@media(max-width:900px){.biopsy-grid{grid-template-columns:1fr}}
+
+/* Alpha 0.6.13 learned-mapping context menu */
+.unmapped-row{background:#fef2f2}
+.ctx-menu{position:fixed;z-index:200;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 14px 34px rgba(15,23,42,.22);min-width:280px;max-width:340px;padding:8px;font-size:13px}
+.ctx-menu h4{margin:4px 6px 8px;font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.ctx-menu .ctx-opt{display:block;width:100%;text-align:left;border:0;background:transparent;padding:8px 8px;border-radius:7px;cursor:pointer;font-size:13px}
+.ctx-menu .ctx-opt:hover{background:#eff6ff}
+.ctx-menu .ctx-sep{border-top:1px solid var(--line);margin:6px 0}
+.ctx-menu input[type=text]{margin-top:6px}
+.ctx-menu .ctx-actions{display:flex;gap:6px;margin-top:8px}
+.ctx-menu .ctx-actions .btn{flex:1;padding:8px;font-size:12px;min-height:36px}
+.mic-btn{border:1px solid var(--line);background:#f8fafc;border-radius:7px;padding:6px 8px;cursor:pointer;font-size:12px;margin-top:6px}
+.mic-btn.listening{background:#fee2e2;border-color:#fecaca}
+.learn-badge{background:#ede9fe;color:#5b21b6}
 </style>
 </head>
 <body>
-<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.1.2 · Synthetic demonstration · Closed-loop pathology worklist + coordinator follow-up audit</div></header>
-<div class="wrap">
-<div class="panel grid four">
- <div class="metric"><span>Open findings</span><strong id="openCount"></strong></div>
- <div class="metric"><span>High priority</span><strong id="highCount"></strong></div>
- <div class="metric"><span>Completed</span><strong id="closedCount"></strong></div>
- <div class="metric"><span>Update entries</span><strong id="updateCount"></strong></div>
+<header>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.27</p></div>
+ <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
+</header>
+
+<div class="shell">
+<aside>
+ <h3>Workflow</h3>
+ <button class="nav active" data-view="documentIntake">0. Document Intake Lab</button>
+ <button class="nav" data-view="intake">1. Intake</button>
+ <button class="nav" data-view="visit">2. Visit Authorization</button>
+ <button class="nav" data-view="soap">3. Structured SOAP</button>
+ <button class="nav" data-view="treatment">4. Treatment Authorization</button>
+ <button class="nav" data-view="queue">5. Work Queue</button>
+ <button class="nav" data-view="biopsy">6. Biopsy / Pathology</button>
+ <button class="nav" data-view="learning">7. Mapping Memory</button>
+ <button class="nav" data-view="audit">Audit</button>
+ <a href="pathology-registry.html" target="_blank" style="display:block;color:#dbeafe;text-decoration:none;padding:11px 12px;border-radius:8px;margin:2px 0;background:#334155">Pathology Registry ↗</a>
+</aside>
+
+<main>
+<div id="workflowRibbon" class="workflow-ribbon">
+ <div class="ribbon-step complete">Patient Intake</div><div class="ribbon-step complete">Insurance Verification</div><div class="ribbon-step complete">Visit Prior Authorization</div><div class="ribbon-step current">Provider Evaluation</div><div class="ribbon-step">Treatment Prior Authorization</div><div class="ribbon-step">Billing</div><div class="ribbon-step">Follow-up</div>
 </div>
 
-<div class="panel followup-panel">
- <div class="row" style="justify-content:space-between">
-  <h2 style="margin:0">⚠ Pathology Audit — Needs Follow-Up</h2>
-  <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
+<section id="documentIntake" class="view">
+ <div class="panel">
+  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.13.22 · clinical document intelligence + encounter-directed authorization routing + learned mapping + batch triage</div></div><span class="badge">Consolidated Build</span></div>
+  <div class="notice">Obvious clinical concepts map directly to HPI, Medication Table, Objective, Assessment, Plan, and PA evidence. Outside records remain separate from the legal encounter until intentionally accepted. Right-click any unmapped or diagnosis field to correct/teach the mapping — PH remembers the correction for future documents. This build also includes: multi-document contamination and non-clinical-document detection, automatic medication/diagnosis matching for the PA checklist, severity-threshold checking (BSA/PASI/EASI vs. typical payer minimums), and a batch Work Queue with PA-likelihood triage (Unlikely / Needs attention / Ready).</div>
  </div>
- <div class="source">Every case below has not yet reached final disposition (no Completion Date recorded). Sorted oldest-open first — this is the coordinator's punch list to keep treatment plans moving, not a general case browser.</div>
- <div style="overflow:auto;margin-top:10px">
-  <table><thead><tr><th>Case</th><th>Diagnosis</th><th>Provider</th><th>Days Open</th><th>Days Since Last Update</th><th>Priority</th><th></th></tr></thead><tbody id="followupRows"></tbody></table>
+
+ <div class="panel">
+  <h3>1. Source Document Intake</h3>
+  <div class="grid two">
+   <div>
+    <label>Load document for data extraction and mapping (synthetic/de-identified only)<input id="clinicalFileInput" type="file" accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
+    <div class="row"><button id="clearBtn" class="btn secondary">Clear</button></div>
+    <div id="sourceMeta" class="source" style="margin-top:8px">No source loaded.</div>
+    <div id="extractStatus" class="notice" style="margin-top:8px">Select a file or load the synthetic note.</div>
+   </div>
+   <div class="card"><div class="mini">Source preservation</div><div id="preserved" class="kpi">Not loaded</div><div class="source">Filename, import time, SHA-256 fingerprint, normalized text, and source evidence are retained in the active browser session.</div></div>
+  </div>
+  <label>Original Source Document<textarea id="rawSource" class="raw-source"></textarea></label>
+  <div id="linkedQueueNotice" class="notice hidden" style="margin-bottom:10px"></div>
+  <div class="row"><button id="extractBtn" class="btn primary">Extract, Map & Compare</button><button id="acceptBtn" class="btn success">Accept Auto-Mapped Clinical Fields</button><button id="syncQueueBtn" class="btn secondary">Update Work Queue Item</button></div>
  </div>
+
+ <div class="panel">
+  <h3>2. Visit Context & Interval Change</h3>
+  <div class="grid two">
+   <label>Visit type<select id="visitType"><option value="followup">Follow-up / interval visit</option><option value="initial">Initial visit / baseline</option></select></label>
+   <div class="notice"><b>Follow-up:</b> determine what changed since the prior visit.<br><b>Initial:</b> establish baseline from referral/outside records without claiming interval change.</div>
+  </div>
+  <div class="grid two" style="margin-top:10px">
+   <label>Prior encounter / baseline source<textarea id="priorSource" placeholder="Paste the prior visit note here for interval comparison."></textarea></label>
+   <label>Interval change summary<textarea id="intervalSummary" readonly></textarea></label>
+  </div>
+ </div>
+
+ <div class="panel">
+  <div class="row between"><h3>3. PH Interpretation / Automatic Destinations</h3><div class="row"><span class="badge learn-badge" id="learnedCountBadge">0 learned mappings</span></div></div>
+  <div class="grid four">
+   <div class="card"><div class="mini">Concepts</div><div id="kConcepts" class="kpi">0</div></div>
+   <div class="card"><div class="mini">Auto-mapped</div><div id="kAuto" class="kpi">0</div></div>
+   <div class="card"><div class="mini">Needs review</div><div id="kReview" class="kpi">0</div></div>
+   <div class="card"><div class="mini">Unmapped</div><div id="kUnmapped" class="kpi">0</div></div>
+  </div>
+  <div class="notice mini" style="margin-top:8px">Right-click (or long-press) any row — especially rows marked <span class="badge bad">UNMAPPED</span> — to pick an ICD-10-organized diagnosis/lesion label or type/dictate a correction. PH will remember it.</div>
+  <div style="overflow:auto;margin-top:10px">
+   <table><thead><tr><th>Concept</th><th>Value</th><th>Context</th><th>PH destination(s)</th><th>Source evidence</th><th>Status</th></tr></thead><tbody id="mappingRows"><tr><td colspan="6">No extraction run.</td></tr></tbody></table>
+  </div>
+ </div>
+
+ <div class="panel">
+  <h3>4. Clinical Destination Review</h3>
+  <div class="grid three">
+   <div class="card"><h4>HPI · Current Treatment</h4><div id="hpiCurrent"></div></div>
+   <div class="card"><h4>HPI · Prior Treatment / Failures</h4><div id="hpiHistory"></div></div>
+   <div class="card"><h4>HPI · Treatment Response</h4><div id="hpiResponse"></div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h4>Objective / Physical Examination</h4><div id="objectiveMap"></div></div>
+   <div class="card"><h4>Assessment / Diagnosis</h4><div id="assessmentMap"></div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h4>Medication State Table</h4><div id="medMap"></div></div>
+   <div class="card"><h4>Plan / Proposed Treatment</h4><div id="planMap"></div></div>
+  </div>
+ </div>
+
+ <div class="panel">
+  <h3>5. Original Source Validation</h3>
+  <div class="grid two">
+   <div><label>Previsit Intelligence Summary<textarea id="previsitSummary" readonly></textarea></label></div>
+   <div><div id="sourcePane" class="source-pane">No source loaded.</div></div>
+  </div>
+ </div>
+
+ <div id="paEvidencePanel" class="panel">
+  <div class="row between"><div><h3>6. Encounter-Directed Authorization Evidence Workbench</h3><div class="source">Encounter → authorization pathway → requirement set → source evidence → gaps → payer learning</div></div><button id="scanPA" class="btn primary">Search Authorization Evidence</button></div>
+  <div class="grid four">
+   <label>Authorization pathway
+    <select id="paPathway">
+     <option value="auto">Auto-detect from encounter</option>
+     <option value="biopsy">Diagnostic skin biopsy / pathology</option>
+     <option value="medication">Medication prior authorization</option>
+    </select>
+   </label>
+   <label id="paDrugLabel">Medication<select id="paDrug"></select></label>
+   <label id="paDxLabel">Diagnosis / indication<select id="paDx"></select></label>
+   <label>Payer / Plan<input id="paPayer" value="Example Payer"></label>
+  </div>
+  <div id="paRouteNotice" class="notice" style="margin-top:10px">Authorization pathway will be selected from the loaded encounter.</div>
+  <div class="grid three" style="margin-top:10px">
+   <div class="card"><div class="mini">Supported</div><div id="paSupported" class="kpi">0/0</div></div>
+   <div class="card"><div class="mini">Missing</div><div id="paMissing" class="kpi">0</div></div>
+   <div class="card"><div class="mini">Recorded approval rate</div><div id="paRate" class="kpi">—</div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h4>Requirement Checklist</h4><div id="paResults"></div></div>
+   <div class="card"><h4>Authorization Evidence Summary</h4><textarea id="paSummary" readonly style="min-height:300px"></textarea><div class="row"><button id="recordApproved" class="btn success">Record Approved</button><button id="recordDenied" class="btn danger">Record Denied</button></div></div>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+   <div class="card"><h4>Denial Requirement Intake</h4><textarea id="denialText" placeholder="Paste denial letter/OCR text here..."></textarea><div class="row"><button id="extractDenial" class="btn primary">Extract Requirements</button><button id="addDenialRules" class="btn secondary">Add Checked Requirements</button></div><div id="denialCandidates"></div></div>
+   <div class="card"><h4>Known Payer-Specific Requirements</h4><div id="knownRules"></div></div>
+  </div>
+ </div>
+</section>
+
+<section id="intake" class="view hidden">
+ <div class="panel"><h2>Patient Intake</h2><div class="grid two">
+  <label>Patient Name<input id="patientName" value="Jordan Ellis"></label><label>MRN<input id="mrn" value="SYN-ACNE-001"></label>
+  <label>Date of Birth<input id="dob" type="date" value="1980-04-15"></label><label>Payer<input id="payer" value="Example Payer"></label>
+ </div><label>Chief Complaint<textarea id="chiefComplaint">Acne follow-up.</textarea></label><label>Prior Treatments<textarea id="priorTreatments"></textarea></label></div>
+</section>
+
+<section id="visit" class="view hidden">
+ <div class="panel"><h2>Visit Authorization Gate</h2><div class="notice ok">Synthetic test environment: visit authorization is cleared for provider evaluation.</div></div>
+</section>
+
+<section id="soap" class="view hidden">
+ <div class="panel"><h2>Structured Dermatology SOAP</h2><div class="notice">Only accepted mappings are populated here. The preserved external source remains separate.</div></div>
+ <div class="panel"><h3>S — Subjective</h3><label>HPI / Subjective Narrative<textarea id="subjectiveNarrative"></textarea></label></div>
+ <div class="panel"><h3>O — Objective</h3><div class="grid three">
+  <label>Body Location<input id="bodyLocation"></label>
+  <label>Morphology<input id="morphology" placeholder="Supports multiple values, e.g. Comedonal + Inflammatory"></label>
+  <label>Lesion Types<input id="lesionTypes"></label>
+  <label>Severity<input id="clinicalSeverity"></label>
+  <label>BSA %<input id="bsa"></label>
+  <label>IGA/PGA<input id="iga"></label>
+  <label>PASI (psoriasis)<input id="pasi" placeholder="Psoriasis Area & Severity Index"></label>
+  <label>EASI (atopic dermatitis)<input id="easi" placeholder="Eczema Area & Severity Index"></label>
+  <label>DLQI<input id="dlqi" placeholder="Dermatology Life Quality Index"></label>
+  <label>Itch NRS<input id="itchNrs" placeholder="0-10 numeric rating scale"></label>
+  <label>Hurley stage (HS)<input id="hurleyStage" placeholder="I / II / III"></label>
+ </div><label>Objective Narrative<textarea id="objectiveNarrative"></textarea></label></div>
+ <div class="panel"><h3>A/P — Assessment and Plan</h3><div class="grid two"><label>Diagnosis<input id="diagnosis"></label><label>ICD-10<input id="icd10"></label></div><label>Assessment Narrative<textarea id="assessmentNarrative"></textarea></label><label>Plan Narrative<textarea id="planNarrative"></textarea></label></div>
+ <div class="panel"><h3>Medication Table</h3><div id="soapMedTable"></div></div>
+</section>
+
+<section id="treatment" class="view hidden">
+ <div class="panel"><h2>Treatment Prior Authorization</h2><div class="notice">Use the FDA/Payer Evidence Workbench in Document Intake to assemble requirement-by-requirement evidence. Denials add payer-specific candidate rules rather than modifying FDA baseline rules.</div><label>Authorization Summary<textarea id="treatmentSummary" style="min-height:350px"></textarea></label></div>
+</section>
+
+<section id="queue" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.13.6 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
+  <div class="notice">Import several clinic documents at once below. Each is extracted, mapped, and scanned for missing PA evidence automatically — the results accumulate here as a persistent worklist instead of being overwritten by the next document, so a coordinator or provider can work through them and record each outcome.</div>
+ </div>
+ <div class="panel">
+  <h3>Batch Import Documents</h3>
+  <label>Select multiple clinic documents (referral letters, new-patient, established-patient notes) — .txt, .rtf, .docx, .pdf, .png, .jpg
+   <input id="batchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg">
+  </label>
+  <div id="batchProgress" class="notice" style="margin-top:8px;display:none"></div>
+ </div>
+ <div class="panel">
+  <div class="row between"><h3>Team</h3></div>
+  <div class="mini" style="margin-bottom:6px">Named individuals available for assignment, in addition to the fixed roles (Coordinator, Provider, Nursing, Unassigned).</div>
+  <div class="row"><input id="teamMemberInput" placeholder="Add a person's name..." style="flex:2"><button id="teamMemberAdd" class="btn secondary">Add</button></div>
+  <div id="teamMemberList" style="margin-top:8px"></div>
+ </div>
+ <div class="panel">
+  <div class="row between"><h3>Worklist</h3><div class="row"><span class="badge" id="queueCountBadge">0 items</span><button id="clearQueueBtn" class="btn secondary" style="min-height:36px;padding:7px 12px">Clear worklist</button></div></div>
+  <div class="row" style="margin-bottom:8px">
+   <label style="font-weight:400;flex:1">Filter by PA likelihood
+    <select id="paLikelihoodFilter">
+     <option value="all">All items</option>
+     <option value="needs_attention">Needs attention (PA elements missing)</option>
+     <option value="ready">Ready — fully supported</option>
+     <option value="unlikely">PA unlikely — not needed</option>
+    </select>
+   </label>
+  </div>
+  <div id="workQueueTable"><div class="notice">No documents imported yet — use Batch Import above.</div></div>
+ </div>
+ <div class="panel"><h3>Current Single-Document Gaps</h3><div class="mini" style="margin-bottom:6px">From the document currently loaded in the Document Intake Lab (tab 0) — separate from the batch worklist above.</div><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div>
+</section>
+
+<section id="biopsy" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Biopsy Differential & Pathology Reconciliation</h2><div class="source">Alpha 0.6.13 · Objective morphology → working diagnosis → ordered differential → pathology final → resolved diagnosis</div></div><span class="badge">Diagnostic Safety Rule</span></div>
+  <div class="notice warn"><b>Pre-biopsy rule:</b> a differential such as “AK vs SCC,” “nevus vs melanoma,” or “psoriasis vs atopic dermatitis” must not be promoted to the active definitive diagnosis before pathology finalization. PH preserves the working diagnosis and ordered differential, then reconciles to the final diagnosis when pathology returns.</div>
+ </div>
+ <div class="panel">
+  <h3>1. Biopsy Episode</h3>
+  <div class="biopsy-grid">
+   <label>Biopsy Episode ID<input id="biopsyEpisodeId" readonly></label>
+   <label>Specimen label<input id="biopsySpecimen" value="A"></label>
+   <label>Anatomic site<input id="biopsySite" placeholder="e.g. right dorsal hand"></label>
+   <label>Working diagnosis<select id="biopsyWorkingDx">
+    <option value="Neoplasm of uncertain behavior of skin|D48.5">Neoplasm of uncertain behavior of skin — D48.5</option>
+    <option value="Melanocytic neoplasm of uncertain behavior|D48.5">Melanocytic neoplasm of uncertain behavior — D48.5</option>
+    <option value="Spongiotic dermatitis, undetermined|">Spongiotic dermatitis, undetermined</option>
+    <option value="Psoriasiform dermatitis, undetermined|">Psoriasiform dermatitis, undetermined</option>
+    <option value="Interface dermatitis, undetermined|">Interface dermatitis, undetermined</option>
+    <option value="Vesiculobullous disorder, undetermined|">Vesiculobullous disorder, undetermined</option>
+    <option value="Vasculopathic / vasculitic disorder, undetermined|">Vasculopathic / vasculitic disorder, undetermined</option>
+    <option value="Granulomatous dermatitis, undetermined|">Granulomatous dermatitis, undetermined</option>
+    <option value="Panniculitis, undetermined|">Panniculitis, undetermined</option>
+    <option value="Cutaneous lymphoproliferative disorder, undetermined|">Cutaneous lymphoproliferative disorder, undetermined</option>
+    <option value="Infectious process, undetermined|">Infectious process, undetermined</option>
+   </select></label>
+   <label>Working ICD-10<input id="biopsyWorkingIcd" value="D48.5"></label>
+   <label>Biopsy technique<select id="biopsyTechnique"><option value="">— select —</option><option>Tangential / shave biopsy</option><option>Punch biopsy</option><option>Incisional biopsy</option><option>Excisional / broad shave</option></select><span id="biopsyCptHint" class="mini" style="display:block;margin-top:4px"></span></label>
+  </div>
+  <label>Clinical lesion / rash description<textarea id="biopsyClinicalDescription" placeholder="Document only findings actually observed or present in the source note."></textarea></label>
+  <div class="notice"><b>Objective ↔ Differential correlation:</b> PH compares the documented physical exam against the reference morphology for each differential. Reference descriptors never auto-populate the legal Objective exam; they are used only to organize documented findings and identify possible support or gaps.</div>
+  <div id="biopsyMorphologyCorrelation" class="biopsy-history">Enter a lesion/rash description and differential to see correlation.</div>
+  <label>Ordered differential diagnoses<textarea id="biopsyDifferential" placeholder="One per line, e.g.&#10;Actinic keratosis&#10;Squamous cell carcinoma"></textarea></label>
+  <label>Clinical question to pathologist<textarea id="biopsyQuestion" placeholder="e.g. AK vs SCC; psoriasis vs atopic dermatitis"></textarea></label>
+  <div class="grid two"><label>Special handling / ancillary consideration<input id="biopsyHandling" placeholder="e.g. separate perilesional DIF specimen, tissue culture, IHC if needed"></label><label>Pathology status<select id="pathStatus"><option>Ordered</option><option>Collected</option><option selected>Pending</option><option>Final</option><option>Amended</option></select></label></div>
+  <div class="row"><button id="detectBiopsyBtn" class="btn secondary">Detect From Loaded Note</button><button id="saveBiopsyBtn" class="btn primary">Save Biopsy Episode</button></div>
+ </div>
+ <div class="panel"><h3>2. Pre-Pathology Diagnostic State</h3><div id="biopsyPreState" class="notice">No biopsy episode saved yet.</div></div>
+ <div class="panel">
+  <h3>3. Pathology Final / Reconciliation</h3><div class="notice">The original working diagnosis and differential remain in the audit history. Final pathology adds a resolved diagnosis; it does not overwrite the pre-biopsy clinical impression.</div>
+  <label>Final pathology report / impression<textarea id="pathFinalText"></textarea></label>
+  <div class="grid two"><label>Resolved final diagnosis<input id="pathFinalDx"></label><label>Resolved ICD-10<input id="pathFinalIcd" placeholder="site-specific definitive code when available"></label></div>
+  <label>Ancillary studies / comments<input id="pathAncillary"></label><label>Downstream follow-up action<input id="pathFollowup"></label>
+  <div class="row"><button id="extractFinalBtn" class="btn secondary">Extract Final Diagnosis</button><button id="finalizePathBtn" class="btn success">Finalize Pathology Reconciliation</button></div><div id="pathResolvedState" style="margin-top:10px"></div>
+ </div>
+ <div class="panel"><h3>4. Diagnostic History</h3><div id="biopsyHistory" class="biopsy-history">No biopsy/pathology history yet.</div></div>
+</section>
+
+<section id="learning" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Mapping Memory</h2><div class="source">Every learned diagnosis/lesion correction, and how often it has fired since</div></div><span class="badge learn-badge" id="learnedCountBadge2">0 learned mappings</span></div>
+  <div class="notice">Right-click (or long-press) any concept row in the Document Intake Lab to add or correct a mapping here. PH matches future source phrasing against this table before falling back to the built-in diagnosis patterns, so verbiage variability across referring providers and OCR output gets absorbed over time instead of producing repeated unmapped rows.</div>
+ </div>
+ <div class="panel">
+  <h3>Learned Diagnosis / Lesion Mappings</h3>
+  <div class="row"><input id="learnManualPhrase" placeholder="Source phrase (e.g. 'lipoma')" style="flex:2"><input id="learnManualDx" placeholder="Maps to diagnosis label" style="flex:2"><input id="learnManualIcd" placeholder="ICD-10" style="flex:1"><select id="learnManualStage" style="flex:1"></select><button id="learnManualAdd" class="btn primary">Add</button></div>
+  <div id="learnedMapTable" style="margin-top:10px"></div>
+ </div>
+ <div class="panel">
+  <h3>Common ICD-10 Dermatology Reference List</h3>
+  <div class="mini" style="margin-bottom:8px">Used to populate the right-click picker. Add entries here to extend the picker without waiting for a new build.</div>
+  <div id="icdReferenceTable"></div>
+ </div>
+</section>
+
+<section id="audit" class="view hidden"><div class="panel"><h2>Audit Trail</h2><div id="auditList"></div></div></section>
+</main>
 </div>
 
-<div class="panel">
- <div class="row">
-  <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
-  <label>Status<select id="statusFilter"><option>All</option><option>Open - Pending Completion</option><option>Completed / Closed</option></select></label>
-  <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
-  <button class="secondary" id="resetBtn">Reset Synthetic Data</button>
- </div>
-</div>
-<div class="panel" style="overflow:auto">
- <table><thead><tr><th>Case</th><th>Patient UID</th><th>Biopsy Provider</th><th>Biopsy Date</th><th>Final Diagnosis</th><th>Site</th><th>Status</th><th>Priority</th><th>Days Open</th><th>Updates</th><th></th></tr></thead><tbody id="caseRows"></tbody></table>
-</div>
-<div class="panel hidden" id="casePanel">
- <h2 id="caseTitle"></h2>
- <div class="grid four">
-  <label>Biopsy / Responsible Provider<select id="biopsyProvider"><option>Unassigned</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
-  <label>Biopsy Date<input id="biopsyDate" type="date"></label>
-  <label>Final Report Date<input id="reportDate" type="date"></label>
-  <label>Completion Date<input id="completionDate" type="date"></label>
-  <label>Completion Type<select id="completionType"><option></option><option>Curative procedure completed</option><option>External referral - patient seen</option><option>External referral - management completed</option><option>Observation / no treatment required</option><option>Other documented closure</option></select></label>
-  <label>Reviewed / Closed By<select id="closedBy"><option></option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
- </div>
- <div class="grid four" style="margin-top:12px">
-  <div class="metric"><span>Biopsy → Report</span><strong id="d1">—</strong></div>
-  <div class="metric"><span>Report → Completion</span><strong id="d2">—</strong></div>
-  <div class="metric"><span>Biopsy → Completion</span><strong id="d3">—</strong></div>
-  <div class="metric"><span>Current Status</span><strong id="caseStatus" style="font-size:16px"></strong></div>
- </div>
- <h3>Update History</h3>
- <div id="updateHistory"></div>
- <h3>Add Update</h3>
- <div class="grid two">
-  <label>Update Date<input id="newUpdateDate" type="date"></label>
-  <label>Update Type<select id="newUpdateType"><option>Patient notification</option><option>Scheduling</option><option>Referral</option><option>Procedure</option><option>External documentation</option><option>Provider review</option><option>Other</option></select></label>
-  <label>Entered By<select id="enteredBy"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Pathology Coordinator</option><option>Medical Assistant</option><option>Nursing</option><option>Other</option></select></label>
-  <label>Update Text<textarea id="newUpdateText"></textarea></label>
-  <label>Next Action<textarea id="newNextAction"></textarea></label>
- </div>
- <div class="row"><button class="primary" id="addUpdateBtn">Add Update</button><button class="success" id="saveCaseBtn">Save Case</button></div>
-</div>
-</div>
+<button id="feedbackBtn" class="btn primary floating-feedback">Feedback / Change Order</button>
+<div id="feedbackModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedback" class="btn secondary">Close</button></div><label>Comment<textarea id="feedbackComment"></textarea></label><button id="submitFeedback" class="btn primary">Submit Feedback</button><div id="feedbackStatus"></div></div></div>
+
+<div id="ctxMenu" class="ctx-menu hidden"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
-const seed=[
- {caseId:"PATH-SYN-001",patientId:"PT-SYN-001",provider:"Todd Pillen, PA-C/SA",biopsy:"2026-07-01",report:"2026-07-05",completion:"",completionType:"",closedBy:"",group:"Basal Cell Carcinoma",dx:"Basal Cell Carcinoma, Nodular Type",site:"Left cheek",status:"Open - Pending Completion",priority:"High",updates:[
-  {date:"2026-07-05",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"Final pathology received; Mohs recommended.",next:"Notify patient and schedule Mohs."},
-  {date:"2026-07-06",type:"Patient notification",enteredBy:"Medical Assistant",text:"Patient notified of diagnosis.",next:"Schedule Mohs."}]},
- {caseId:"PATH-SYN-002",patientId:"PT-SYN-001",provider:"Mallory Heath, PA-C",biopsy:"2026-07-10",report:"2026-07-13",completion:"2026-07-29",completionType:"Curative procedure completed",closedBy:"Mallory Heath, PA-C",group:"Squamous Cell Carcinoma",dx:"Squamous Cell Carcinoma in situ",site:"Right forearm",status:"Completed / Closed",priority:"High",updates:[
-  {date:"2026-07-13",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"SCC in situ confirmed.",next:"Schedule ED&C."},
-  {date:"2026-07-18",type:"Scheduling",enteredBy:"Medical Assistant",text:"Procedure scheduled.",next:"Complete procedure."},
-  {date:"2026-07-29",type:"Procedure",enteredBy:"Mallory Heath, PA-C",text:"ED&C completed.",next:"Routine follow-up."}]},
- {caseId:"PATH-SYN-003",patientId:"PT-SYN-002",provider:"Todd Pillen, PA-C/SA",biopsy:"2026-07-15",report:"2026-07-18",completion:"",completionType:"",closedBy:"",group:"Melanoma",dx:"Melanoma in situ",site:"Upper back",status:"Open - Pending Completion",priority:"High",updates:[
-  {date:"2026-07-18",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"Melanoma in situ confirmed.",next:"Refer for definitive excision."},
-  {date:"2026-07-19",type:"Referral",enteredBy:"Medical Assistant",text:"Referral transmitted to surgical oncology.",next:"Obtain documentation of completed management."}]}
+"use strict";
+const VERSION="0.6.13.27", $=id=>document.getElementById(id);
+const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
+const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
+let ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};
+let audit=[];
+
+const SYNTHETIC=`ESTABLISHED PATIENT DERMATOLOGY FOLLOW-UP
+Patient: Jordan Ellis
+MRN: SYN-ACNE-001
+DOB: 1980-04-15
+Encounter Date: 2026-08-12
+
+HISTORY OF PRESENT ILLNESS
+Patient returns for acne follow-up. Currently using tretinoin 0.025% cream nightly and clindamycin 1% lotion every morning. Reports moderate improvement in comedonal lesions but persistent inflammatory lesions on the cheeks. Tolerating therapy without significant irritation.
+
+PHYSICAL EXAMINATION
+Face: Multiple open and closed comedones on forehead, cheeks, and chin. Scattered inflammatory papules and few pustules on bilateral cheeks. Mild post-inflammatory erythema. No nodules or cysts today. Chest and back: Few scattered comedones and papules. No scarring noted.
+
+ASSESSMENT / DIAGNOSIS
+Acne vulgaris, moderate, mixed comedonal and inflammatory (L70.0).
+
+PLAN
+1. Continue current regimen of tretinoin 0.025% cream nightly and clindamycin lotion AM.
+2. Consider addition of oral doxycycline if insufficient response at next visit.
+3. Reinforce gentle skincare and non-comedogenic products.
+4. Follow-up in 3 months or sooner if worsening.
+5. Reviewed risks of long-term antibiotic use if escalation needed.`;
+
+const MEDS=["doxycycline","minocycline","tretinoin","adapalene","clindamycin","benzoyl peroxide","isotretinoin","dupixent","dupilumab","humira","adalimumab","cosentyx","secukinumab","methotrexate","cyclosporine","tacrolimus","pimecrolimus","crisaborole","clobetasol","triamcinolone","hydrocortisone","otezla","apremilast","rinvoq","upadacitinib","cibinqo","abrocitinib","sotyktu","deucravacitinib","xolair","omalizumab","zoryve","roflumilast","vtama","tapinarof","adbry","tralokinumab","ebglyss","lebrikizumab"];
+
+const PA_DRUGS=[
+ {id:"isotretinoin",name:"Isotretinoin",dx:[{name:"Severe recalcitrant nodular acne",icd:"L70.0 / L70.1",scoreHint:"No single standardized score is FDA-required — document qualitative severity (nodular/cystic/scarring), lesion counts, and psychosocial impact instead.",req:[
+  ["Diagnosis","acne|acne vulgaris|nodular acne|severe acne"],["Severity / recalcitrance","severe|recalcitrant|nodular|scarring|psychosocial"],["Conventional therapy failure","failed conventional therapy|failed systemic therapy|treatment failure|therapy failure|medication failure|inadequate response|unresponsive to treatment|unresponsive to therapy|systemic antibiotic|doxycycline|minocycline|topical retinoid"]]}]},
+ {id:"dupilumab",name:"Dupilumab (Dupixent)",dx:[{name:"Atopic dermatitis",icd:"L20.x",scoreHint:"EASI score, BSA%, and/or Itch NRS are the standard measures payers request for atopic dermatitis.",req:[
+  ["Diagnosis","atopic dermatitis|atopic eczema|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","easi|iga|bsa|body surface area|itch nrs|pruritus nrs"],["Topical therapy response","failed|inadequate response|not controlled|topical corticosteroid|tacrolimus|pimecrolimus|crisaborole"]]}]},
+ {id:"secukinumab",name:"Secukinumab (Cosentyx)",dx:[{name:"Plaque psoriasis",icd:"L40.0",scoreHint:"PASI score, BSA%, and/or DLQI are the standard measures payers request for plaque psoriasis.",req:[
+  ["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga|dlqi"],["Prior therapy / candidacy","failed|phototherapy|systemic therapy|methotrexate|cyclosporine"]]}]},
+ {id:"adalimumab",name:"Adalimumab (Humira)",dx:[
+  {name:"Plaque psoriasis",icd:"L40.0",scoreHint:"PASI score, BSA%, and/or DLQI are the standard measures payers request for plaque psoriasis.",req:[["Diagnosis","plaque psoriasis|psoriasis"],["Severity","moderate to severe|moderate-to-severe|severe"],["Objective severity","bsa|pasi|iga|pga|dlqi"],["Prior therapy / candidacy","failed|inadequate response|intolerant|contraindicated|phototherapy|methotrexate|cyclosporine"]]},
+  {name:"Hidradenitis suppurativa",icd:"L73.2",scoreHint:"Hurley stage (I/II/III) is the standard severity classification payers request for hidradenitis suppurativa.",req:[["Diagnosis","hidradenitis suppurativa|hidradenitis|hs"],["Severity","moderate to severe|moderate-to-severe|severe|hurley"],["Prior therapy / response","failed|inadequate response|antibiotic|clindamycin|rifampin|doxycycline"]]}
+ ]},
+ {id:"upadacitinib",name:"Upadacitinib (Rinvoq)",dx:[{name:"Atopic dermatitis",icd:"L20.x",scoreHint:"EASI score, BSA%, and/or Itch NRS are the standard measures payers request for atopic dermatitis.",req:[["Diagnosis","atopic dermatitis|eczema"],["Severity","moderate to severe|moderate-to-severe|severe"],["Prior systemic therapy","failed systemic|other systemic therapy|biologic|dupilumab|cyclosporine|methotrexate|inadequate response|intolerant"]]}]}
 ];
-let cases=JSON.parse(localStorage.getItem("ph-path-registry-011")||"null")||structuredClone(seed),active=null;
-const $=x=>document.getElementById(x);
-function days(a,b){if(!a||!b)return"—";return Math.round((new Date(b)-new Date(a))/86400000)+" d"}
-function daysNum(a,b){if(!a||!b)return null;return Math.round((new Date(b)-new Date(a))/86400000)}
-function lastUpdateDate(c){if(!c.updates||!c.updates.length)return c.biopsy;return c.updates.map(u=>u.date).filter(Boolean).sort().slice(-1)[0]||c.biopsy}
-function renderFollowup(){
- const today=new Date().toISOString().slice(0,10);
- const staleDays=Number($("staleThreshold").value)||14;
- const open=cases.filter(c=>!c.status.startsWith("Completed"))
-  .map(c=>({c,daysOpen:daysNum(c.biopsy,today),daysSinceUpdate:daysNum(lastUpdateDate(c),today)}))
-  .sort((a,b)=>(b.daysOpen||0)-(a.daysOpen||0));
- $("followupRows").innerHTML=open.length?open.map(({c,daysOpen,daysSinceUpdate})=>{
-  const stale=daysSinceUpdate!==null&&daysSinceUpdate>=staleDays;
-  return `<tr>
-   <td>${c.caseId}</td>
-   <td><b>${c.dx}</b><div class="source">${c.group}</div></td>
-   <td>${c.provider}</td>
-   <td>${daysOpen===null?"—":daysOpen+" d"}</td>
-   <td>${daysSinceUpdate===null?"—":daysSinceUpdate+" d"}${stale?' <span class="badge stale">⚠ STALE</span>':""}</td>
-   <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td>
-   <td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td>
-  </tr>`;
- }).join(""):'<tr><td colspan="7" class="source">No open cases — every case has reached final disposition.</td></tr>';
+
+/* ---- 0.6.13: default ICD-10 dermatology reference list, seeds the right-click picker and can be extended in the Mapping Memory tab ---- */
+/* 0.6.13.8: replaced with the clinically reviewed, frequency-trimmed reference (approved
+   09/2026) — high-frequency general-practice diagnoses (~85% of visits per NAMCS/JAMA Derm
+   referral data) plus lower-frequency diagnoses kept specifically for their PA/biopsy-workflow
+   relevance (skin cancer differentials, biologic-eligible diagnoses) rather than raw frequency
+   alone. BCC/SCC/melanoma/melanoma-in-situ/SCC-in-situ intentionally carry a descriptive
+   site-specific placeholder rather than one fixed code, since ICD-10-CM requires a site (and
+   sometimes laterality) subcode for these selected at the time of coding — do not hardcode a
+   single C43/C44/D03/D04 code for these five. Anything not on this list is added by teaching
+   PH via the right-click mapping menu; it then joins this list automatically (see
+   addLearnedMapping) rather than needing another bulk import.
+*/
+const DEFAULT_ICD_REFERENCE=[
+ ["Acne vulgaris","L70.0"],["Contact dermatitis (allergic/irritant/unspecified)","L25.9"],
+ ["Atopic dermatitis","L20.9"],["Seborrheic dermatitis","L21.9"],["Plaque psoriasis","L40.0"],
+ ["Actinic keratosis","L57.0"],["Benign melanocytic nevus","D22.9 (site-specific)"],
+ ["Seborrheic keratosis","L82.1"],["Epidermal inclusion cyst","L72.0"],
+ ["Verruca vulgaris (common warts)","B07.9"],["Lipoma","D17.9"],["Rosacea","L71.9"],
+ ["Xerosis cutis","L85.3"],["Tinea corporis","B35.4"],["Non-scarring alopecia","L65.9"],
+ ["Urticaria","L50.9"],["Vitiligo","L80"],["Cellulitis","L03.90"],["Impetigo","L01.00"],
+ ["Hidradenitis suppurativa","L73.2"],
+ ["Neoplasm of uncertain behavior of skin","D48.5"],
+ ["Basal cell carcinoma (confirmed)","C44.- (site-specific — select exact code at coding time)"],
+ ["Squamous cell carcinoma, invasive (confirmed)","C44.- (site-specific — select exact code at coding time)"],
+ ["Squamous cell carcinoma in situ (Bowen disease)","D04.- (site-specific — select exact code at coding time)"],
+ ["Malignant melanoma (confirmed)","C43.- (site-specific — select exact code at coding time)"],
+ ["Melanoma in situ","D03.- (site-specific — select exact code at coding time)"],
+ ["Melanocytic neoplasm of uncertain behavior","D48.5"]
+];
+function loadIcdReference(){try{const stored=JSON.parse(localStorage.getItem("ph0613-icd-reference")||"null");return stored&&stored.length?stored:DEFAULT_ICD_REFERENCE.slice()}catch{return DEFAULT_ICD_REFERENCE.slice()}}
+function saveIcdReference(a){localStorage.setItem("ph0613-icd-reference",JSON.stringify(a))}
+let icdReference=loadIcdReference();
+
+/* ---- 0.6.13: learned diagnosis/lesion mapping store ---- */
+function loadLearnedMap(){try{return JSON.parse(localStorage.getItem(LEARN_KEY)||"[]")}catch{return[]}}
+function saveLearnedMap(a){localStorage.setItem(LEARN_KEY,JSON.stringify(a))}
+let learnedMap=loadLearnedMap();
+function learnedMatchFor(text){
+ const n=norm(text);
+ let best=null;
+ for(const entry of learnedMap){
+   const phrase=norm(entry.phrase);
+   if(!phrase)continue;
+   const re=new RegExp("\\b"+phrase.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i");
+   if(re.test(n)){ if(!best||phrase.length>norm(best.phrase).length) best=entry; }
+ }
+ return best;
 }
-function render(){
- const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf=$("statusFilter").value||"All",pf=$("providerFilter").value||"All";
- $("groupFilter").innerHTML='<option>All</option>'+groups.map(g=>`<option ${g===gf?"selected":""}>${g}</option>`).join("");
- const filtered=cases.filter(c=>(gf==="All"||c.group===gf)&&(sf==="All"||c.status===sf)&&(pf==="All"||c.provider===pf)).sort((a,b)=>a.group.localeCompare(b.group)||a.dx.localeCompare(b.dx)||a.biopsy.localeCompare(b.biopsy));
- $("caseRows").innerHTML=filtered.map(c=>`<tr><td>${c.caseId}</td><td>${c.patientId}</td><td>${c.provider}</td><td>${c.biopsy}</td><td><b>${c.dx}</b><div class="source">${c.group}</div></td><td>${c.site}</td><td><span class="badge ${c.status.startsWith("Completed")?"closed":"open"}">${c.status}</span></td><td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td><td>${c.completion?"—":days(c.biopsy,new Date().toISOString().slice(0,10))}</td><td>${c.updates.length}</td><td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td></tr>`).join("");
- $("openCount").textContent=cases.filter(c=>!c.status.startsWith("Completed")).length;$("closedCount").textContent=cases.filter(c=>c.status.startsWith("Completed")).length;$("highCount").textContent=cases.filter(c=>c.priority==="High"&&!c.status.startsWith("Completed")).length;$("updateCount").textContent=cases.reduce((n,c)=>n+c.updates.length,0);
- renderFollowup();
+/* 0.6.13.3: generic single-word anatomical/descriptive terms are refused as learned phrases —
+   these are exactly the terms that co-occur with almost any diagnosis and caused a real
+   false-positive collision in testing (a phrase matching an unrelated document's body-site
+   mention silently overrode the correct extracted diagnosis). */
+const GENERIC_PHRASE_BLOCKLIST=new Set(["hand","hands","arm","arms","leg","legs","foot","feet","face","cheek","cheeks","chin","nose","ear","ears","scalp","neck","chest","back","trunk","extremities","forehead","skin","lesion","lesions","papule","papules","plaque","plaques","nodule","nodules","cyst","cysts","rash","area","site"]);
+function isGenericPhrase(phrase){const n=norm(phrase).trim();return n.length<4||GENERIC_PHRASE_BLOCKLIST.has(n)}
+function addLearnedMapping(phrase,dxLabel,icd,source,stage){
+ phrase=String(phrase||"").trim(); dxLabel=String(dxLabel||"").trim(); icd=String(icd||"").trim();
+ if(!phrase||!dxLabel)return {ok:false,reason:"missing"};
+ if(isGenericPhrase(phrase))return {ok:false,reason:"generic"};
+ const i=learnedMap.findIndex(e=>norm(e.phrase)===norm(phrase));
+ const entry={phrase,dxLabel,icd,stage:stage||"Preliminary / Differential",hits:(i>=0?learnedMap[i].hits:0),createdAt:(i>=0?learnedMap[i].createdAt:new Date().toISOString()),source:source||"manual"};
+ if(i>=0)learnedMap[i]=entry; else learnedMap.unshift(entry);
+ saveLearnedMap(learnedMap);
+ renderLearnedMapTable();updateLearnedBadge();
+ // 0.6.13.5: a taught label now joins the picker's own reference list, so the next person
+ // teaching a mapping sees it as a selectable option (and the type-ahead check catches it)
+ // instead of it only living invisibly in the background matching logic.
+ if(!icdReference.some(e=>norm(e[0])===norm(dxLabel))){
+   icdReference.push([dxLabel,icd||""]);
+   saveIcdReference(icdReference);
+   renderIcdReferenceTable();
+ }
+ return {ok:true};
 }
-function openCase(id){active=cases.find(c=>c.caseId===id);$("casePanel").classList.remove("hidden");$("caseTitle").textContent=`${active.caseId} — ${active.patientId}`;$("biopsyProvider").value=active.provider;$("biopsyDate").value=active.biopsy;$("reportDate").value=active.report;$("completionDate").value=active.completion;$("completionType").value=active.completionType;$("closedBy").value=active.closedBy;renderCase();window.scrollTo(0,document.body.scrollHeight)}
-function renderCase(){if(!active)return;$("d1").textContent=days(active.biopsy,active.report);$("d2").textContent=days(active.report,active.completion);$("d3").textContent=days(active.biopsy,active.completion);$("caseStatus").textContent=active.status;$("updateHistory").innerHTML=active.updates.slice().sort((a,b)=>a.date.localeCompare(b.date)).map(u=>`<div class="panel"><b>${u.date||"Date not recorded"} · ${u.type}</b><div>${u.text}</div><div class="source">Entered by: ${u.enteredBy||"—"} · Next: ${u.next||"—"}</div></div>`).join("")}
-$("addUpdateBtn").onclick=()=>{if(!active)return;const text=$("newUpdateText").value.trim();if(!text)return alert("Enter update text.");active.updates.push({date:$("newUpdateDate").value,type:$("newUpdateType").value,enteredBy:$("enteredBy").value,text,next:$("newNextAction").value});$("newUpdateText").value="";$("newNextAction").value="";save();renderCase();render()}
-$("saveCaseBtn").onclick=()=>{if(!active)return;active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;active.completion=$("completionDate").value;active.completionType=$("completionType").value;active.closedBy=$("closedBy").value;active.status=active.completion?"Completed / Closed":"Open - Pending Completion";save();renderCase();render()}
-function save(){localStorage.setItem("ph-path-registry-011",JSON.stringify(cases))}
-$("groupFilter").onchange=render;$("statusFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;$("resetBtn").onclick=()=>{cases=structuredClone(seed);save();active=null;$("casePanel").classList.add("hidden");render()}
-render();
+function bumpLearnedHit(phrase){const i=learnedMap.findIndex(e=>norm(e.phrase)===norm(phrase));if(i>=0){learnedMap[i].hits=(learnedMap[i].hits||0)+1;saveLearnedMap(learnedMap)}}
+function updateLearnedBadge(){const n=learnedMap.length+" learned mapping"+(learnedMap.length===1?"":"s");$("learnedCountBadge").textContent=n;$("learnedCountBadge2").textContent=n}
+function renderLearnedMapTable(){
+ const box=$("learnedMapTable");if(!box)return;
+ box.innerHTML=learnedMap.length?('<table><thead><tr><th>Source phrase</th><th>Maps to</th><th>ICD-10</th><th>Stage</th><th>Times applied</th><th>Source</th><th></th></tr></thead><tbody>'+
+  learnedMap.map((e,i)=>`<tr><td>${esc(e.phrase)}</td><td>${esc(e.dxLabel)}</td><td>${esc(e.icd||"—")}</td><td><span class="pill">${esc(e.stage||"—")}</span></td><td>${e.hits||0}</td><td><span class="pill">${esc(e.source)}</span></td><td><button class="btn secondary rmLearn" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></td></tr>`).join('')
+  +'</tbody></table>'):'<div class="notice">No learned mappings yet. Right-click an unmapped row in Document Intake, or add one manually below.</div>';
+ document.querySelectorAll(".rmLearn").forEach(b=>b.onclick=()=>{learnedMap.splice(Number(b.dataset.i),1);saveLearnedMap(learnedMap);renderLearnedMapTable();updateLearnedBadge();addAudit("Learned mapping removed","Manual removal from Mapping Memory.")});
+}
+function renderIcdReferenceTable(){
+ const box=$("icdReferenceTable");if(!box)return;
+ box.innerHTML='<table><thead><tr><th>Diagnosis / lesion label</th><th>ICD-10</th><th></th></tr></thead><tbody>'+
+  icdReference.map((e,i)=>`<tr><td>${esc(e[0])}</td><td>${esc(e[1])}</td><td><button class="btn secondary rmIcd" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></td></tr>`).join('')
+  +'</tbody></table>';
+ document.querySelectorAll(".rmIcd").forEach(b=>b.onclick=()=>{icdReference.splice(Number(b.dataset.i),1);saveIcdReference(icdReference);renderIcdReferenceTable()});
+}
+
+function addAudit(action,detail){audit.unshift({time:new Date().toLocaleString(),action,detail});renderAudit()}
+function renderAudit(){$("auditList").innerHTML=audit.length?audit.map(a=>`<div class="map-item"><b>${esc(a.action)}</b><div class="mini">${esc(a.time)}</div><div>${esc(a.detail)}</div></div>`).join(""):'<div class="notice">No audit events yet.</div>'}
+function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
+document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>showView(n.dataset.view));
+
+async function sha256Text(text){try{const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("")}catch{return"unavailable"}}
+function normalized(t){return String(t||"").replace(/\u00a0/g," ").replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
+function stripRtf(r){return normalized(r.replace(/\\par[d]?/g,"\n").replace(/\\tab/g,"\t").replace(/\\'[0-9a-fA-F]{2}/g," ").replace(/\\u(-?\d+)\??/g,(_,n)=>String.fromCharCode(Number(n)<0?Number(n)+65536:Number(n))).replace(/\\[a-zA-Z]+-?\d* ?/g,"").replace(/[{}]/g,""))}
+async function extractDocx(file){if(typeof JSZip==="undefined")throw new Error("DOCX library did not load.");const zip=await JSZip.loadAsync(await file.arrayBuffer()),xf=zip.file("word/document.xml");if(!xf)throw new Error("DOCX document.xml not found.");const xml=await xf.async("string"),doc=new DOMParser().parseFromString(xml,"application/xml"),paras=[...doc.getElementsByTagNameNS("*","p")];return normalized(paras.map(p=>[...p.getElementsByTagNameNS("*","t")].map(t=>t.textContent).join("")).filter(Boolean).join("\n"))}
+async function extractPdf(file){if(typeof pdfjsLib==="undefined")throw new Error("PDF library did not load.");pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js";const pdf=await pdfjsLib.getDocument({data:await file.arrayBuffer()}).promise,pages=[];for(let p=1;p<=Math.min(pdf.numPages,50);p++){const page=await pdf.getPage(p),c=await page.getTextContent(),txt=c.items.map(i=>i.str).join(" ").trim();pages.push(`[[PAGE ${p}]]\n${txt}`)}let text=normalized(pages.join("\n\n"));if(text.replace(/\[\[PAGE \d+\]\]/g,"").replace(/\s/g,"").length>40)return text;if(typeof Tesseract==="undefined")return text;const o=[];for(let p=1;p<=Math.min(pdf.numPages,20);p++){const page=await pdf.getPage(p),vp=page.getViewport({scale:1.5}),canvas=document.createElement("canvas"),ctx=canvas.getContext("2d");canvas.width=vp.width;canvas.height=vp.height;await page.render({canvasContext:ctx,viewport:vp}).promise;const r=await Tesseract.recognize(canvas,"eng");o.push(`[[PAGE ${p}]]\n${r.data.text}`)}return normalized(o.join("\n\n"))}
+async function extractFile(file){const n=file.name.toLowerCase();if(n.endsWith(".txt"))return normalized(await file.text());if(n.endsWith(".rtf"))return stripRtf(await file.text());if(n.endsWith(".docx"))return extractDocx(file);if(n.endsWith(".pdf"))return extractPdf(file);if(/\.(png|jpe?g)$/.test(n)){if(typeof Tesseract==="undefined")throw new Error("OCR library did not load.");const r=await Tesseract.recognize(file,"eng");return normalized(r.data.text)}throw new Error("Unsupported file type.")}
+
+async function loadSource(text,filename){ingestState.filename=filename;ingestState.importedAt=new Date().toISOString();ingestState.raw=normalized(text);ingestState.fingerprint=await sha256Text(ingestState.raw);ingestState.mappings=[];ingestState.meds=[];ingestState.accepted=false;$("rawSource").value=ingestState.raw;$("sourcePane").textContent=ingestState.raw;$("sourceMeta").textContent=`${filename} · ${ingestState.importedAt} · SHA-256 ${ingestState.fingerprint.slice(0,16)}…`;$("preserved").textContent="Preserved";$("extractStatus").textContent="Source loaded and preserved. Ready for semantic extraction.";addAudit("Source loaded",filename)}
+
+function sentences(t){return normalized(t).split(/(?<=[.!?])\s+|\n+/).map(x=>x.trim()).filter(x=>x.length>7)}
+/* 0.6.13: recognizes referral-letter section headers in addition to encounter-note headers */
+function detectSectionedLines(t){const lines=normalized(t).split("\n"),out=[];let section="UNSECTIONED";for(const raw of lines){const l=raw.trim();if(!l)continue;if(/^(HISTORY|HPI|HISTORY OF PRESENT ILLNESS|CLINICAL SUMMARY|CHIEF COMPLAINT(?:\s*\/\s*INTERVAL HISTORY)?|PHYSICAL EXAMINATION|PHYSICAL EXAM|EXAM|EXAMINATION FINDINGS|OBJECTIVE|ASSESSMENT(?:\s*\/\s*DIAGNOSIS)?|ASSESSMENT|DIAGNOSIS|PLAN|RECOMMENDATIONS(?:\s*\/\s*PLAN)?|COUNSELING|REVIEW OF SYSTEMS)$/i.test(l.replace(/:$/,""))){section=l.replace(/:$/,"").toUpperCase();continue}out.push({section,text:l})}return out}
+function addConcept(arr,concept,value,context,dest,evidence,status="Auto-mapped",confidence=.95,extra={}){if(!value)return;const key=[concept,value,context,dest.join("|")].join("::").toLowerCase();if(arr.some(x=>x.key===key))return;arr.push({key,concept,value,context,dest,evidence,status,confidence,...extra})}
+
+/* 0.6.13.3: classifies a diagnosis line into the stage taxonomy used for outcomes tracking:
+   Historical / Outside (from a referral or a prior note, not today's working impression),
+   Preliminary / Differential (pending pathology, "rule out", differential language),
+   Confirmed (pathology) (pathology report language), or
+   Confirmed (clinical) (a diagnosis made on exam alone, the normal case for most derm visits). */
+function classifyDiagnosisStage(evidence,fullText){
+ const e=norm(evidence||"");
+ // 0.6.13.9: stage is now judged from the evidence sentence itself only, not the document's
+ // opening framing. A referral letter's own Assessment section can (and often should) state a
+ // diagnosis that differs from what the referring provider suspected — that assessment is the
+ // dermatologist's current finding, not "historical," even though it lives inside a referral
+ // letter. Checking the document's first ~600 characters previously mislabeled every such case
+ // as Historical/Outside just for being a referral letter, regardless of whose diagnosis was
+ // actually extracted.
+ if(/referred for|referring (provider|physician|md)|outside (record|note)|per referral|primary care note|prior primary care|pcp note/.test(e))return"Historical / Outside";
+ if(/pathology (consistent with|confirmed|confirms|showed|demonstrates|review)|biopsy-proven|biopsy proven|margins clear on biopsy|confirmed (basal cell|squamous cell|melanoma)/.test(e))return"Confirmed (pathology)";
+ if(/rule out|r\/o|\bvs\b|versus|suspicious for|pending histolog|clinical diagnosis pending|uncertain behavior|differential/.test(e))return"Preliminary / Differential";
+ return"Confirmed (clinical)";
+}
+const DIAGNOSIS_STAGES=["Historical / Outside","Preliminary / Differential","Confirmed (clinical)","Confirmed (pathology)"];
+
+/* 0.6.13: expanded dx pattern list (lipoma, epidermal inclusion cyst, verruca vulgaris added; psoriasis pattern widened) plus learned-mapping lookup that runs first */
+function parseSemantic(t){
+ const rows=[],lines=detectSectionedLines(t),all=sentences(t);
+ const text=norm(t);
+
+ // 0.6.13.3: only the single best (most specific) learned mapping is applied, matched with word
+ // boundaries, and only against diagnosis-bearing context (the Assessment/Diagnosis section if
+ // one was detected, else sentences that already look like an assessment/differential/pathology
+ // statement) rather than the raw whole-document text. Matching anywhere in the document allowed
+ // a generic word (e.g. a body site mentioned in an unrelated sentence) to silently hijack the
+ // diagnosis of a completely different encounter — this scopes the search to where a diagnosis
+ // would actually be stated.
+ // 0.6.13.16: line-based section detection requires a header to sit alone on its own line, which
+ // works for .docx (paragraph breaks preserved) but fails for PDF-extracted text, where pdf.js
+ // joins everything on a page into one continuous run with no real line breaks — "Assessment"
+ // ends up glued directly to the sentence that follows it, never isolated on its own line.
+ // Confirmed this exact failure against a real PDF referral letter: the line-based detection came
+ // back empty, silently falling back to a whole-document search that grabbed the referral's
+ // subject-line mention instead of the actual Assessment section content. This inline fallback
+ // finds "Assessment" as a word anywhere in the flat text and captures the content up to the next
+ // recognizable section boundary, regardless of whether real line breaks survived extraction.
+ let assessLines=lines.filter(x=>/ASSESSMENT|DIAGNOSIS/.test(x.section)).map(x=>x.text).join(" ");
+ if(!assessLines){
+   const inlineMatch=t.match(/\bassessment(?:\s*\/\s*diagnosis)?\b\s*[:\-]?\s*([\s\S]{1,400}?)(?=\brecommendations\b|\bplan\b|\bfollow-?up\b|\bsincerely\b|\bcounseling\b|$)/i);
+   if(inlineMatch)assessLines=inlineMatch[1].trim();
+ }
+ const diagContextSentences=all.filter(s=>/assessment|diagnos|impression|differential|rule out|r\/o|\bvs\b|versus|patholog|biopsy/i.test(s)).join(" ");
+ const learnedSearchScope=assessLines||diagContextSentences||text;
+ const learnedHit=learnedMatchFor(learnedSearchScope);
+ if(learnedHit){
+   const ev=all.find(s=>new RegExp("\\b"+norm(learnedHit.phrase).replace(/[.*+?^${}()|[\]\\]/g,"\\$&")+"\\b","i").test(norm(s)))||learnedHit.phrase;
+   addConcept(rows,"Diagnosis",learnedHit.dxLabel,"current",["Assessment / Diagnosis"],ev,"Auto-mapped (learned)",.9,{learnedFrom:learnedHit.phrase,stage:learnedHit.stage||classifyDiagnosisStage(ev,t)});
+   if(learnedHit.icd)addConcept(rows,"ICD-10",learnedHit.icd,"current",["Diagnosis Coding"],ev,"Auto-mapped (learned)",.9,{learnedFrom:learnedHit.phrase});
+   bumpLearnedHit(learnedHit.phrase);
+ }
+
+ // 0.6.13.9: diagnosis and ICD-10 extraction now prefer the Assessment/Diagnosis section text
+ // over the rest of the document. Without this, a referral letter's subject line or opening
+ // ("Re: Referral for ... Verruca Vulgaris") could be picked up as the diagnosis evidence
+ // instead of the dermatologist's own actual Assessment further down — harmless when the two
+ // happen to agree, but exactly wrong when a referral's suspected diagnosis differs from what
+ // the specialist actually finds, which is the whole reason referrals exist.
+ const assessSentences = assessLines ? sentences(assessLines) : [];
+
+ // Identity / diagnosis / coding
+ const dxPatterns=[
+  ["Acne vulgaris",/\bacne vulgaris\b/i],
+  ["Atopic dermatitis",/\batopic dermatitis\b/i],
+  ["Plaque psoriasis",/\bpsoriasis vulgaris\b|\bplaque psoriasis\b|\bpsoriasis\b.{0,20}\bplaque\b|\bplaque\b.{0,20}\bpsoriasis\b/i],
+  ["Hidradenitis suppurativa",/\bhidradenitis suppurativa\b/i],
+  ["Neoplasm of uncertain behavior of skin",/\bneoplasm of uncertain behavior(?: of skin)?\b/i],
+  ["Lipoma",/\blipomas?\b/i],
+  ["Epidermal inclusion cyst",/\bepidermal inclusion cysts?\b|\bepidermoid cysts?\b/i],
+  ["Verruca vulgaris (common warts)",/\bverruca vulgaris\b|\bcommon warts?\b/i]
+ ];
+ dxPatterns.forEach(([v,re])=>{if(rows.some(r=>r.concept==="Diagnosis"))return;const ev=assessSentences.find(s=>re.test(s))||all.find(s=>re.test(s));if(ev)addConcept(rows,"Diagnosis",v,"current",["Assessment / Diagnosis"],ev,"Auto-mapped",.95,{stage:classifyDiagnosisStage(ev,t)})});
+ const icd=((assessLines.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0])||((t.match(/\b[A-Z]\d{2}(?:\.[0-9A-Z]+)?\b/i)||[])[0]);
+ if(icd){
+   addConcept(rows,"ICD-10",icd.toUpperCase(),"current",["Diagnosis Coding"],assessSentences.find(s=>s.includes(icd))||all.find(s=>s.includes(icd))||icd,"Auto-mapped",.99);
+   if(icd.toUpperCase()==="D48.5" && !rows.some(r=>r.concept==="Diagnosis")){
+     const ev=assessSentences.find(s=>/D48\.5/i.test(s))||all.find(s=>/D48\.5/i.test(s))||"D48.5";
+     addConcept(rows,"Diagnosis","Neoplasm of uncertain behavior of skin","current",["Assessment / Diagnosis"],ev,"Auto-mapped",.99,{stage:classifyDiagnosisStage(ev,t)});
+   }
+ }
+
+ // 0.6.13: if an ICD-10 code was found but still no diagnosis label (or vice versa), surface an
+ // explicit Unmapped row rather than letting the gap disappear silently. This is the row the
+ // provider right-clicks to teach PH the correct label.
+ if(icd && !rows.some(r=>r.concept==="Diagnosis")){
+   const assessLine=lines.find(x=>/ASSESSMENT|DIAGNOSIS/.test(x.section))?.text || all.find(s=>s.includes(icd)) || "";
+   addConcept(rows,"Diagnosis","(unmapped — right-click to assign)","current",["Assessment / Diagnosis"],assessLine,"Unmapped",0,{unmapped:true,rawIcd:icd,stage:classifyDiagnosisStage(assessLine,t)});
+ }
+
+ // Biopsy episode site and differential are specimen-specific and do not promote malignancy to a definitive diagnosis.
+ const biopsyContext=all.find(s=>/biopsy|patholog|clinical concern|rule out|r\/o|\bvs\b|versus/i.test(s))||"";
+ const siteMatch=(t.match(/\b(?:left|right)?\s*(?:dorsal\s+)?(?:hand|forearm|arm|cheek|nose|ear|scalp|neck|chest|back|leg|foot)\b/i)||[])[0];
+ if(siteMatch && /biopsy|D48\.5|neoplasm of uncertain behavior|squamous cell carcinoma|SCC|patholog/i.test(t)){
+   addConcept(rows,"Biopsy site",siteMatch.replace(/\s+/g," ").trim(),"current",["Objective / Biopsy Site","Biopsy Episode"],all.find(s=>norm(s).includes(norm(siteMatch)))||biopsyContext,"Auto-mapped",.97);
+ }
+ const diffTerms=[];
+ if(/\bactinic keratosis(?:es)?\b|\bAK\b/i.test(t))diffTerms.push("Actinic keratosis");
+ if(/\bsquamous cell carcinoma in situ\b|\bSCC in situ\b/i.test(t))diffTerms.push("Squamous cell carcinoma in situ");
+ if(/\bsquamous cell carcinoma\b|\bSCC\b/i.test(t))diffTerms.push("Squamous cell carcinoma");
+ if(/\bbasal cell carcinoma\b|\bBCC\b/i.test(t))diffTerms.push("Basal cell carcinoma");
+ if(/\bmelanoma\b/i.test(t))diffTerms.push("Melanoma");
+ const uniqDiff=[...new Set(diffTerms)];
+ if(uniqDiff.length && /D48\.5|neoplasm of uncertain behavior|clinical concern|rule out|r\/o|\bvs\b|versus|biopsy/i.test(t)){
+   addConcept(rows,"Differential diagnosis",uniqDiff.join(" vs "),"differential-only",["Assessment / Differential","Biopsy Episode"],all.find(s=>/squamous cell carcinoma|SCC|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma/i.test(s))||biopsyContext,"Auto-mapped",.95,{diagnosticLock:true});
+ }
+
+ // Severity
+ const sev=all.find(s=>/\b(mild|moderate|severe|moderate-to-severe|moderate to severe)\b/i.test(s) && /assessment|diagnos|acne|dermatitis|psoriasis|severity/i.test(s));
+ if(sev){const m=sev.match(/\b(mild|moderate|severe|moderate-to-severe|moderate to severe)\b/i);addConcept(rows,"Disease severity",m?.[1]||sev,"current",["Assessment / Disease Status","PA Evidence"],sev)}
+
+ // Morphology: deliberately MULTI-VALUE
+ const morph=[];
+ if(/\bcomedon(?:e|es|al)\b/i.test(t))morph.push("Comedonal");
+ if(/\binflammatory\b/i.test(t))morph.push("Inflammatory");
+ if(/\beczematous\b/i.test(t))morph.push("Eczematous");
+ if(/\bscaly plaques?\b/i.test(t))morph.push("Scaly plaques");
+ if(morph.length){const ev=all.find(s=>morph.some(v=>norm(s).includes(norm(v).replace("comedonal","comedon").replace("eczematous","eczemat")) ) || /mixed comedonal and inflammatory/i.test(s))||all.find(s=>/comedon|inflammatory|eczematous|scaly plaque/i.test(s));addConcept(rows,"Morphology",morph.join(" + "),"current",["Objective / Morphology"],ev,"Auto-mapped",.97,{values:morph})}
+
+ // Granular lesion types and negative findings
+ const lesionTerms=[["Open comedones",/open comedones?/i],["Closed comedones",/closed comedones?/i],["Papules",/\bpapules?\b/i],["Pustules",/\bpustules?\b/i],["Nodules",/\bnodules?\b/i],["Cysts",/\bcysts?\b/i],["Plaques",/\bplaques?\b/i],["Excoriations",/\bexcoriations?\b/i]];
+ const positive=[],negative=[];
+ lesionTerms.forEach(([v,re])=>{const ev=all.find(s=>re.test(s));if(ev){if(new RegExp(`no\\s+(?:\\w+\\s+){0,2}${re.source.replace(/\\b/g,"")}`,"i").test(ev)||/no nodules or cysts|no scarring/i.test(ev)&&["Nodules","Cysts"].includes(v))negative.push(v);else positive.push(v)}});
+ if(positive.length)addConcept(rows,"Lesion types",positive.join(", "),"current",["Objective / Lesion Types"],all.find(s=>positive.some(v=>norm(s).includes(norm(v.replace(/s$/,"")))))||"", "Auto-mapped",.94,{values:positive});
+ if(/no nodules or cysts|no scarring/i.test(t))addConcept(rows,"Negative objective findings",[...new Set([...( /no nodules or cysts/i.test(t)?["No nodules","No cysts"]:[]),...( /no scarring/i.test(t)?["No scarring"]:[])])].join(", "),"current",["Objective / Negative Findings"],all.find(s=>/no nodules or cysts|no scarring/i.test(s))||"", "Auto-mapped",.96);
+
+ // Locations
+ const locs=[];["forehead","cheeks","chin","face","chest","back","scalp","trunk","extremities"].forEach(l=>{if(new RegExp("\\b"+l+"\\b","i").test(t))locs.push(l.charAt(0).toUpperCase()+l.slice(1))});
+ if(locs.length)addConcept(rows,"Body location",[...new Set(locs)].join(", "),"current",["Objective / Body Location"],all.find(s=>locs.some(l=>norm(s).includes(norm(l))))||"", "Auto-mapped",.93,{values:[...new Set(locs)]});
+
+ // Objective narrative lines
+ lines.filter(x=>/PHYSICAL EXAM|OBJECTIVE|EXAMINATION FINDINGS/.test(x.section) && /comedon|papule|pustule|plaque|erythema|scar|nodule|cyst|excoriat/i.test(x.text)).forEach(x=>addConcept(rows,"Objective finding",x.text,"current",["Objective / Physical Examination"],x.text,"Auto-mapped",.94));
+
+ // Response / interval
+ // 0.6.13.10: "better" and "worse" as bare words are far too generic — they're two of the most
+ // common adjectives in English and will fire on any text that happens to contain them for any
+ // reason (confirmed: a company name "Just Better HVAC LLC" false-triggered this on every mention
+ // of the business name in an HVAC invoice). Replaced with the actual clinical phrasings this rule
+ // is meant to catch — "getting better," "much better," etc. — which require the word to appear in
+ // a real improvement/worsening statement rather than standing alone.
+ all.filter(s=>/improved|getting better|much better|feeling better|looks? better|doing better|getting worse|much worse|feeling worse|looks? worse|persistent|unchanged|partial response|inadequate response|failed|flare|flaring|progressed|progression|insufficient response/i.test(s)).forEach(s=>addConcept(rows,"Treatment response",s,"current",["HPI / Treatment Response","Interval Change","PA Evidence"],s,"Auto-mapped",.93));
+
+ // Measurements
+ let m=t.match(/\bBSA\s*[:=]?\s*(\d+(?:\.\d+)?)\s*%/i);if(m)addConcept(rows,"BSA",m[1]+"%","current",["Objective / BSA","PA Evidence"],all.find(s=>/BSA/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bEASI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"EASI","EASI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/EASI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bPASI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"PASI","PASI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/PASI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bDLQI\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"DLQI","DLQI "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/DLQI/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\b(?:itch|pruritus)\s*NRS\s*[:=]?\s*(\d+(?:\.\d+)?)/i);if(m)addConcept(rows,"Itch NRS","Itch NRS "+m[1],"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/(itch|pruritus)\s*nrs/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\bHurley\s*stage\s*[:=]?\s*(I{1,3}|1|2|3)\b/i);if(m)addConcept(rows,"Hurley stage","Hurley stage "+m[1].toUpperCase(),"current",["Objective / Disease Score","PA Evidence"],all.find(s=>/hurley/i.test(s))||m[0],"Auto-mapped",.99);
+ m=t.match(/\b(?:IGA|PGA)\s*[:=]?\s*([^\n.;]+)/i);if(m)addConcept(rows,"IGA/PGA",m[1].trim(),"current",["Objective / IGA-PGA","PA Evidence"],all.find(s=>/\bIGA\b|\bPGA\b/i.test(s))||m[0],"Auto-mapped",.99);
+
+ // Medications with temporal state
+ const meds=[];
+ all.forEach(s=>MEDS.forEach(med=>{if(norm(s).includes(med)){let status="Mentioned",dest=["Medication Table"],context="review",n=norm(s);
+   if(/discontinue|stop|hold/.test(n)){status="Discontinue";context="planned";dest=["Medication Table","Plan"]}
+   else if(/consider|start|initiate|begin|plan to start|recommend/.test(n)){status=/consider/.test(n)?"Proposed / Conditional":"Proposed / Pending";context="planned";dest=["Medication Table","Plan","PA Evaluation"]}
+   else if(/failed|previously|prior|history of|tried|inadequate response|intolerant/.test(n)){status="Historical / Failed";context="historical";dest=["Medication Table","HPI / Treatment History","PA Evidence"]}
+   else if(/continue|currently|taking|using|current regimen| on /.test(n)){status="Current / Continue";context="current";dest=["Medication Table","HPI / Current Treatment"]}
+   const entry={med,status,context,sentence:s,dest};if(!meds.some(x=>x.med===med&&x.sentence===s))meds.push(entry);
+ }}));
+ meds.forEach(x=>addConcept(rows,"Medication",x.med,x.context,x.dest,x.sentence,x.status==="Mentioned"?"Needs review":"Auto-mapped",x.status==="Mentioned"?.75:.95,{medStatus:x.status}));
+ ingestState.meds=meds;
+
+ // Plan actions/counseling/follow-up
+ // 0.6.13.17: same PDF-flattening problem as the Assessment section, now confirmed for the Plan/
+ // Recommendations section too — "Recommendations / Plan" glued directly to its numbered list with
+ // no real line break means the line-based detection finds nothing, silently dropping real,
+ // actionable treatment content (cryotherapy, home therapy instructions, etc.) from the Plan panel.
+ const planLines=lines.filter(x=>/PLAN|COUNSELING|RECOMMENDATIONS/.test(x.section));
+ if(planLines.length){
+   planLines.forEach(x=>addConcept(rows,"Plan",x.text,"planned",["Plan"],x.text,"Auto-mapped",.9));
+ }else{
+   const planMatch=t.match(/\b(?:recommendations\s*\/\s*plan|plan)\b\s*[:\-]?\s*([\s\S]{1,700}?)(?=\bsincerely\b|\bwe will continue to manage\b|\bpatient education\b|\bfollow-?up\b\s*[:\-]|$)/i);
+   if(planMatch){
+     const chunk=planMatch[1].trim();
+     const items=chunk.split(/(?=\d+\.\s)/).map(s=>s.trim()).filter(s=>s.length>3);
+     (items.length?items:[chunk]).forEach(item=>addConcept(rows,"Plan",item,"planned",["Plan"],item,"Auto-mapped",.9));
+   }
+ }
+ return rows;
+}
+
+function renderConcepts(){
+ const rows=ingestState.mappings;
+ $("mappingRows").innerHTML=rows.length?rows.map((r,i)=>`<tr class="${r.status==="Unmapped"?"unmapped-row":r.status.startsWith("Auto-mapped")?"auto":r.status==="Needs review"?"review":"missing"}" data-i="${i}" oncontextmenu="return openMapCtx(event,${i})"><td>${esc(r.concept)}</td><td>${esc(r.value)}${r.stage?`<div class="mini"><span class="pill">${esc(r.stage)}</span></div>`:""}</td><td>${esc(r.context)}${r.medStatus?` · ${esc(r.medStatus)}`:""}</td><td>${r.dest.map(d=>`<span class="pill">${esc(d)}</span>`).join("")}${r.status==="Auto-mapped (learned)"?'<span class="pill learn-badge">learned</span>':""}</td><td><button class="btn secondary sourceJump" data-i="${i}">View source</button></td><td><b>${r.status==="Unmapped"?'<span class="badge bad">UNMAPPED</span>':r.status.startsWith("Auto-mapped")?"✓ AUTO":"REVIEW"}</b></td></tr>`).join(""):'<tr><td colspan="6">No concepts detected.</td></tr>';
+ $("kConcepts").textContent=rows.length;$("kAuto").textContent=rows.filter(x=>x.status.startsWith("Auto-mapped")).length;$("kReview").textContent=rows.filter(x=>x.status==="Needs review").length;$("kUnmapped").textContent=rows.filter(x=>x.status==="Unmapped").length;
+ document.querySelectorAll(".sourceJump").forEach(b=>b.onclick=(e)=>{e.stopPropagation();highlightSource(rows[Number(b.dataset.i)]?.evidence||"")});
+ const bucket=(id,dest,msg)=>{const a=rows.filter(r=>r.dest.includes(dest));$(id).innerHTML=a.length?a.map(r=>`<div class="map-item"><b>${esc(r.concept)}</b>${r.medStatus?`<span class="pill">${esc(r.medStatus)}</span>`:""}<div>${esc(r.value)}</div></div>`).join(""):`<div class="notice">${msg}</div>`};
+ bucket("hpiCurrent","HPI / Current Treatment","No current-treatment mapping.");
+ bucket("hpiHistory","HPI / Treatment History","No prior-treatment mapping.");
+ bucket("hpiResponse","HPI / Treatment Response","No treatment-response mapping.");
+ bucket("objectiveMap","Objective / Physical Examination","No narrative objective findings."); 
+ $("objectiveMap").innerHTML += rows.filter(r=>/^Objective \//.test(r.dest[0]||"") && r.concept!=="Objective finding").map(r=>`<div class="map-item"><b>${esc(r.concept)}</b><div>${esc(r.value)}</div></div>`).join("");
+ const assess=rows.filter(r=>r.dest.some(d=>d.startsWith("Assessment")));$("assessmentMap").innerHTML=assess.length?assess.map(r=>`<div class="map-item"><b>${esc(r.concept)}</b>${r.status==="Unmapped"?' <span class="badge bad">UNMAPPED</span>':""}<div>${esc(r.value)}</div></div>`).join(""):'<div class="notice">No assessment mapping.</div>';
+ const meds=rows.filter(r=>r.concept==="Medication");$("medMap").innerHTML=meds.length?meds.map(r=>`<div class="map-item"><b>${esc(r.value)}</b><span class="pill">${esc(r.medStatus||r.context)}</span><div class="mini">${esc(r.evidence)}</div></div>`).join(""):'<div class="notice">No medications detected.</div>';
+ const plans=rows.filter(r=>r.dest.includes("Plan"));$("planMap").innerHTML=plans.length?plans.map(r=>`<div class="map-item"><b>${esc(r.concept)}</b>${r.medStatus?`<span class="pill">${esc(r.medStatus)}</span>`:""}<div>${esc(r.value)}</div></div>`).join(""):'<div class="notice">No plan mapping.</div>';
+}
+function highlightSource(ev){const raw=ingestState.raw,box=$("sourcePane");if(!ev){box.textContent=raw;return}const p=norm(raw).indexOf(norm(ev));if(p<0){box.textContent=raw;return}box.innerHTML=esc(raw.slice(0,p))+'<mark>'+esc(raw.slice(p,p+ev.length))+'</mark>'+esc(raw.slice(p+ev.length));box.querySelector("mark")?.scrollIntoView({behavior:"smooth",block:"center"})}
+
+/* ---- 0.6.13: right-click / long-press mapping context menu ---- */
+let ctxTargetRow=null, ctxRecognition=null;
+function closeMapCtx(){$("ctxMenu").classList.add("hidden");$("ctxMenu").innerHTML="";ctxTargetRow=null;if(ctxRecognition){try{ctxRecognition.stop()}catch{} ctxRecognition=null}}
+function openMapCtx(evt,i){
+ evt.preventDefault();
+ ctxTargetRow=i;
+ const row=ingestState.mappings[i];
+ const menu=$("ctxMenu");
+ const options=icdReference.map((e,idx)=>`<button class="ctx-opt" data-icdidx="${idx}" data-label="${esc(norm(e[0]))}">${esc(e[0])} <span class="mini">(${esc(e[1])})</span></button>`).join("");
+ menu.innerHTML=`
+  <h4>Map "${esc(row.value).slice(0,60)}"</h4>
+  <div id="ctxOptionsList" style="max-height:180px;overflow:auto">${options}</div>
+  <div class="ctx-sep"></div>
+  <input type="text" id="ctxFreeText" placeholder="Type a diagnosis / lesion label...">
+  <div id="ctxMatchNotice" class="mini" style="margin-top:4px;min-height:14px"></div>
+  <input type="text" id="ctxFreeIcd" placeholder="ICD-10 (optional)" style="margin-top:6px">
+  <select id="ctxStageSelect" style="margin-top:6px">${DIAGNOSIS_STAGES.map(s=>`<option value="${esc(s)}"${s===(row.stage||"Preliminary / Differential")?" selected":""}>${esc(s)}</option>`).join("")}</select>
+  <button id="ctxMicBtn" class="mic-btn" type="button">🎤 Dictate (synthetic-test only)</button>
+  <div class="ctx-actions"><button class="btn primary" id="ctxSaveBtn">Save & Remember</button><button class="btn secondary" id="ctxCancelBtn">Cancel</button></div>
+  <div class="mini" style="margin-top:6px">Saved corrections are matched against future source documents automatically.</div>`;
+ const vw=window.innerWidth,vh=window.innerHeight,mw=340,mh=420;
+ let x=evt.clientX,y=evt.clientY;
+ if(x+mw>vw)x=Math.max(8,vw-mw-8);
+ if(y+mh>vh)y=Math.max(8,vh-mh-8);
+ menu.style.left=x+"px";menu.style.top=y+"px";
+ menu.classList.remove("hidden");
+ menu.querySelectorAll("[data-icdidx]").forEach(b=>b.onclick=()=>{
+   const [label,code]=icdReference[Number(b.dataset.icdidx)];
+   applyMapping(row,label,code,$("ctxStageSelect").value);
+ });
+ $("ctxSaveBtn").onclick=()=>{
+   const label=$("ctxFreeText").value.trim(), icd=$("ctxFreeIcd").value.trim();
+   if(!label){alert("Enter or select a diagnosis/lesion label first.");return}
+   applyMapping(row,label,icd,$("ctxStageSelect").value);
+ };
+ $("ctxCancelBtn").onclick=closeMapCtx;
+ // 0.6.13.2: live filter the picker list as the provider types, so an existing canonical
+ // label surfaces instead of a near-duplicate free-text entry being created by habit.
+ const optList=$("ctxOptionsList"), matchNotice=$("ctxMatchNotice");
+ $("ctxFreeText").oninput=(e)=>{
+   const q=norm(e.target.value.trim());
+   const opts=[...optList.querySelectorAll(".ctx-opt")];
+   if(!q){opts.forEach(o=>o.style.display="");matchNotice.textContent="";matchNotice.className="mini";return}
+   let firstMatch=null, exact=null;
+   opts.forEach(o=>{
+     const label=o.dataset.label;
+     const isMatch=label.includes(q)||q.includes(label);
+     o.style.display=isMatch?"":"none";
+     if(isMatch && !firstMatch)firstMatch=o;
+     if(label===q)exact=o;
+   });
+   if(exact){exact.scrollIntoView({block:"nearest"});matchNotice.className="mini";matchNotice.innerHTML=`<b style="color:var(--ok)">Exact existing match found above</b> — click it instead of creating a new label.`;}
+   else if(firstMatch){firstMatch.scrollIntoView({block:"nearest"});matchNotice.className="mini";matchNotice.innerHTML=`Possible existing match(es) above — check before adding a new label.`;}
+   else{matchNotice.className="mini";matchNotice.textContent="No existing match found — this will create a new learned label.";}
+ };
+ const micBtn=$("ctxMicBtn");
+ const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+ if(!SR){micBtn.disabled=true;micBtn.textContent="🎤 Dictation not supported in this browser";}
+ else{
+  micBtn.onclick=()=>{
+   if(ctxRecognition){try{ctxRecognition.stop()}catch{} ctxRecognition=null;micBtn.classList.remove("listening");micBtn.textContent="🎤 Dictate (synthetic-test only)";return}
+   ctxRecognition=new SR();ctxRecognition.lang="en-US";ctxRecognition.interimResults=false;ctxRecognition.maxAlternatives=1;
+   ctxRecognition.onresult=(e)=>{const said=e.results[0][0].transcript;$("ctxFreeText").value=said;};
+   ctxRecognition.onend=()=>{micBtn.classList.remove("listening");micBtn.textContent="🎤 Dictate (synthetic-test only)";ctxRecognition=null};
+   ctxRecognition.onerror=()=>{micBtn.classList.remove("listening");micBtn.textContent="🎤 Dictation error — try typing instead"};
+   micBtn.classList.add("listening");micBtn.textContent="🎤 Listening… click to stop";
+   try{ctxRecognition.start()}catch{}
+  };
+ }
+ return false;
+}
+function applyMapping(row,label,icd,stage){
+ const phraseSource = row.evidence && row.evidence.length<200 ? row.evidence : row.value;
+ // Prefer a short, specific phrase to learn from: the raw diagnosis-line text if short, else the row value.
+ const phrase = row.rawIcd && phraseSource.length>120 ? row.value : phraseSource;
+ const result = addLearnedMapping(phrase, label, icd, "provider-correction", stage);
+ if(!result.ok && result.reason==="generic"){
+   alert(`"${phrase}" is too generic (a bare body site or common word) to save as a learned phrase — it would likely misfire on unrelated documents. The field below has been updated for this document only; please teach PH with a more specific phrase (e.g. the fuller diagnosis wording) if you want this to auto-apply next time.`);
+ }
+ row.value=label; row.status=result.ok?"Auto-mapped (learned)":"Needs review"; row.confidence=.9; row.stage=stage;
+ if(icd){
+   const icdRow=ingestState.mappings.find(r=>r.concept==="ICD-10");
+   if(icdRow) icdRow.value=icd;
+   else addConcept(ingestState.mappings,"ICD-10",icd,"current",["Diagnosis Coding"],row.evidence,result.ok?"Auto-mapped (learned)":"Needs review",.9);
+ }
+ renderConcepts();
+ addAudit("Provider taught mapping",`"${phrase}" → ${label}${icd?` (${icd})`:""} [${stage}]${result.ok?". This mapping will now auto-apply to future documents.":". NOT saved to memory — phrase judged too generic; applied to this document only."}`);
+ closeMapCtx();
+}
+document.addEventListener("click",(e)=>{if(!$("ctxMenu").contains(e.target))closeMapCtx()});
+document.addEventListener("scroll",(e)=>{const menu=$("ctxMenu");if(menu && menu.contains(e.target))return;closeMapCtx()},true);
+window.openMapCtx=openMapCtx;
+/* long-press support for touch devices */
+(function(){
+ let pressTimer=null;
+ document.addEventListener("touchstart",(e)=>{
+  const tr=e.target.closest("#mappingRows tr[data-i]");
+  if(!tr)return;
+  pressTimer=setTimeout(()=>{const touch=e.touches[0];openMapCtx({preventDefault(){},clientX:touch.clientX,clientY:touch.clientY},Number(tr.dataset.i))},550);
+ },{passive:true});
+ document.addEventListener("touchend",()=>{if(pressTimer)clearTimeout(pressTimer)});
+ document.addEventListener("touchmove",()=>{if(pressTimer)clearTimeout(pressTimer)});
+})();
+
+function buildInterval(){
+ const mode=$("visitType").value,cur=ingestState.mappings,prior=$("priorSource").value.trim();
+ if(mode==="initial"){return "Initial visit baseline: establish the supported diagnosis, disease severity, morphology, lesion distribution, prior therapies, medication exposure, treatment response, and outside-source provenance. Ambiguous outside terminology should remain reviewable rather than being converted into a current physical examination without confirmation."}
+ const parts=[];
+ const response=cur.find(r=>r.concept==="Treatment response");if(response)parts.push(response.value);
+ const morph=cur.find(r=>r.concept==="Morphology");if(morph)parts.push("Current morphology: "+morph.value+".");
+ const objective=cur.find(r=>r.concept==="Objective finding");if(objective)parts.push(objective.value);
+ const proposed=cur.filter(r=>r.concept==="Medication"&&/Proposed/.test(r.medStatus||"")).map(r=>r.value);if(proposed.length)parts.push("Proposed treatment change: "+[...new Set(proposed)].join(", ")+".");
+ if(prior){
+   const pm=parseSemantic(prior).filter(r=>r.concept==="Medication").map(r=>r.value),cm=cur.filter(r=>r.concept==="Medication").map(r=>r.value),added=[...new Set(cm.filter(x=>!pm.includes(x)))];
+   if(added.length)parts.push("New medication mention(s) versus prior source: "+added.join(", ")+".");
+ }
+ return parts.length?parts.join(" "):"No reliable interval change could be generated from the loaded source."
+}
+function buildPrevisit(){
+ const rows=ingestState.mappings,get=c=>rows.find(r=>r.concept===c)?.value,lines=[];
+ const dxRow=rows.find(r=>r.concept==="Diagnosis");
+ if(dxRow){
+   const icdVal=get("ICD-10");
+   const stageLabel={
+    "Historical / Outside":"Outside/prior diagnosis (from referral or a previous note — not necessarily today's working diagnosis)",
+    "Preliminary / Differential":"Working diagnosis (preliminary — pending pathology/confirmation)",
+    "Confirmed (pathology)":"Diagnosis (confirmed by pathology)",
+    "Confirmed (clinical)":"Diagnosis (clinical impression today)"
+   }[dxRow.stage]||"Diagnosis";
+   lines.push(stageLabel+": "+dxRow.value+(icdVal?" ("+icdVal+")":"")+".");
+ }
+ if(get("Disease severity"))lines.push("Severity: "+get("Disease severity")+".");
+ if(get("Morphology"))lines.push("Morphology: "+get("Morphology")+".");
+ const current=rows.filter(r=>r.concept==="Medication"&&r.medStatus==="Current / Continue").map(r=>r.value);if(current.length)lines.push("Current therapy: "+[...new Set(current)].join(", ")+".");
+ const hist=rows.filter(r=>r.concept==="Medication"&&r.medStatus==="Historical / Failed").map(r=>r.value);if(hist.length)lines.push("Prior/failed therapy: "+[...new Set(hist)].join(", ")+".");
+ const resp=rows.find(r=>r.concept==="Treatment response");if(resp)lines.push("Treatment response: "+resp.value);
+ const prop=rows.filter(r=>r.concept==="Medication"&&/Proposed/.test(r.medStatus||"")).map(r=>r.value);if(prop.length)lines.push("Proposed/conditional therapy: "+[...new Set(prop)].join(", ")+".");
+ lines.push("Interval context: "+buildInterval());
+ return lines.join("\n");
+}
+/* 0.6.13.4: detect likely multiple-document contamination in the loaded source — a common
+   testing mistake where a new note is pasted into the Original Source Document box without
+   clearing the previous one first. Counts recurring document-boundary markers; 2+ of the same
+   marker means the box almost certainly contains more than one encounter concatenated together. */
+function detectMultiDocumentContamination(t){
+ const markers=[
+  /NEW PATIENT DERMATOLOGY ENCOUNTER NOTE/gi,
+  /ESTABLISHED PATIENT DERMATOLOGY FOLLOW-UP NOTE/gi,
+  /Referral for Dermatology Evaluation/gi,
+  /Electronically signed by:/gi,
+  /\bDate of Service:/gi
+ ];
+ for(const re of markers){const hits=(t.match(re)||[]).length; if(hits>=2) return {contaminated:true,marker:re.source,count:hits}}
+ const assessHits=(t.match(/ASSESSMENT\s*\/\s*DIAGNOSIS/gi)||[]).length;
+ if(assessHits>=2) return {contaminated:true,marker:"ASSESSMENT / DIAGNOSIS",count:assessHits};
+ return {contaminated:false};
+}
+
+/* 0.6.13.11: rule-based clinical-vs-administrative document classifier, based on the same
+   signal categories medical-records scanning workflows use (clinical section headers + medical
+   entity density vs. insurance/billing/identity-document markers). This is a lightweight rule
+   check, not a trained classifier — it's meant to catch the clear cases (an HVAC invoice, an
+   insurance card, an EOB) and flag genuine edge cases for review, not make a confident medical
+   judgment call on ambiguous text. */
+function classifyDocumentRelevance(t){
+ const n=norm(t);
+ const clinicalSignals=[
+  [/chief complaint|reason for encounter|presenting complaint/,"Chief Complaint header"],
+  [/history of present illness|\bhpi\b/,"HPI header"],
+  [/past medical history|\bpmh\b/,"PMH header"],
+  [/review of systems|\bros\b/,"ROS header"],
+  [/physical exam(ination)?|examination findings/,"Physical Exam header"],
+  [/vital signs|\bvitals\b/,"Vital Signs header"],
+  [/\bmedications?\b.{0,15}(list|current|home)/,"Medications header"],
+  [/\ballerg(y|ies)\b/,"Allergies section"],
+  [/assessment\s*\/?\s*(and\s*)?plan|\bimpression\b|\bassessment\s*\/?\s*diagnosis\b/,"Assessment/Plan header"],
+  [/discharge diagnosis|admission diagnosis/,"Discharge/Admission Diagnosis header"],
+  [/\b[a-z]\d{2}(?:\.[0-9a-z]+)?\b/i,"ICD-10-style code"],
+  [/\b(md|do|np|pa-c|rn)\b|attending physician|board-certified dermatologist/,"Provider credential"],
+  [/\bmg\/dL\b|\bmm\s?hg\b|\bbpm\b|\bbsa\b/,"Clinical measurement unit"]
+ ];
+ const adminSignals=[
+  [/\binvoice\b|\bestimate\b|\bsubtotal\b|\bamount due\b/,"Invoice/billing language"],
+  [/\bcopay\b|\bpolicy number\b|\bgroup number\b|\bsubscriber\b|explanation of benefits|\beob\b/,"Insurance/EOB language"],
+  [/driver'?s licen[cs]e|\bpassport\b|date of issue/,"Identity document language"],
+  [/\bclaim number\b|\bpayment\b.{0,15}(due|received)/,"Claims/payment language"],
+  [/\bLLC\b|\bP\.?O\.? Box\b/,"Business/vendor correspondence marker"],
+  [/curriculum vitae|\bcv\b.{0,10}(summary|update)|\bpublications?\b.{0,15}(list|peer-reviewed)|peer-reviewed|\bet al\.?\b|\bdoi\s*:|h-index|i10-index|\bjournal of\b/,"Academic/bibliographic document marker"]
+ ];
+ const clinicalHits=clinicalSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
+ const adminHits=adminSignals.filter(([re])=>re.test(n)).map(([,label])=>label);
+ if(clinicalHits.length===0 && adminHits.length>0) return {verdict:"non-clinical",clinicalHits,adminHits};
+ if(clinicalHits.length>0 && adminHits.length>0) return {verdict:"mixed",clinicalHits,adminHits};
+ if(clinicalHits.length===0 && adminHits.length===0) return {verdict:"undetermined",clinicalHits,adminHits};
+ return {verdict:"clinical",clinicalHits,adminHits};
+}
+
+function extractAndMap(){if(!$("rawSource").value.trim()){alert("Load a source first.");return}ingestState.raw=$("rawSource").value;ingestState.mappings=parseSemantic(ingestState.raw);renderConcepts();$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit();const unmapped=ingestState.mappings.filter(x=>x.status==="Unmapped").length;const contam=detectMultiDocumentContamination(ingestState.raw);const rel=classifyDocumentRelevance(ingestState.raw);let banner="";let bannerClass="notice ok";
+ if(rel.verdict==="non-clinical"){bannerClass="notice warn";banner=`<b>⚠ This does not look like a clinical document.</b> No clinical section headers or medical terminology were found (${ingestState.mappings.length} concept(s) extracted anyway may be false matches on ordinary text). Administrative/business markers found: ${esc(rel.adminHits.join(", ")||"none specific")}. Consider whether this document belongs in the clinical workflow at all before trusting anything below.<br>`}
+ else if(rel.verdict==="mixed"){bannerClass="notice warn";banner=`<b>⚠ Mixed clinical and administrative signals.</b> This document has both clinical markers (${esc(rel.clinicalHits.join(", "))}) and administrative/billing markers (${esc(rel.adminHits.join(", "))}) — review carefully, as this can happen with a registration form that includes a brief clinical note, or a referral letter with billing details attached.<br>`}
+ else if(rel.verdict==="undetermined"){bannerClass="notice warn";banner=`<b>⚠ No clear clinical or administrative signals found.</b> This document didn't match any recognized clinical section headers/terminology, but also didn't match recognized administrative/billing language — PH can't confirm this is a clinical document. ${ingestState.mappings.length===0?"No concepts were extracted, which is consistent with a non-clinical document.":`${ingestState.mappings.length} concept(s) were extracted anyway; verify they're genuine before trusting them.`} The Authorization Evidence Workbench below will not run against a document with no real clinical content.<br>`}
+ if(contam.contaminated){bannerClass="notice warn";banner+=`<b>⚠ Possible multiple documents detected</b> — the source text contains ${contam.count} occurrences of "${esc(contam.marker)}", which usually means more than one encounter/letter got pasted or loaded into this box without clearing it first. Extraction assumes a single document; click <b>Clear</b> and reload just one source, or results below may mix content from different visits.<br>`}
+ $("extractStatus").className=bannerClass;
+ $("extractStatus").innerHTML=banner+`Semantic extraction complete: ${ingestState.mappings.length} concepts identified.${unmapped?` ${unmapped} field(s) need a mapping — right-click to teach PH.`:" No unmapped fields."}`;
+ $("sourcePane").textContent=ingestState.raw;
+ ingestState.relevanceVerdict=rel.verdict;
+ // 0.6.13.16: run auto-detection once per fresh load, only when this document's route is
+ // "medication" — a real diagnosis was found, but does it match any known medication indication?
+ ingestState.noMedicationMatch=false;
+ if(detectedAuthorizationPathway()==="medication"){
+   const loadedDx=ingestState.mappings.find(r=>r.concept==="Diagnosis");
+   if(loadedDx && loadedDx.status!=="Unmapped"){
+     const match=autoDetectMedicationDx(loadedDx.value+" "+(loadedDx.evidence||""));
+     if(match){$("paDrug").value=match.drugId;fillPADx();$("paDx").value=String(match.dxIndex)}
+     else{ingestState.noMedicationMatch=true;ingestState.unmatchedDiagnosis=loadedDx.value}
+   }
+ }
+ addAudit("Semantic mapping completed",`${ingestState.mappings.length} concepts; ${ingestState.mappings.filter(x=>x.status.startsWith("Auto-mapped")).length} auto-mapped; ${unmapped} unmapped.${contam.contaminated?" WARNING: possible multi-document contamination detected.":""}${rel.verdict!=="clinical"?` Document relevance check: ${rel.verdict}.`:""}`);
+ scanPAEvidence()}
+/* ================= 0.6.13.6: Batch import + persistent Work Queue ================= */
+const WORK_QUEUE_KEY="ph0613-work-queue", TEAM_KEY="ph0613-team-members";
+const FIXED_ROLES=["Coordinator","Provider","Nursing","Unassigned"];
+function loadWorkQueue(){try{return JSON.parse(localStorage.getItem(WORK_QUEUE_KEY)||"[]")}catch{return[]}}
+function saveWorkQueue(a){localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}
+let workQueueItems=loadWorkQueue();
+function loadTeamMembers(){try{return JSON.parse(localStorage.getItem(TEAM_KEY)||"[]")}catch{return[]}}
+function saveTeamMembers(a){localStorage.setItem(TEAM_KEY,JSON.stringify(a))}
+let teamMembers=loadTeamMembers();
+
+function detectPathwayFromText(rawText){
+ const src=norm(rawText);
+ if(/\bbiopsy\b|punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|pathology results|d48\.5|neoplasm of uncertain behavior/.test(src))return"biopsy";
+ return"medication";
+}
+function batchBiopsyRequirements(rows,rawText){
+ const get=c=>rows.find(r=>r.concept===c)?.value||"";
+ const site=get("Biopsy site")||get("Body location");
+ const req=[
+  {label:"Working diagnosis / diagnostic uncertainty",pattern:"D48.5|neoplasm of uncertain behavior|uncertain behavior"},
+  {label:"Lesion morphology supporting biopsy",pattern:"hyperkeratotic|erythematous|plaque|papule|nodule|crust|scale|indurat|ulcer|bleed|nonhealing|persistent|growing|changing|scaly"},
+  {label:"Anatomic site documented",pattern:site||"right hand|left hand|hand|forearm|arm|face|scalp|chest|back|leg|foot|nose|ear|neck"},
+  {label:"Clinical differential / concern documented",pattern:"squamous cell carcinoma|SCC|SCC in situ|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma|clinical concern|rule out|r/o|versus"},
+  {label:"Biopsy procedure documented or planned",pattern:"punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|biopsy performed|biopsy planned|biopsy of"},
+  {label:"Pathology / tissue diagnosis intent",pattern:"pathology results|pathology pending|histopathology|tissue diagnosis|definitive diagnosis|guide definitive therapy"}
+ ];
+ const reqRows=req.map(r=>{const e=findEvidence(r.pattern,rawText);return{...r,status:e?"Found":"Missing",evidence:e}});
+ return{serviceLabel:"Diagnostic skin biopsy / pathology",rows:reqRows};
+}
+function batchMedicationRequirements(rawText,diagnosisText){
+ // 0.6.13.21: reuse the same auto-detection the single-document flow uses, instead of the looser
+ // substring search this function had before — keeps both paths consistent, and lets batch items
+ // correctly distinguish "no medication applies to this diagnosis at all" from "a medication
+ // applies but supporting evidence is incomplete," which the Worklist can now surface directly.
+ const match=autoDetectMedicationDx(diagnosisText||rawText);
+ if(!match)return null;
+ const drug=PA_DRUGS.find(d=>d.id===match.drugId);
+ const dx=drug.dx[match.dxIndex];
+ const reqRows=dx.req.map(r=>{const e=findEvidence(r[1],rawText);return{label:r[0],status:e?"Found":"Missing",evidence:e}});
+ return{serviceLabel:drug.name+" — "+dx.name,rows:reqRows};
+}
+function runBatchDocument(filename,rawText){
+ const rows=parseSemantic(rawText);
+ const dxRow=rows.find(r=>r.concept==="Diagnosis");
+ const icdRow=rows.find(r=>r.concept==="ICD-10");
+ const pathway=detectPathwayFromText(rawText);
+ const relevance=classifyDocumentRelevance(rawText);
+ let serviceLabel="",missing=[],supported=[],paLikelihood="needs_attention";
+ if(pathway==="biopsy"){
+   const p=batchBiopsyRequirements(rows,rawText);
+   serviceLabel=p.serviceLabel;missing=p.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=p.rows.filter(r=>r.status==="Found").map(r=>r.label);
+   paLikelihood=missing.length?"needs_attention":"ready";
+ }else{
+   const m=batchMedicationRequirements(rawText,dxRow?dxRow.value:"");
+   if(m){
+     serviceLabel=m.serviceLabel;missing=m.rows.filter(r=>r.status==="Missing").map(r=>r.label);supported=m.rows.filter(r=>r.status==="Found").map(r=>r.label);
+     paLikelihood=missing.length?"needs_attention":"ready";
+   }else{
+     serviceLabel=dxRow&&dxRow.status!=="Unmapped"?"No medication prior authorization applies to this diagnosis":"Medication prior authorization (no diagnosis detected — needs manual review)";
+     paLikelihood=dxRow&&dxRow.status!=="Unmapped"?"unlikely":"needs_attention";
+   }
+ }
+ return{
+  id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000),
+  rawText,
+  filename,importedAt:new Date().toISOString(),
+  diagnosis:dxRow?dxRow.value:"(no diagnosis detected — needs review)",
+  diagnosisStage:dxRow?dxRow.stage:"",
+  icd:icdRow?icdRow.value:"",
+  pathway,serviceLabel,missing,supported,paLikelihood,
+  relevanceVerdict:relevance.verdict,relevanceHits:{clinical:relevance.clinicalHits,admin:relevance.adminHits},
+  assignedType:"role",assignedTo:"Unassigned",
+  status:"Pending",
+  history:[{at:new Date().toISOString(),note:"Imported via batch and scanned for PA evidence."}]
+ };
+}
+function renderTeamMembers(){
+ const box=$("teamMemberList");if(!box)return;
+ box.innerHTML=teamMembers.length?teamMembers.map((n,i)=>`<span class="pill">${esc(n)} <button class="rmTeam" data-i="${i}" style="border:0;background:transparent;cursor:pointer;color:var(--bad);font-weight:700">×</button></span>`).join(" "):'<div class="mini">No named individuals added yet — roles (Coordinator, Provider, Nursing) are always available.</div>';
+ document.querySelectorAll(".rmTeam").forEach(b=>b.onclick=()=>{teamMembers.splice(Number(b.dataset.i),1);saveTeamMembers(teamMembers);renderTeamMembers();renderWorkQueueTable()});
+}
+function assignOptionsHtml(selectedType,selectedValue){
+ const roleOpts=FIXED_ROLES.map(r=>`<option value="role::${esc(r)}"${selectedType==="role"&&selectedValue===r?" selected":""}>${esc(r)} (role)</option>`).join("");
+ const personOpts=teamMembers.map(n=>`<option value="person::${esc(n)}"${selectedType==="person"&&selectedValue===n?" selected":""}>${esc(n)}</option>`).join("");
+ return roleOpts+personOpts;
+}
+function relevanceBadge(verdict){
+ const styles={"clinical":"background:#dcfce7;color:#166534","non-clinical":"background:#fee2e2;color:#991b1b","mixed":"background:#fef3c7;color:#92400e","undetermined":"background:#fef3c7;color:#92400e"};
+ const labels={"clinical":"Clinical","non-clinical":"Non-clinical","mixed":"Mixed signals","undetermined":"Undetermined"};
+ return `<span class="pill" style="${styles[verdict]||''}">${esc(labels[verdict]||verdict)}</span>`;
+}
+function paLikelihoodBadge(likelihood){
+ const styles={"needs_attention":"background:#fee2e2;color:#991b1b","ready":"background:#dcfce7;color:#166534","unlikely":"background:#e5e7eb;color:#374151"};
+ const labels={"needs_attention":"Needs attention","ready":"Ready — supported","unlikely":"PA unlikely"};
+ return `<span class="pill" style="${styles[likelihood]||''}">${esc(labels[likelihood]||likelihood||"—")}</span>`;
+}
+function renderWorkQueueTable(){
+ const box=$("workQueueTable");if(!box)return;
+ $("queueCountBadge").textContent=workQueueItems.length+" item"+(workQueueItems.length===1?"":"s");
+ if(!workQueueItems.length){box.innerHTML='<div class="notice">No documents imported yet — use Batch Import above.</div>';return}
+ // 0.6.13.21: filter by PA likelihood while keeping each row's original array index intact, so
+ // assign/status/remove/open actions still target the correct underlying item after filtering.
+ const filterVal=$("paLikelihoodFilter")?$("paLikelihoodFilter").value:"all";
+ const indexed=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>filterVal==="all"||it.paLikelihood===filterVal);
+ if(!indexed.length){box.innerHTML=`<div class="notice">No items match this filter.</div>`;return}
+ box.innerHTML='<table><thead><tr><th>Document</th><th>Relevance</th><th>PA Likelihood</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
+  indexed.map(({it,i})=>{
+   const flagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";
+   const purgeBtn=flagged?`<button class="btn danger wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Purge</button>`:`<button class="btn secondary wqRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button>`;
+   return `<tr${flagged?' style="background:#fffbeb"':""}>
+   <td>${esc(it.filename)}<div class="mini">${new Date(it.importedAt).toLocaleString()}</div></td>
+   <td>${it.relevanceVerdict?relevanceBadge(it.relevanceVerdict):'<span class="mini">—</span>'}</td>
+   <td>${paLikelihoodBadge(it.paLikelihood)}</td>
+   <td>${esc(it.diagnosis)}${it.icd?` (${esc(it.icd)})`:""}${it.diagnosisStage?`<div class="mini"><span class="pill">${esc(it.diagnosisStage)}</span></div>`:""}</td>
+   <td>${esc(it.serviceLabel)}</td>
+   <td>${it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>'}</td>
+   <td><select class="wqAssign" data-i="${i}">${assignOptionsHtml(it.assignedType,it.assignedTo)}</select></td>
+   <td><select class="wqStatus" data-i="${i}">${["Pending","Submitted","Approved","Denied","Completed"].map(s=>`<option value="${s}"${it.status===s?" selected":""}>${s}</option>`).join("")}</select></td>
+   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button>${purgeBtn}</div></td>
+  </tr>`;}).join("")+'</tbody></table>';
+ document.querySelectorAll(".wqAssign").forEach(sel=>sel.onchange=()=>{const [type,value]=sel.value.split("::");const it=workQueueItems[Number(sel.dataset.i)];it.assignedType=type;it.assignedTo=value;it.history.push({at:new Date().toISOString(),note:`Assigned to ${value} (${type}).`});saveWorkQueue(workQueueItems);addAudit("Work queue item assigned",`${it.filename} → ${value}`)});
+ document.querySelectorAll(".wqStatus").forEach(sel=>sel.onchange=()=>{const it=workQueueItems[Number(sel.dataset.i)];const prev=it.status;it.status=sel.value;it.history.push({at:new Date().toISOString(),note:`Status changed ${prev} → ${sel.value}.`});saveWorkQueue(workQueueItems);addAudit("Work queue status updated",`${it.filename}: ${prev} → ${sel.value}`)});
+ document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];const wasFlagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit(wasFlagged?"Work queue item purged (non-clinical)":"Work queue item removed",it.filename+(wasFlagged?` [relevance: ${it.relevanceVerdict}]`:""))});
+ document.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
+}
+async function handleBatchImport(fileList){
+ const files=[...fileList];
+ if(!files.length)return;
+ const prog=$("batchProgress");prog.style.display="";prog.className="notice";
+ let done=0,failed=[];
+ for(const file of files){
+   prog.textContent=`Processing ${done+1} of ${files.length}: ${file.name}…`;
+   try{
+     const text=await extractFile(file);
+     const item=runBatchDocument(file.name,text);
+     workQueueItems.unshift(item);
+   }catch(err){failed.push(file.name+" ("+err.message+")")}
+   done++;
+ }
+ saveWorkQueue(workQueueItems);
+ renderWorkQueueTable();
+ prog.className=failed.length?"notice warn":"notice ok";
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added to the worklist.`+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
+}
+/* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
+   item loads its original text back into the interactive editor (right-click mapping, biopsy
+   module, everything already built), and a linked "sync back" updates the worklist row with
+   whatever was corrected, without losing the assignment/status/history already recorded. */
+function openWorkQueueItem(i){
+ const it=workQueueItems[i];
+ if(!it.rawText){alert("Original document text wasn't stored for this item (it may have been imported before this feature was added) — nothing to reopen.");return}
+ loadSource(it.rawText,it.filename).then(()=>{
+   ingestState.linkedQueueId=it.id;
+   extractAndMap();
+   showView("documentIntake");
+   $("linkedQueueNotice").classList.remove("hidden");
+   $("linkedQueueNotice").innerHTML=`Opened from Work Queue: <b>${esc(it.filename)}</b>. Make corrections below, then click <b>Update Work Queue Item</b> to save them back to the worklist.`;
+   addAudit("Opened from Work Queue",it.filename);
+ });
+}
+function syncCurrentDocumentToQueue(){
+ if(!ingestState.linkedQueueId){alert("This document wasn't opened from the Work Queue, so there's no worklist item to update. Use the Work Queue tab's Batch Import, or click Open on an existing item, to link one.");return}
+ const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);
+ if(!it){alert("The linked Work Queue item could not be found (it may have been removed).");return}
+ const rescanned=runBatchDocument(it.filename,ingestState.raw);
+ Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported,paLikelihood:rescanned.paLikelihood,relevanceVerdict:rescanned.relevanceVerdict,relevanceHits:rescanned.relevanceHits});
+ it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document Intake Lab."});
+ saveWorkQueue(workQueueItems);
+ renderWorkQueueTable();
+ $("linkedQueueNotice").className="notice ok";
+ $("linkedQueueNotice").innerHTML=`Work Queue item for <b>${esc(it.filename)}</b> updated — diagnosis, pathway, and missing-evidence list refreshed. Assignment and status were kept as-is.`;
+ addAudit("Work queue item synced",it.filename);
+}
+
+function acceptMappings(){
+ if(!ingestState.mappings.length){alert("Run Extract, Map & Compare first.");return}
+ const rows=ingestState.mappings;
+ const get=c=>rows.find(r=>r.concept===c)?.value;
+ $("diagnosis").value=get("Diagnosis")||"";$("icd10").value=get("ICD-10")||"";$("clinicalSeverity").value=get("Disease severity")||"";$("morphology").value=get("Morphology")||"";$("bodyLocation").value=get("Biopsy site")||get("Body location")||"";$("lesionTypes").value=get("Lesion types")||"";
+ $("bsa").value=(get("BSA")||"").replace("%","");$("iga").value=get("IGA/PGA")||"";
+ $("pasi").value=(get("PASI")||"").replace(/^PASI\s*/i,"");$("easi").value=(get("EASI")||"").replace(/^EASI\s*/i,"");$("dlqi").value=(get("DLQI")||"").replace(/^DLQI\s*/i,"");$("itchNrs").value=(get("Itch NRS")||"").replace(/^Itch NRS\s*/i,"");$("hurleyStage").value=(get("Hurley stage")||"").replace(/^Hurley stage\s*/i,"");
+ $("objectiveNarrative").value=rows.filter(r=>r.dest.includes("Objective / Physical Examination")).map(r=>r.value).join(" ");
+ $("subjectiveNarrative").value=[...rows.filter(r=>r.dest.includes("HPI / Current Treatment")||r.dest.includes("HPI / Treatment Response")).map(r=>r.evidence)].filter((v,i,a)=>a.indexOf(v)===i).join(" ");
+ $("assessmentNarrative").value=[get("Diagnosis"),get("Disease severity"),get("Morphology")].filter(Boolean).join(" · ");
+ $("planNarrative").value=[...rows.filter(r=>r.dest.includes("Plan")).map(r=>r.evidence)].filter((v,i,a)=>a.indexOf(v)===i).join(" ");
+ $("priorTreatments").value=[...rows.filter(r=>r.dest.includes("HPI / Treatment History")).map(r=>`${r.value} (${r.medStatus||"historical"})`)].join("; ");
+ const meds=rows.filter(r=>r.concept==="Medication");$("soapMedTable").innerHTML=meds.length?meds.map(r=>`<div class="map-item"><b>${esc(r.value)}</b><span class="pill">${esc(r.medStatus||r.context)}</span><div class="mini">${esc(r.evidence)}</div></div>`).join(""):'<div class="notice">No medication entries.</div>';
+ ingestState.accepted=true;addAudit("Mappings accepted","Auto-mapped clinical fields populated into the structured SOAP draft. Original source remains preserved separately.");alert("Auto-mapped clinical fields were populated into the SOAP draft. The external source remains preserved separately.")
+}
+
+function loadRules(){try{return JSON.parse(localStorage.getItem(RULES_KEY)||"[]")}catch{return[]}}
+function saveRules(a){localStorage.setItem(RULES_KEY,JSON.stringify(a))}
+function loadOutcomes(){try{return JSON.parse(localStorage.getItem(OUTCOME_KEY)||"[]")}catch{return[]}}
+function saveOutcomes(a){localStorage.setItem(OUTCOME_KEY,JSON.stringify(a))}
+function selectedPA(){const drug=PA_DRUGS.find(d=>d.id===$("paDrug").value)||PA_DRUGS[0],dx=drug.dx[Number($("paDx").value||0)]||drug.dx[0];return{drug,dx}}
+function fillPADx(){const d=PA_DRUGS.find(x=>x.id===$("paDrug").value)||PA_DRUGS[0];$("paDx").innerHTML=d.dx.map((x,i)=>`<option value="${i}">${esc(x.name)} · ${esc(x.icd)}</option>`).join("");renderKnownRules();updatePAStats()}
+/* 0.6.13.16: auto-detect which PA_DRUGS medication/diagnosis pairing (if any) actually matches
+   the loaded document's own extracted diagnosis, instead of silently leaving whatever medication
+   was last selected (or the page's initial "Isotretinoin" default) selected regardless of what
+   was actually loaded. Confirmed repeatedly in testing: a wart/lipoma/cyst diagnosis has nothing
+   to do with acne, but the FDA checklist kept running the acne/isotretinoin requirements against
+   it anyway, producing a confusing "Diagnosis: MISSING" for a diagnosis that plainly IS in the
+   note — just not the diagnosis this particular checklist is checking for. */
+function autoDetectMedicationDx(diagnosisText){
+ const n=norm(diagnosisText||"");
+ if(!n)return null;
+ for(const d of PA_DRUGS){
+   for(let i=0;i<d.dx.length;i++){
+     const pattern=d.dx[i].req[0][1];
+     if(pattern.split("|").some(term=>n.includes(term.trim().toLowerCase())))return{drugId:d.id,dxIndex:i};
+   }
+ }
+ return null;
+}
+function findEvidence(pattern,src){const low=norm(src);for(const t of pattern.split("|").map(x=>x.trim()).filter(Boolean)){const n=norm(t),i=low.indexOf(n);if(i>=0)return src.slice(Math.max(0,i-90),Math.min(src.length,i+n.length+180)).replace(/\s+/g," ").trim()}return""}
+function relevantRules(){const {drug,dx}=selectedPA(),p=norm($("paPayer").value);return loadRules().filter(r=>r.active!==false&&r.drugId===drug.id&&r.diagnosis===dx.name&&norm(r.payer)===p)}
+
+function detectedAuthorizationPathway(){
+ const forced=$("paPathway")?.value||"auto";
+ if(forced!=="auto")return forced;
+ const src=norm([ingestState.raw,$("planNarrative").value,$("objectiveNarrative").value,$("assessmentNarrative").value].join("\n"));
+ if(/\bbiopsy\b|punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|pathology results|D48\.5|neoplasm of uncertain behavior/.test(src))return"biopsy";
+ return"medication";
+}
+function biopsyEvidenceProfile(){
+ const rows=ingestState.mappings||[];
+ const get=c=>rows.find(r=>r.concept===c)?.value||"";
+ const site=get("Biopsy site")||get("Body location");
+ const workingDx=get("Diagnosis")||(/D48\.5/i.test(ingestState.raw)?"Neoplasm of uncertain behavior of skin":"");
+ const differential=get("Differential diagnosis")||"";
+ return{
+  service:"Diagnostic skin biopsy / pathology",
+  workingDx:workingDx||"Clinically indeterminate cutaneous lesion",
+  icd:get("ICD-10")||"",
+  site:site||"",
+  differential,
+  req:[
+   {label:"Working diagnosis / diagnostic uncertainty",pattern:"D48.5|neoplasm of uncertain behavior|uncertain behavior",type:"Biopsy baseline"},
+   {label:"Lesion morphology supporting biopsy",pattern:"hyperkeratotic|erythematous|plaque|papule|nodule|crust|scale|indurat|ulcer|bleed|nonhealing|persistent|growing|changing|scaly",type:"Biopsy baseline"},
+   {label:"Anatomic site documented",pattern:site||"right hand|left hand|hand|forearm|arm|face|scalp|chest|back|leg|foot|nose|ear|neck",type:"Biopsy baseline"},
+   {label:"Clinical differential / concern documented",pattern:"squamous cell carcinoma|SCC|SCC in situ|actinic keratosis|AK|basal cell carcinoma|BCC|melanoma|clinical concern|rule out|r/o|versus",type:"Biopsy baseline"},
+   {label:"Biopsy procedure documented or planned",pattern:"punch biopsy|shave biopsy|tangential biopsy|incisional biopsy|biopsy performed|biopsy planned|biopsy of",type:"Biopsy baseline"},
+   {label:"Pathology / tissue diagnosis intent",pattern:"pathology results|pathology pending|histopathology|tissue diagnosis|definitive diagnosis|guide definitive therapy",type:"Biopsy baseline"}
+  ]
+ };
+}
+function renderAuthorizationRoute(){
+ const route=detectedAuthorizationPathway();
+ const notice=$("paRouteNotice"),drugLabel=$("paDrugLabel"),dxLabel=$("paDxLabel");
+ if(route==="biopsy"){
+   const p=biopsyEvidenceProfile();
+   notice.className="notice ok";
+   notice.innerHTML=`<b>Detected pathway:</b> Diagnostic skin biopsy / pathology<br><b>Working diagnosis:</b> ${esc(p.workingDx)}${p.icd?` (${esc(p.icd)})`:""}${p.site?`<br><b>Biopsy site:</b> ${esc(p.site)}`:""}${p.differential?`<br><b>Differential:</b> ${esc(p.differential)} <span class="pill">differential-only until pathology final</span>`:""}`;
+   drugLabel.classList.add("hidden");dxLabel.classList.add("hidden");
+ }else{
+   notice.className="notice";
+   notice.innerHTML="<b>Detected pathway:</b> Medication prior authorization. FDA baseline and payer-specific medication requirements are evaluated separately.";
+   drugLabel.classList.remove("hidden");dxLabel.classList.remove("hidden");
+ }
+ return route;
+}
+function scanPAEvidence(){
+ // 0.6.13.13: don't run a medication/biopsy PA check against a document with no real clinical
+ // content — this is exactly what let "Isotretinoin" keep showing up (a stale dropdown default)
+ // against an unrelated appliance-service checklist that extracted zero concepts. The Evidence
+ // Workbench now explicitly refuses to evaluate when there's nothing clinical to evaluate,
+ // instead of silently reporting "0/3 supported" as if that meant something.
+ if(ingestState.mappings.length===0 && (ingestState.relevanceVerdict==="non-clinical"||ingestState.relevanceVerdict==="undetermined")){
+   $("paDrugLabel").classList.add("hidden");$("paDxLabel").classList.add("hidden");
+   $("paRouteNotice").className="notice warn";
+   $("paRouteNotice").innerHTML="<b>⚠ No authorization pathway evaluated.</b> The loaded document produced zero clinical concepts and did not look clinical. Running a medication or biopsy requirement check against it would be meaningless — load a genuine clinical encounter first.";
+   $("paResults").innerHTML='<div class="notice">Nothing to evaluate — no clinical content was found in the loaded document.</div>';
+   $("paSupported").textContent="—";$("paMissing").textContent="—";$("paRate").textContent="—";
+   $("paSummary").value="No authorization evidence summary generated: the loaded document contains no recognized clinical content.";
+   $("treatmentSummary").value=$("paSummary").value;
+   $("workQueue").innerHTML='<div class="notice">No PA evidence scan was run — the loaded document had no clinical content.</div>';
+   return;
+ }
+ const route=renderAuthorizationRoute();
+ const src=[ingestState.raw,$("priorSource").value,$("subjectiveNarrative").value,$("objectiveNarrative").value,$("assessmentNarrative").value,$("planNarrative").value,$("priorTreatments").value].join("\n");
+
+ if(route==="biopsy"){
+   const p=biopsyEvidenceProfile();
+   const rows=p.req.map((r,i)=>{const e=findEvidence(r.pattern,src);return{id:"BX-"+i,...r,status:e?"Found":"Missing",evidence:e}});
+   window.ph0613PA=rows;
+   $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":"missing"}"><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}</div>`).join("");
+   const f=rows.filter(r=>r.status==="Found").length;$("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=rows.length-f;$("paRate").textContent="—";
+   const lines=["PH DIAGNOSTIC BIOPSY AUTHORIZATION EVIDENCE SUMMARY","Service: "+p.service,"Working diagnosis: "+p.workingDx+(p.icd?" ["+p.icd+"]":""),p.site?"Site: "+p.site:"",p.differential?"Clinical differential: "+p.differential+" (differential only; pathology pending)":"","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"].filter(Boolean);
+   rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
+   if(!rows.some(r=>r.status==="Found"))lines.push("• None located.");
+   lines.push("","MISSING / PROVIDER OR STAFF REVIEW:");
+   rows.filter(r=>r.status==="Missing").forEach(r=>lines.push("• "+r.label+": not located in available documentation."));
+   if(!rows.some(r=>r.status==="Missing"))lines.push("• None.");
+   lines.push("","Diagnostic safety: suspected SCC/BCC/melanoma remains a differential diagnosis until pathology finalization. PH does not promote a malignancy differential to the active definitive diagnosis.");
+   $("paSummary").value=lines.join("\n");$("treatmentSummary").value=$("paSummary").value;
+   const missing=rows.filter(r=>r.status==="Missing");$("workQueue").innerHTML=missing.length?missing.map(r=>`<div class="map-item"><b>Missing biopsy authorization evidence:</b> ${esc(r.label)}<div class="mini">Provider/staff review required if this criterion applies for the payer.</div></div>`).join(""):'<div class="notice ok">No currently detected biopsy-evidence gaps in the loaded encounter.</div>';
+   return;
+ }
+
+ if(ingestState.noMedicationMatch){
+   $("paDrugLabel").classList.add("hidden");$("paDxLabel").classList.add("hidden");
+   $("paRouteNotice").className="notice warn";
+   $("paRouteNotice").innerHTML=`<b>⚠ No matching medication for this diagnosis.</b> This encounter's diagnosis — <b>${esc(ingestState.unmatchedDiagnosis)}</b> — doesn't correspond to any medication in PH's FDA-requirement reference list. This is often correct and expected: many dermatologic conditions (biopsy/destruction/excision procedures, benign lesions like warts, cysts, or lipomas) are managed without a systemic medication requiring prior authorization at all. If this diagnosis genuinely does need a medication PA, use the dropdowns above to select one manually.`;
+   $("paResults").innerHTML='<div class="notice">No FDA-baseline checklist shown — no matching medication for this diagnosis.</div>';
+   $("paSupported").textContent="—";$("paMissing").textContent="—";$("paRate").textContent="—";
+   $("paSummary").value=`No medication authorization checklist generated: the loaded diagnosis (${ingestState.unmatchedDiagnosis}) does not match any medication in PH's reference list.`;
+   $("treatmentSummary").value=$("paSummary").value;
+   $("workQueue").innerHTML='<div class="notice">No PA evidence gaps to show — no medication requirement checklist applies to this diagnosis.</div>';
+   return;
+ }
+ if(!$("paDrug").value)return;
+ const {drug,dx}=selectedPA();
+/* 0.6.13.22: "Objective severity" previously only checked whether a BSA/PASI/EASI-shaped number
+   appeared anywhere — not whether that number actually clears the threshold payers use for
+   "moderate-to-severe" classification. Confirmed in testing: a note documenting BSA 5% was marked
+   "FOUND," but 5% is below the ~10% threshold commonly cited for moderate-to-severe psoriasis —
+   meaning the checklist was reporting the requirement as satisfied when the actual value likely
+   would not support the PA. These thresholds are commonly-cited clinical conventions, not a
+   universal rule — payer criteria vary, and this is a flag for review, not a denial prediction.
+*/
+function checkSeverityThreshold(evidenceText){
+ if(!evidenceText)return null;
+ let m;
+ if(m=evidenceText.match(/BSA\D{0,30}?(\d+(?:\.\d+)?)\s*%/i)){
+   const v=parseFloat(m[1]);
+   if(v<10)return{value:`BSA ${v}%`,detail:`BSA ${v}% is below the ~10% threshold commonly cited for moderate-to-severe classification.`};
+ }
+ if(m=evidenceText.match(/PASI\D{0,10}?(\d+(?:\.\d+)?)/i)){
+   const v=parseFloat(m[1]);
+   if(v<10)return{value:`PASI ${v}`,detail:`PASI ${v} is below the ~10 threshold commonly cited for moderate-to-severe classification.`};
+ }
+ if(m=evidenceText.match(/EASI\D{0,10}?(\d+(?:\.\d+)?)/i)){
+   const v=parseFloat(m[1]);
+   if(v<16)return{value:`EASI ${v}`,detail:`EASI ${v} is below the ~16 threshold commonly cited for moderate-to-severe atopic dermatitis.`};
+ }
+ return null;
+}
+ const req=dx.req.map((r,i)=>({id:"FDA-"+i,type:"FDA baseline",label:r[0],pattern:r[1],source:"Seed FDA indication profile"})).concat(relevantRules().map(r=>({id:r.id,type:"Payer learned",label:r.requirement,pattern:r.searchTerms||r.requirement,source:r.payer+" denial"})));
+ // 0.6.13.15: a requirement about prior treatment history (recalcitrance, therapy failure, prior
+ // response/candidacy) genuinely cannot be documented on a same-day INITIAL visit — treatment is
+ // only being started today, so there's no history yet to report. Flagging that as "MISSING" reads
+ // as a deficiency needing correction right now, when it's actually just not applicable until a
+ // follow-up visit happens. This only softens requirements that are inherently history-dependent;
+ // a genuinely missing Diagnosis or objective severity measurement is still a real gap regardless
+ // of visit type, since those should be documented at any visit including the first one.
+ const isInitialVisit = $("visitType").value==="initial";
+ const historyDependent = /failure|recalcitran|prior (therap|system)|response|candidacy/i;
+ const rows=req.map(r=>{
+   const e=findEvidence(r.pattern,src);
+   let status=e?"Found":"Missing",thresholdNote=null;
+   if(!e && isInitialVisit && historyDependent.test(r.label))status="Not yet applicable";
+   if(e && /objective severity/i.test(r.label)){
+     const below=checkSeverityThreshold(e);
+     if(below){status="Below threshold";thresholdNote=below.detail}
+   }
+   return{...r,status,evidence:e,thresholdNote};
+ });window.ph0613PA=rows;
+ $("paResults").innerHTML=rows.map(r=>`<div class="map-item ${r.status==="Found"?"auto":r.status==="Not yet applicable"?"":r.status==="Below threshold"?"":"missing"}" ${r.status==="Not yet applicable"?'style="background:#eff6ff"':r.status==="Below threshold"?'style="background:#fff7ed"':""}><b>${esc(r.label)}</b><span class="pill">${esc(r.type)}</span><div>${r.status==="Found"?"✓ FOUND":r.status==="Not yet applicable"?"◔ NOT YET APPLICABLE (initial visit)":r.status==="Below threshold"?"⚠ DOCUMENTED, BELOW TYPICAL THRESHOLD":"○ MISSING"}</div>${r.evidence?`<div class="mini">Evidence: ${esc(r.evidence)}</div>`:""}${r.status==="Not yet applicable"?'<div class="mini">Cannot be documented until treatment has been tried — reassess at a follow-up visit.</div>':""}${r.status==="Below threshold"?`<div class="mini" style="color:#9a3412">${esc(r.thresholdNote)} Not a denial prediction — payer criteria vary — but worth a second look before submission.</div>`:""}${r.status==="Missing"&&/severity/i.test(r.label)&&dx.scoreHint?`<div class="mini" style="color:#1e3a8a">💡 ${esc(dx.scoreHint)}</div>`:""}</div>`).join("");
+ const f=rows.filter(r=>r.status==="Found").length;const trueMissing=rows.filter(r=>r.status==="Missing");const notYet=rows.filter(r=>r.status==="Not yet applicable");const belowThresh=rows.filter(r=>r.status==="Below threshold");
+ $("paSupported").textContent=f+"/"+rows.length;$("paMissing").textContent=trueMissing.length;
+ const lines=["PH PRIOR AUTHORIZATION EVIDENCE SUMMARY","Medication: "+drug.name,"Diagnosis: "+dx.name+" ["+dx.icd+"]","Payer: "+$("paPayer").value,"","SUPPORTED REQUIREMENTS:"];
+ rows.filter(r=>r.status==="Found").forEach(r=>lines.push("• "+r.label+": supported by available source documentation."));
+ if(!rows.some(r=>r.status==="Found"))lines.push("• None located.");
+ lines.push("","MISSING / PROVIDER OR STAFF REVIEW:");trueMissing.forEach(r=>lines.push("• "+r.label+": not located in available documentation."));if(!trueMissing.length)lines.push("• None.");
+ if(belowThresh.length){lines.push("","DOCUMENTED BUT BELOW TYPICAL THRESHOLD (review before submission):");belowThresh.forEach(r=>lines.push("• "+r.label+": "+r.thresholdNote))}
+ if(notYet.length){lines.push("","NOT YET APPLICABLE (initial visit — reassess once treatment has been tried):");notYet.forEach(r=>lines.push("• "+r.label+": cannot be documented on a same-day initial visit."))}
+ lines.push("","FDA baseline and payer-specific rules are maintained separately. Missing facts are not inferred or fabricated.");$("paSummary").value=lines.join("\n");$("treatmentSummary").value=$("paSummary").value;
+ $("workQueue").innerHTML=(trueMissing.length||belowThresh.length)?[...trueMissing.map(r=>`<div class="map-item"><b>Missing PA evidence:</b> ${esc(r.label)}<div class="mini">Provider/staff review required before submission if this criterion applies.</div></div>`),...belowThresh.map(r=>`<div class="map-item"><b>Below typical threshold:</b> ${esc(r.label)}<div class="mini">${esc(r.thresholdNote)}</div></div>`)].join(""):'<div class="notice ok">No currently loaded PA evidence gaps for this profile.</div>';
+}
+function extractDenialRules(){const txt=$("denialText").value.trim();if(!txt){alert("Paste denial text first.");return}const s=sentences(txt),cue=/not\s+(documented|demonstrated|met|provided|submitted)|requires?|must|failure|failed|trial|duration|contraindicat|intoler|prior|step therapy|preferred|bsa|pasi|easi|iga|denied|coverage/i;window.denialCandidates=s.filter(x=>cue.test(x)).slice(0,12);$("denialCandidates").innerHTML=window.denialCandidates.length?window.denialCandidates.map((x,i)=>`<label style="display:flex;gap:8px;align-items:flex-start;margin:8px 0;font-weight:normal"><input class="denChk" type="checkbox" value="${i}" checked style="width:auto;min-height:auto;margin-top:3px"><span>${esc(x)}</span></label>`).join(""):'<div class="notice warn">No requirement-like sentence detected automatically.</div>'}
+function addDenialRules(){const {drug,dx}=selectedPA(),p=$("paPayer").value,all=loadRules(),cand=window.denialCandidates||[];document.querySelectorAll(".denChk:checked").forEach(c=>{const q=cand[Number(c.value)];if(q)all.unshift({id:"PR-"+Date.now()+"-"+Math.floor(Math.random()*1000),drugId:drug.id,diagnosis:dx.name,payer:p,requirement:q,searchTerms:q,status:"Observed",confidence:.5,active:true,createdAt:new Date().toISOString()})});saveRules(all);renderKnownRules();scanPAEvidence();addAudit("Payer requirement learned","Reviewed denial requirement(s) added as payer-specific Observed rules.")}
+function renderKnownRules(){const r=relevantRules();$("knownRules").innerHTML=r.length?r.map(x=>`<div class="map-item"><b>${esc(x.requirement)}</b><span class="pill">${esc(x.status||"Observed")}</span><div class="mini">${esc(x.payer)} · confidence ${Math.round((x.confidence||.5)*100)}%</div></div>`).join(""):'<div class="notice">No learned payer-specific requirements for this profile yet.</div>'}
+function recordOutcome(status){const {drug,dx}=selectedPA(),rows=window.ph0613PA||[],o=loadOutcomes();o.unshift({status,drugId:drug.id,diagnosis:dx.name,payer:$("paPayer").value,at:new Date().toISOString(),found:rows.filter(r=>r.status==="Found").map(r=>r.label),missing:rows.filter(r=>r.status==="Missing").map(r=>r.label)});saveOutcomes(o);const rules=loadRules();rules.forEach(r=>{if(r.drugId===drug.id&&r.diagnosis===dx.name&&norm(r.payer)===norm($("paPayer").value)){r.uses=(r.uses||0)+1;if(status==="Approved"){r.approvals=(r.approvals||0)+1;r.confidence=Math.min(.95,(r.confidence||.5)+.05);if(r.approvals>=3)r.status="Confirmed"}else r.denials=(r.denials||0)+1}});saveRules(rules);updatePAStats();renderKnownRules();addAudit("PA outcome recorded",status)}
+function updatePAStats(){const {drug,dx}=selectedPA(),p=norm($("paPayer").value),o=loadOutcomes().filter(x=>x.drugId===drug.id&&x.diagnosis===dx.name&&norm(x.payer)===p),ap=o.filter(x=>x.status==="Approved").length;$("paRate").textContent=o.length?Math.round(100*ap/o.length)+"%":"—"}
+
+
+const BIOPSY_MORPHOLOGY_LIBRARY={
+ "basal cell carcinoma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["shiny","pearly","translucent","papule","nodule","rolled border","telangiectasia","bleed","ulcer","pigmented","scar-like","indurated plaque","sun-exposed","head","neck"]},
+ "squamous cell carcinoma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed","sun-exposed","head","neck","upper extremity"]},
+ "squamous cell carcinoma, invasive":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed"]},
+ "scc":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperkeratotic","papule","plaque","tender","ulcer","scale","erosion","nonhealing","bleed"]},
+ "scc in situ":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["well-demarcated","erythematous","scaly","plaque","slowly enlarging","sun-exposed","fails topical therapy"]},
+ "bowen disease":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["well-demarcated","erythematous","scaly","plaque","slowly enlarging","sun-exposed"]},
+ "actinic keratosis":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["rough","scaly","gritty","papule","erythematous base","sun-exposed","indurated","tender","growing","ulcerated","fails treatment"]},
+ "ak":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["rough","scaly","gritty","papule","erythematous","sun-exposed","indurated","tender","growing","ulcerated"]},
+ "malignant melanoma":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","color variegation","diameter","evolution","ugly duckling","rapid growth","raised","firm","growing","bleeding","itch","ulceration"]},
+ "melanoma":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","color variegation","evolution","ugly duckling","rapid growth","raised","firm","bleeding","itch","ulceration"]},
+ "melanoma in situ":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["flat","pigmented","macule","patch","irregular border","irregular color","sun-damaged","enlarging","changing pigmentation"]},
+ "benign melanocytic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["symmetric","uniformly pigmented","well-defined","macule","papule","stable","change","symptomatic","ugly duckling"]},
+ "dysplastic nevus":{working:"Melanocytic neoplasm of uncertain behavior",icd:"D48.5",features:["asymmetry","irregular border","ill-defined border","color variegation","fried-egg","evolution","atypical"]},
+ "seborrheic keratosis":{working:"Benign neoplasm (working)",icd:"L82.1",features:["well-demarcated","stuck-on","waxy","verrucous","brown","papule","plaque","inflamed","bleeding","rapidly changing"]},
+ "bullous pemphigoid":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense bullae","bullae","urticarial","erythematous plaques","pruritic","trunk","flexures"]},
+ "pemphigus":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["flaccid bullae","erosions","nikolsky","oral","mucosal","scaly crusted erosions"]},
+ "linear iga bullous dermatosis":{working:"Vesiculobullous disorder, undetermined",icd:"",features:["tense vesicles","bullae","annular","cluster of jewels","string of pearls"]},
+ "cutaneous lupus":{working:"Interface / connective tissue disorder",icd:"",features:["erythematous","scaly plaques","follicular plugging","atrophy","dyspigmentation","scarring","photodistributed","annular","psoriasiform"]},
+ "lichen planus":{working:"Interface / lichenoid disorder",icd:"",features:["pruritic","polygonal","flat-topped","violaceous","papules","wickham striae","flexor wrists","ankles","oral"]},
+ "pyoderma gangrenosum":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["painful ulcer","violaceous","undermined border","rapidly enlarging","pathergy"]},
+ "sweet syndrome":{working:"Neutrophilic dermatosis, undetermined",icd:"",features:["tender","edematous","juicy","erythematous","papules","plaques","pseudovesicles"]},
+ "mycosis fungoides":{working:"Cutaneous lymphoproliferative, undetermined",icd:"",features:["persistent","treatment-refractory","scaly","erythematous","patches","plaques","sun-protected","bathing-trunk","poikiloderma","indurated","evolving"]},
+ "atopic dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"L20.9",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural","refractory"]},
+ "eczema":{working:"Spongiotic dermatitis, undetermined",icd:"L20.9",features:["ill-defined","erythematous","scaly","excoriated","lichenified","plaques","flexural"]},
+ "contact dermatitis":{working:"Spongiotic dermatitis, undetermined",icd:"",features:["sharply demarcated","eczematous","geometric","linear","contact site","chronic","refractory"]},
+ "psoriasis":{working:"Psoriasiform dermatitis, undetermined",icd:"L40.0",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "psoriasis vulgaris":{working:"Psoriasiform dermatitis, undetermined",icd:"L40.0",features:["well-demarcated","erythematous","plaques","silvery scale","extensor","scalp","auspitz","nail pitting"]},
+ "drug eruption":{working:"Interface dermatitis, undetermined",icd:"",features:["symmetric","blanching","erythematous","macules","papules","morbilliform","new drug"]},
+ "sjs":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
+ "ten":{working:"Interface dermatitis, undetermined",icd:"",features:["painful","dusky","macules","targetoid","epidermal detachment","mucosal erosions","nikolsky"]},
+ "leukocytoclastic vasculitis":{working:"Vasculopathic / vasculitic disorder, undetermined",icd:"",features:["palpable purpura","dependent","lower extremities","vesicles","ulcers","necrosis"]},
+ "granuloma annulare":{working:"Granulomatous dermatitis, undetermined",icd:"",features:["asymptomatic","skin-colored","erythematous","annular plaques","raised border","central clearing","dorsal hands","feet"]},
+ "erythema nodosum":{working:"Panniculitis, undetermined",icd:"",features:["tender","poorly demarcated","erythematous","subcutaneous nodules","anterior shins","no ulceration"]},
+ "dermatofibroma":{working:"Neoplasm of uncertain behavior of skin",icd:"D48.5",features:["firm","hyperpigmented","dermal papule","nodule","leg","dimple sign","enlarging","atypical"]},
+ "pyogenic granuloma":{working:"Benign skin neoplasm (working)",icd:"",features:["rapidly growing","friable","red","pedunculated","papule","bleeds"]},
+ "hidradenitis suppurativa":{working:"Inflammatory nodular disorder",icd:"L73.2",features:["recurrent","painful","inflammatory nodules","abscesses","sinus tracts","scarring","intertriginous","axillae","groin","inframammary"]},
+ "infectious":{working:"Infectious process, undetermined",icd:"",features:["nonhealing","papule","plaque","ulcer","verrucous nodule","draining lesion","immunosuppressed","exposure"]}
+};
+function normalizeFeature(s){return norm(String(s||"")).replace(/[^a-z0-9% -]/g," ").replace(/\s+/g," ").trim()}
+function morphologyProfileFor(diff){const key=normalizeFeature(diff);if(BIOPSY_MORPHOLOGY_LIBRARY[key])return BIOPSY_MORPHOLOGY_LIBRARY[key];const hit=Object.keys(BIOPSY_MORPHOLOGY_LIBRARY).find(k=>key.includes(k)||k.includes(key));return hit?BIOPSY_MORPHOLOGY_LIBRARY[hit]:null}
+function correlateObjectiveToDifferential(){const objective=normalizeFeature($("biopsyClinicalDescription")?.value||"");const diffs=splitDiff($("biopsyDifferential")?.value||"");if(!$("biopsyMorphologyCorrelation"))return [];if(!objective&&!diffs.length){$("biopsyMorphologyCorrelation").textContent="Enter a lesion/rash description and differential to see correlation.";return []}const results=diffs.map(d=>{const ref=morphologyProfileFor(d);if(!ref)return {d,matched:[],reference:[],status:"No reference profile"};const matched=ref.features.filter(f=>objective.includes(normalizeFeature(f))||normalizeFeature(f).split(" ").some(tok=>tok.length>4&&objective.includes(tok)));return {d,matched:[...new Set(matched)],reference:ref.features,status:matched.length?"Documented support found":"No matching descriptor documented"}});$("biopsyMorphologyCorrelation").innerHTML=results.length?results.map(r=>`<div class="map-item"><b>${esc(r.d)}</b> · ${r.status}<br>${r.matched.length?`<span class="source">Documented supporting features:</span> ${r.matched.map(x=>`<span class="biopsy-chip biopsy-final">${esc(x)}</span>`).join("")}`:`<span class="source">PH did not find a reference descriptor in the documented exam. This does not exclude the differential.</span>`}<br>${r.reference.length?`<details><summary class="source">Reference morphology (not inserted into Objective)</summary>${r.reference.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join("")}</details>`:""}</div>`).join(""):"No differential diagnoses entered.";return results}
+function applyWorkingDxFromDifferential(){const diffs=splitDiff($("biopsyDifferential").value);const profiles=diffs.map(morphologyProfileFor).filter(Boolean);if(!profiles.length)return;const malignantOrMelanocytic=diffs.some(d=>/carcinoma|\bscc\b|\bbcc\b|melanoma|merkel|actinic keratosis|\bak\b/i.test(d));if(malignantOrMelanocytic){const isMel=diffs.some(d=>/melanoma|nevus|melanocytic/i.test(d));$("biopsyWorkingDx").value=isMel?"Melanocytic neoplasm of uncertain behavior|D48.5":"Neoplasm of uncertain behavior of skin|D48.5";$("biopsyWorkingIcd").value="D48.5";return}const first=profiles[0];const option=[...$("biopsyWorkingDx").options].find(o=>o.value.split("|")[0]===first.working);if(option){$("biopsyWorkingDx").value=option.value;setWorkingDx()}}
+
+const BIOPSY_KEY="ph0613-biopsy-episodes";
+let biopsyEpisodes=[];
+try{biopsyEpisodes=JSON.parse(localStorage.getItem(BIOPSY_KEY)||"[]")}catch{biopsyEpisodes=[]}
+function newBiopsyId(){const d=new Date(),stamp=d.toISOString().replace(/\D/g,"").slice(0,14);return "BX-"+stamp+"-"+Math.floor(Math.random()*900+100)}
+function parseWorkingDxValue(){const [dx,icd=""]=$("biopsyWorkingDx").value.split("|");return{dx,icd}}
+function setWorkingDx(){const w=parseWorkingDxValue();$("biopsyWorkingIcd").value=w.icd||""}
+function splitDiff(text){return String(text||"").split(/\n|;|,?\s+(?:vs\.?|versus|r\/o|rule out)\s+/i).map(x=>x.trim()).filter(Boolean)}
+function detectBiopsyFromLoadedNote(){
+ const t=ingestState.raw||$("rawSource").value||"";if(!t.trim()){alert("Load a clinical source first.");return}
+ const s=sentences(t),biopsyLine=s.find(x=>/biopsy|shave|punch|incisional|tangential|rule out|r\/o|versus|\bvs\b/i.test(x))||"";
+ const diffMatch=t.match(/(?:r\/o|rule out|differential(?: diagnosis)?[:\-]?|ddx[:\-]?)[^\n.]*|[A-Za-z][A-Za-z \/-]+?\s+(?:vs\.?|versus)\s+[A-Za-z][A-Za-z \/-]+/i);
+ if(diffMatch){const raw=diffMatch[0].replace(/^(?:r\/o|rule out|differential(?: diagnosis)?[:\-]?|ddx[:\-]?)\s*/i,"");const diffs=splitDiff(raw);if(diffs.length)$("biopsyDifferential").value=diffs.join("\n");$("biopsyQuestion").value=raw.trim()}
+ const siteLine=s.find(x=>/site[:\-]|left |right |forehead|cheek|nose|ear|scalp|neck|chest|back|arm|forearm|hand|leg|foot/i.test(x));if(siteLine&&!$("biopsySite").value)$("biopsySite").value=siteLine;
+ if(/shave|tangential/i.test(biopsyLine))$("biopsyTechnique").value="Tangential / shave biopsy";else if(/punch/i.test(biopsyLine))$("biopsyTechnique").value="Punch biopsy";else if(/incisional/i.test(biopsyLine))$("biopsyTechnique").value="Incisional biopsy";else if(/excisional/i.test(biopsyLine))$("biopsyTechnique").value="Excisional / broad shave";
+ const hasCancerDiff=/squamous cell carcinoma|basal cell carcinoma|melanoma|merkel cell carcinoma|carcinoma/i.test($("biopsyDifferential").value);if(hasCancerDiff){$("biopsyWorkingDx").value="Neoplasm of uncertain behavior of skin|D48.5";$("biopsyWorkingIcd").value="D48.5"}
+ $("biopsyClinicalDescription").value=$("biopsyClinicalDescription").value||biopsyLine;applyWorkingDxFromDifferential();correlateObjectiveToDifferential();renderBiopsyPreState();addAudit("Biopsy differential detected","Loaded note reviewed. Objective findings were correlated with differential reference morphology; differential malignancy terms remain differential only before pathology finalization.")
+}
+/* 0.6.13.24: bridges the biopsy episode tracker to the separate Pathology Registry page. Both
+   pages are served from the same origin, so localStorage under the registry's own key is genuinely
+   shared between them — no messaging layer needed. Writing directly in the registry's exact data
+   shape means the registry page itself needs no changes at all; it already reads this key on load.
+*/
+const PATH_REGISTRY_KEY="ph-path-registry-011";
+function loadPathRegistry(){try{return JSON.parse(localStorage.getItem(PATH_REGISTRY_KEY)||"null")}catch{return null}}
+function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases))}
+function guessDiagnosisGroup(text){
+ const n=norm(text||"");
+ if(/basal cell/.test(n))return"Basal Cell Carcinoma";
+ if(/squamous cell/.test(n))return"Squamous Cell Carcinoma";
+ if(/melanoma/.test(n))return"Melanoma";
+ if(/sebaceous carcinoma/.test(n))return"Sebaceous Carcinoma";
+ if(/actinic keratosis/.test(n))return"Precancerous";
+ return"Other / Benign";
+}
+function syncBiopsyEpisodeToRegistry(episode){
+ // Registry may not exist yet (first-ever biopsy on this browser) — start from an empty list
+ // rather than the registry page's own demo seed data, since these are real (synthetic-test)
+ // encounters, not the registry's illustrative examples.
+ let cases=loadPathRegistry();
+ if(cases===null)cases=[];
+ const differentialText=(episode.differential||[]).join(" vs ");
+ const workingText=episode.workingDiagnosis+(differentialText?` (differential: ${differentialText})`:"");
+ const isCancerDifferential=/carcinoma|melanoma/i.test(differentialText+" "+episode.workingDiagnosis);
+ let entry=cases.find(c=>c.caseId===episode.id);
+ const isNew=!entry;
+ if(!entry){
+   entry={caseId:episode.id,patientId:ingestState.filename||"(unspecified — see linked source document)",provider:"Unassigned",biopsy:(episode.createdAt||new Date().toISOString()).slice(0,10),report:"",completion:"",completionType:"",closedBy:"",group:guessDiagnosisGroup(differentialText)||"Pending pathology",dx:workingText,site:episode.site||"",status:"Open - Pending Completion",priority:isCancerDifferential?"High":"Routine",updates:[]};
+   cases.unshift(entry);
+ }else{
+   entry.dx=workingText;entry.site=episode.site||entry.site;entry.priority=isCancerDifferential?"High":entry.priority;
+ }
+ entry.updates.push({date:new Date().toISOString().slice(0,10),type:"Procedure",enteredBy:"Provider",text:`Biopsy performed (${episode.technique||"technique not specified"}); working diagnosis: ${workingText}.`,next:"Await final pathology report."});
+ savePathRegistry(cases);
+ return isNew;
+}
+function syncPathologyFinalizationToRegistry(episode){
+ let cases=loadPathRegistry();if(cases===null)return;
+ const entry=cases.find(c=>c.caseId===episode.id);if(!entry)return;
+ entry.report=(episode.finalizedAt||new Date().toISOString()).slice(0,10);
+ entry.dx=episode.finalDiagnosis+(episode.finalIcd?` (${episode.finalIcd})`:"");
+ entry.group=guessDiagnosisGroup(episode.finalDiagnosis);
+ entry.updates.push({date:entry.report,type:"Pathology result",enteredBy:"Pathology Coordinator",text:`Final pathology: ${episode.finalDiagnosis}${episode.finalIcd?` (${episode.finalIcd})`:""}.${episode.followup?" Follow-up: "+episode.followup+".":""}`,next:"Awaiting definitive treatment/referral completion — case remains open until Completion Date is recorded in the Pathology Registry."});
+ // Status intentionally stays "Open" here — pathology being finalized is not the same as the
+ // case being closed. Closure (Completion Date/Type) is recorded directly in the registry page
+ // once the resulting procedure/referral is actually completed, matching its own existing design.
+ savePathRegistry(cases);
+}
+function saveBiopsyEpisode(){const w=parseWorkingDxValue(),id=$("biopsyEpisodeId").value||newBiopsyId(),episode={id,createdAt:new Date().toISOString(),specimen:$("biopsySpecimen").value.trim()||"A",site:$("biopsySite").value.trim(),workingDiagnosis:w.dx,workingIcd:$("biopsyWorkingIcd").value.trim(),clinicalDescription:$("biopsyClinicalDescription").value.trim(),differential:splitDiff($("biopsyDifferential").value),question:$("biopsyQuestion").value.trim(),technique:$("biopsyTechnique").value,handling:$("biopsyHandling").value.trim(),morphologyCorrelation:correlateObjectiveToDifferential(),pathStatus:$("pathStatus").value,finalDiagnosis:"",finalIcd:"",finalText:"",ancillary:"",followup:""};const i=biopsyEpisodes.findIndex(x=>x.id===id);if(i>=0)biopsyEpisodes[i]=episode;else biopsyEpisodes.unshift(episode);localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));const isNewRegistryCase=syncBiopsyEpisodeToRegistry(episode);$("biopsyEpisodeId").value=id;renderBiopsyPreState();renderBiopsyHistory();addAudit("Biopsy episode saved",id+": "+episode.workingDiagnosis+(episode.workingIcd?" ("+episode.workingIcd+")":"")+"; differential preserved."+(isNewRegistryCase?" Added to Pathology Registry as an open case.":" Pathology Registry entry updated."))}
+function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("biopsyDifferential").value);$("biopsyPreState").innerHTML=`<b>Objective description:</b> ${esc($("biopsyClinicalDescription").value.trim()||"Not documented")}<br><b>Working diagnosis:</b> ${esc(w.dx)}${$("biopsyWorkingIcd").value?` (${esc($("biopsyWorkingIcd").value)})`:""}<br><b>Differential:</b> ${diff.length?diff.map(x=>`<span class="biopsy-chip">${esc(x)}</span>`).join(""):"None entered"}<br><b>Diagnostic lock:</b> <span class="biopsy-chip biopsy-locked">Differential terms are not active definitive diagnoses until pathology finalizes</span>`;correlateObjectiveToDifferential()}
+/* 0.6.13.8: now returns {name, icd} instead of a bare name string, so a recognized pathology
+   diagnosis auto-fills its ICD-10 code too — reducing hand-entry to just the cases genuinely not
+   yet taught, per the reviewed coding-integrity table. Skin cancers get a site-specific
+   placeholder rather than a guessed fixed code, consistent with that same review. */
+function inferFinalDx(text){
+ const low=norm(text);
+ // 0.6.13.23: more specific patterns (in-situ / Bowen disease, melanoma in situ) must be checked
+ // BEFORE the bare invasive-carcinoma terms — confirmed against real de-identified pathology
+ // report language that a report reading "Squamous Cell Carcinoma in situ - Bowen's Disease Type"
+ // was being resolved to plain invasive "Squamous cell carcinoma" (C44.- code) instead of the
+ // correct in-situ entity (D04.- code) — a real and clinically significant miscoding, since in-situ
+ // vs. invasive carcinoma differ substantially in severity, treatment, and billing. Also widened
+ // the in-situ pattern to match the fully spelled-out phrase, not just the abbreviated "SCC".
+ const candidates=[
+  ["Squamous cell carcinoma in situ (Bowen disease)",/\bsquamous cell carcinoma in situ\b|\bscc in situ\b|\bbowen('?s)? disease\b/,"D04.- (site-specific — select exact code)"],
+  ["Dysplastic (atypical) nevus",/\b(dysplastic|atypical)\b[^.]{0,40}\bnevus\b|\bnevus\b[^.]{0,40}\b(dysplastic|atypia|atypical)\b/i,"D22.- (site-specific) — correlate; may warrant D48.5 if severe atypia noted"],
+  ["Melanoma in situ",/\bmelanoma in situ\b/,"D03.- (site-specific — select exact code)"],
+  ["Malignant melanoma",/\bmalignant melanoma\b|\binvasive melanoma\b/,"C43.- (site-specific — select exact code)"],
+  ["Squamous cell carcinoma",/\bsquamous cell carcinoma\b|\bscc\b/,"C44.- (site-specific — select exact code)"],
+  ["Basal cell carcinoma",/\bbasal cell carcinoma\b|\bbcc\b/,"C44.- (site-specific — select exact code)"],
+  ["Actinic keratosis",/\bactinic keratosis\b/,"L57.0"],
+  ["Seborrheic keratosis",/\bseborrheic keratosis\b/,"L82.1"],
+  ["Psoriasis vulgaris",/\bpsoriasis vulgaris\b|\bpsoriasis\b/,"L40.0"],
+  ["Atopic dermatitis",/\batopic dermatitis\b|\beczema\b/,"L20.9"],
+  ["Bullous pemphigoid",/\bbullous pemphigoid\b/,""],
+  ["Lichen planus",/\blichen planus\b/,""],
+  ["Granuloma annulare",/\bgranuloma annulare\b/,""],
+  ["Benign melanocytic nevus",/\b(compound|intradermal|junctional|combined|cellular blue|congenital)\b[^.]{0,20}\bnevus\b|\bmelanocytic nevus\b/i,"D22.- (site-specific — select exact code)"],
+  ["Dermatofibroma",/\bdermatofibroma\b/,""]
+ ];
+ for(const [name,re,icd] of candidates) if(re.test(low)) return applyGradeIfPresent(name,icd,low);
+ return {name:"",icd:""};
+}
+/* 0.6.13.26: dysplastic nevus specifically needs its atypia grade (mild/moderate/severe)
+   captured, not just the bare label — grade is the clinically meaningful distinction (it drives
+   re-excision margins, and severe atypia is treated closer to melanoma-in-situ territory) and the
+   ICD reference already distinguishes low-grade from severe/high-grade dysplastic nevi. Confirmed
+   directly relevant: this pathway is commonly reached from a pre-biopsy melanoma differential that
+   resolves to "just" a dysplastic nevus — a very common, expected outcome, not a rare edge case. */
+function applyGradeIfPresent(name,icd,low){
+ if(name!=="Dysplastic (atypical) nevus")return{name,icd};
+ const m=low.match(/\b(mild|moderate|severe)\b[^.]{0,60}(atypia|dysplasia)|(atypia|dysplasia)[^.]{0,60}\b(mild|moderate|severe)\b/);
+ const grade=m?(m[1]||m[4]):null;
+ if(!grade)return{name,icd};
+ const gradedName=`Dysplastic nevus, ${grade} atypia`;
+ const gradedIcd=grade==="severe"?"D48.5 (severe atypia — bordering melanoma in situ; correlate closely, site-specific)":"D22.- (site-specific) — "+grade+" atypia, low-grade dysplastic nevus";
+ return{name:gradedName,icd:gradedIcd};
+}
+/* 0.6.13.27: a pathology report's "Margin status" line very commonly packs a factual description
+   and an actionable recommendation into one sentence (e.g. "...extends to the peripheral margin;
+   conservative re-excision is recommended..."). This splits the two apart by looking for genuine
+   action-language (recommend, re-excision, referral, correlate clinically, follow-up, etc.) rather
+   than blindly splitting on punctuation — validated against all 13 of the sample pathology reports,
+   including several where a semicolon joins two purely descriptive facts with no action at all
+   (those correctly stay together rather than being wrongly split).
+*/
+function splitMarginIntoFields(marginText){
+ if(!marginText)return{ancillary:"",followup:""};
+ const clauses=marginText.replace(/^Margin status:\s*/i,"").split(/;\s*|(?<=\.)\s+(?=[A-Z])/).map(c=>c.trim()).filter(Boolean);
+ const actionRe=/\brecommend(ed|s)?\b|\bre-?excision\b|\breferral\b|\brefer\b|\bcorrelate clinically\b|\bfurther treatment\b|\bfollow-?up\b|\bschedule\b|\bmanagement\b/i;
+ const ancillary=[],followup=[];
+ clauses.forEach(c=>{(actionRe.test(c)?followup:ancillary).push(c.replace(/\.$/,""))});
+ return{ancillary:ancillary.join("; ").trim(),followup:followup.join("; ").trim()};
+}
+function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}
+ const marginMatch=t.match(/margin status\s*:\s*([^\n]+(?:\n(?!\s*$)[^\n]+)*)/i);
+ if(marginMatch){
+   const {ancillary,followup}=splitMarginIntoFields(marginMatch[0]);
+   if(ancillary && !$("pathAncillary").value.trim())$("pathAncillary").value=ancillary;
+   if(followup && !$("pathFollowup").value.trim())$("pathFollowup").value=followup;
+ }
+ $("pathStatus").value="Final"}
+function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));syncPathologyFinalizationToRegistry(ep);$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}<br><span class="mini">Pathology Registry updated — case remains open until Completion Date/Type is recorded there.</span></div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved. Pathology Registry updated.")}
+function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
+
+$("clearBtn").onclick=()=>{ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
+$("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name)}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
+$("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("syncQueueBtn").onclick=syncCurrentDocumentToQueue;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
+$("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
+
+$("feedbackBtn").onclick=()=>$("feedbackModal").classList.remove("hidden");$("closeFeedback").onclick=()=>$("feedbackModal").classList.add("hidden");$("submitFeedback").onclick=async()=>{const comment=$("feedbackComment").value.trim();if(!comment)return;const record={id:"CO-"+Date.now(),reviewer:"Todd Pillen, PA-C/SA",type:"Reviewer feedback",module:"Alpha 0.6.13",priority:"Routine",comment,caseId:"Synthetic reviewer",url:location.href,appVersion:VERSION,environment:"Reviewer",createdAt:new Date().toISOString(),status:"New"};try{const res=await fetch("https://ph-feedback.tpillen104.workers.dev/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});if(!res.ok)throw new Error("Server "+res.status);$("feedbackStatus").className="notice ok";$("feedbackStatus").textContent="Feedback submitted.";$("feedbackComment").value=""}catch(e){$("feedbackStatus").className="notice warn";$("feedbackStatus").textContent="Feedback could not be submitted: "+e.message}};
+$("resetBtn").onclick=()=>{if(confirm("Reset the synthetic 0.6.13 reviewer session?"))location.reload()};
+
+$("biopsyEpisodeId").value=newBiopsyId();
+/* 0.6.13.8: informational CPT hint only — technique-based biopsy codes are stable regardless of
+   diagnosis, per the reviewed CPT reference. Excision is size-dependent so no single code is shown. */
+const BIOPSY_CPT_HINT={"Tangential / shave biopsy":"CPT 11102 (tangential/shave biopsy, single lesion)","Punch biopsy":"CPT 11104 (punch biopsy, single lesion)","Incisional biopsy":"CPT 11106 (incisional biopsy, single lesion)","Excisional / broad shave":"Size-dependent — see excision CPT reference (11400–11406 benign / 11600–11606 malignant)"};
+$("biopsyTechnique").onchange=(e)=>{$("biopsyCptHint").textContent=BIOPSY_CPT_HINT[e.target.value]||""};
+$("biopsyWorkingDx").onchange=()=>{setWorkingDx();renderBiopsyPreState()};
+$("biopsyDifferential").oninput=()=>{applyWorkingDxFromDifferential();renderBiopsyPreState();correlateObjectiveToDifferential()};
+$("biopsyClinicalDescription").oninput=()=>{renderBiopsyPreState();correlateObjectiveToDifferential()};
+$("detectBiopsyBtn").onclick=detectBiopsyFromLoadedNote;
+$("saveBiopsyBtn").onclick=saveBiopsyEpisode;
+$("extractFinalBtn").onclick=extractFinalDiagnosis;
+$("finalizePathBtn").onclick=finalizePathology;
+$("learnManualStage").innerHTML=DIAGNOSIS_STAGES.map(s=>`<option value="${esc(s)}">${esc(s)}</option>`).join("");
+$("learnManualAdd").onclick=()=>{const p=$("learnManualPhrase").value,d=$("learnManualDx").value,i=$("learnManualIcd").value,st=$("learnManualStage").value;const r=addLearnedMapping(p,d,i,"manual",st);if(r.ok){$("learnManualPhrase").value="";$("learnManualDx").value="";$("learnManualIcd").value="";addAudit("Learned mapping added manually",`"${p}" → ${d}${i?` (${i})`:""} [${st}]`)}else if(r.reason==="generic"){alert(`"${p}" is too generic (a bare body site or common word) to save — it would likely misfire on unrelated documents. Please use a more specific phrase.`)}};
+$("batchFileInput").onchange=(e)=>{handleBatchImport(e.target.files);e.target.value=""};
+$("teamMemberAdd").onclick=()=>{const n=$("teamMemberInput").value.trim();if(!n)return;if(!teamMembers.some(x=>norm(x)===norm(n))){teamMembers.push(n);saveTeamMembers(teamMembers);renderTeamMembers();renderWorkQueueTable();addAudit("Team member added",n)}$("teamMemberInput").value=""};
+$("clearQueueBtn").onclick=()=>{if(confirm("Clear the entire batch worklist? This cannot be undone.")){workQueueItems=[];saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue cleared","Manual clear from Work Queue tab.")}};
+$("paLikelihoodFilter").onchange=renderWorkQueueTable;
+renderTeamMembers();renderWorkQueueTable();
+renderBiopsyPreState();renderBiopsyHistory();renderLearnedMapTable();renderIcdReferenceTable();updateLearnedBadge();
+renderAudit();addAudit("PH Alpha 0.6.13 initialized","Consolidated build loaded with learned diagnosis/lesion mapping (right-click to teach), expanded dx pattern set (lipoma, epidermal inclusion cyst, verruca vulgaris), referral-letter section detection, and biopsy differential/pathology reconciliation.");
 </script>
-</body></html>
+</body>
+</html>
