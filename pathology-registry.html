@@ -36,6 +36,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
  <div class="row" style="margin-top:8px">
   <input type="file" id="bulkImportFile" accept=".json">
   <button class="primary" id="bulkImportBtn">Import File</button>
+  <button class="secondary" id="purgeImportBtn" style="background:#fee2e2;color:#991b1b">Purge All Bulk-Imported Cases</button>
   <span id="bulkImportStatus" class="source"></span>
  </div>
 </div>
@@ -154,13 +155,22 @@ $("bulkImportBtn").onclick=()=>{
   let added=0,skipped=0;
   imported.forEach(rec=>{
    if(!rec.caseId||existingIds.has(rec.caseId)){skipped++;return}
-   cases.push({caseId:rec.caseId,patientId:rec.patientId||"",provider:rec.provider||"Unassigned",biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:rec.completionType||"",closedBy:rec.closedBy||"",group:rec.group||"Other / Benign",dx:rec.dx||"(diagnosis not specified)",site:rec.site||"",status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority||"Routine",updates:Array.isArray(rec.updates)?rec.updates:[]});
+   cases.push({caseId:rec.caseId,patientId:rec.patientId||"",source:rec.source||"bulk-import",provider:rec.provider||"Unassigned",biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:rec.completionType||"",closedBy:rec.closedBy||"",group:rec.group||"Other / Benign",dx:rec.dx||"(diagnosis not specified)",site:rec.site||"",status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority||"Routine",possibleDuplicate:!!rec.possibleDuplicate,updates:Array.isArray(rec.updates)?rec.updates:[]});
    existingIds.add(rec.caseId);added++;
   });
   save();render();
   $("bulkImportStatus").textContent=`Imported ${added} case(s). Skipped ${skipped} (missing/duplicate case ID).`;
  };
  reader.readAsText(file);
+};
+$("purgeImportBtn").onclick=()=>{
+ const toRemove=cases.filter(c=>c.source==="bulk-import").length;
+ if(!toRemove){$("bulkImportStatus").textContent="No bulk-imported cases found to purge.";return}
+ if(!confirm(`Remove all ${toRemove} bulk-imported case(s)? Manually-entered cases are never affected. This cannot be undone.`))return;
+ cases=cases.filter(c=>c.source!=="bulk-import");
+ active=null;$("casePanel").classList.add("hidden");
+ save();render();
+ $("bulkImportStatus").textContent=`Purged ${toRemove} bulk-imported case(s).`;
 };
 render();
 </script>
