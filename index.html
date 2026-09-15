@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.26</title>
+<title>PH Alpha 0.6.13.27</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.26</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.27</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -333,7 +333,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.26", $=id=>document.getElementById(id);
+const VERSION="0.6.13.27", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1447,7 +1447,30 @@ function applyGradeIfPresent(name,icd,low){
  const gradedIcd=grade==="severe"?"D48.5 (severe atypia — bordering melanoma in situ; correlate closely, site-specific)":"D22.- (site-specific) — "+grade+" atypia, low-grade dysplastic nevus";
  return{name:gradedName,icd:gradedIcd};
 }
-function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}$("pathStatus").value="Final"}
+/* 0.6.13.27: a pathology report's "Margin status" line very commonly packs a factual description
+   and an actionable recommendation into one sentence (e.g. "...extends to the peripheral margin;
+   conservative re-excision is recommended..."). This splits the two apart by looking for genuine
+   action-language (recommend, re-excision, referral, correlate clinically, follow-up, etc.) rather
+   than blindly splitting on punctuation — validated against all 13 of the sample pathology reports,
+   including several where a semicolon joins two purely descriptive facts with no action at all
+   (those correctly stay together rather than being wrongly split).
+*/
+function splitMarginIntoFields(marginText){
+ if(!marginText)return{ancillary:"",followup:""};
+ const clauses=marginText.replace(/^Margin status:\s*/i,"").split(/;\s*|(?<=\.)\s+(?=[A-Z])/).map(c=>c.trim()).filter(Boolean);
+ const actionRe=/\brecommend(ed|s)?\b|\bre-?excision\b|\breferral\b|\brefer\b|\bcorrelate clinically\b|\bfurther treatment\b|\bfollow-?up\b|\bschedule\b|\bmanagement\b/i;
+ const ancillary=[],followup=[];
+ clauses.forEach(c=>{(actionRe.test(c)?followup:ancillary).push(c.replace(/\.$/,""))});
+ return{ancillary:ancillary.join("; ").trim(),followup:followup.join("; ").trim()};
+}
+function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}
+ const marginMatch=t.match(/margin status\s*:\s*([^\n]+(?:\n(?!\s*$)[^\n]+)*)/i);
+ if(marginMatch){
+   const {ancillary,followup}=splitMarginIntoFields(marginMatch[0]);
+   if(ancillary && !$("pathAncillary").value.trim())$("pathAncillary").value=ancillary;
+   if(followup && !$("pathFollowup").value.trim())$("pathFollowup").value=followup;
+ }
+ $("pathStatus").value="Final"}
 function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("Save the biopsy episode first.");return}const ep=biopsyEpisodes.find(x=>x.id===id);if(!ep){alert("Saved biopsy episode not found.");return}const finalDx=$("pathFinalDx").value.trim(),finalIcd=$("pathFinalIcd").value.trim();if(!finalDx){alert("Enter or extract the final pathology diagnosis first.");return}ep.pathStatus=$("pathStatus").value==="Amended"?"Amended":"Final";ep.finalDiagnosis=finalDx;ep.finalIcd=finalIcd;ep.finalText=$("pathFinalText").value.trim();ep.ancillary=$("pathAncillary").value.trim();ep.followup=$("pathFollowup").value.trim();ep.finalizedAt=new Date().toISOString();localStorage.setItem(BIOPSY_KEY,JSON.stringify(biopsyEpisodes));syncPathologyFinalizationToRegistry(ep);$("pathResolvedState").innerHTML=`<div class="notice ok"><b>Pathology reconciled.</b><br>Original working diagnosis preserved: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Original differential preserved: ${ep.differential.map(esc).join(" vs ")}<br><b>Resolved final diagnosis:</b> ${esc(finalDx)}${finalIcd?` (${esc(finalIcd)})`:""}<br><span class="mini">Pathology Registry updated — case remains open until Completion Date/Type is recorded there.</span></div>`;renderBiopsyHistory();addAudit("Pathology finalized",id+": "+finalDx+(finalIcd?" ("+finalIcd+")":"")+". Original working diagnosis/differential preserved. Pathology Registry updated.")}
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
