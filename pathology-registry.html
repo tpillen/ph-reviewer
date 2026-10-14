@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PH Pathology Tracking Registry Alpha 0.1.1</title>
+<title>PH Pathology Tracking Registry Alpha 0.1.3</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
@@ -21,7 +21,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 </style>
 </head>
 <body>
-<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.1.2 · Synthetic demonstration · Closed-loop pathology worklist + coordinator follow-up audit</div></header>
+<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.1.3 · Synthetic demonstration · Closed-loop pathology worklist + coordinator follow-up audit</div></header>
 <div class="wrap">
 <div class="panel grid four">
  <div class="metric"><span>Open findings</span><strong id="openCount"></strong></div>
@@ -32,11 +32,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 
 <div class="panel">
  <h2 style="margin-top:0">Bulk Import Cases (JSON)</h2>
+ <div class="source" style="margin-bottom:6px"><b>Pathology reports that arrive as PDFs, images, faxes or text files are not imported here.</b> Load them in the main PH app (Work Queue → Batch Import). PH recognizes surgical pathology reports, shows what it extracted for your review, and files the checked ones into this registry. This JSON import is for loading pre-built, de-identified case lists.</div>
  <div class="source">Import a JSON array of case records exported from an external source (e.g. a de-identified tracking spreadsheet). Cases are added to the existing list — nothing already in the registry is overwritten. Each imported record should already be de-identified before it ever reaches this page.</div>
  <div class="row" style="margin-top:8px">
   <input type="file" id="bulkImportFile" accept=".json">
   <button class="primary" id="bulkImportBtn">Import File</button>
-  <button class="secondary" id="purgeImportBtn" style="background:#fee2e2;color:#991b1b">Purge All Bulk-Imported Cases</button>
+  <button class="secondary" id="purgeImportBtn" style="background:#fee2e2;color:#991b1b">Purge All Imported Cases (JSON + report files)</button>
   <span id="bulkImportStatus" class="source"></span>
  </div>
 </div>
@@ -115,12 +116,14 @@ function renderFollowup(){
  const staleDays=Number($("staleThreshold").value)||14;
  const open=cases.filter(c=>!c.status.startsWith("Completed"))
   .map(c=>({c,daysOpen:daysNum(c.biopsy,today),daysSinceUpdate:daysNum(lastUpdateDate(c),today)}))
-  .sort((a,b)=>(b.daysOpen||0)-(a.daysOpen||0));
+  // referral-pending-confirmation cases surface first regardless of age — a fallen-through referral
+  // is a more urgent failure than a case that simply hasn't been scheduled yet
+  .sort((a,b)=>(b.c.referralPendingConfirmation?1:0)-(a.c.referralPendingConfirmation?1:0)||(b.daysOpen||0)-(a.daysOpen||0));
  $("followupRows").innerHTML=open.length?open.map(({c,daysOpen,daysSinceUpdate})=>{
   const stale=daysSinceUpdate!==null&&daysSinceUpdate>=staleDays;
-  return `<tr>
+  return `<tr${c.referralPendingConfirmation?' style="background:#fef2f2"':""}>
    <td>${c.caseId}</td>
-   <td><b>${c.dx}</b><div class="source">${c.group}</div></td>
+   <td><b>${c.dx}</b><div class="source">${c.group}</div>${c.referralPendingConfirmation?'<span class="badge" style="background:#fecaca;color:#7f1d1d">⚠ REFERRAL UNCONFIRMED</span>':""}</td>
    <td>${c.provider}</td>
    <td>${daysOpen===null?"—":daysOpen+" d"}</td>
    <td>${daysSinceUpdate===null?"—":daysSinceUpdate+" d"}${stale?' <span class="badge stale">⚠ STALE</span>':""}</td>
@@ -155,7 +158,7 @@ $("bulkImportBtn").onclick=()=>{
   let added=0,skipped=0;
   imported.forEach(rec=>{
    if(!rec.caseId||existingIds.has(rec.caseId)){skipped++;return}
-   cases.push({caseId:rec.caseId,patientId:rec.patientId||"",source:rec.source||"bulk-import",provider:rec.provider||"Unassigned",biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:rec.completionType||"",closedBy:rec.closedBy||"",group:rec.group||"Other / Benign",dx:rec.dx||"(diagnosis not specified)",site:rec.site||"",status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority||"Routine",possibleDuplicate:!!rec.possibleDuplicate,updates:Array.isArray(rec.updates)?rec.updates:[]});
+   cases.push({caseId:rec.caseId,patientId:rec.patientId||"",source:rec.source||"bulk-import",provider:rec.provider||"Unassigned",biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:rec.completionType||"",closedBy:rec.closedBy||"",group:rec.group||"Other / Benign",dx:rec.dx||"(diagnosis not specified)",site:rec.site||"",status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority||"Routine",possibleDuplicate:!!rec.possibleDuplicate,needsCodingReview:!!rec.needsCodingReview,referralPendingConfirmation:!!rec.referralPendingConfirmation,updates:Array.isArray(rec.updates)?rec.updates:[]});
    existingIds.add(rec.caseId);added++;
   });
   save();render();
