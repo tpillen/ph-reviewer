@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.29</title>
+<title>PH Alpha 0.6.13.30</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.29</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.30</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -298,7 +298,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.13.29 · surgical pathology reports, reviewed here and filed into the Pathology Registry</div></div></div>
+  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.13.30 · surgical pathology reports, reviewed here and filed into the Pathology Registry</div></div></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -393,7 +393,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.29", $=id=>document.getElementById(id);
+const VERSION="0.6.13.30", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1140,9 +1140,10 @@ function parsePathologyReport(raw){
  let reported=_dateAfter(flat,"date reported|report date|reported|finalized|date signed out|signed out|date of result|result date|final(?:ized)?(?: report)?(?: date)?");
  if(!reported){const m=flat.match(new RegExp("(?:signed|released)[^0-9]{0,70}?"+_DATE_RE,"i"));if(m)reported=_toIso(m[1])}
  // --- final diagnosis section (part A only when several specimens are in one report)
- let multi=/\bB[.)]\s+(?:skin|received|specimen)|\bpart b\b|second site|additional specimen|also received|\bspecimen b\b/i.test(flat);
- let dxSeg=dxCandidates[0]||"";
- const MULTI_CUT=/\bB[.)]\s+[A-Za-z]|\bpart b\b|second site|additional specimen|also received|;\s*[A-Za-z ,]{3,40}\s[-–]\s[A-Z]/i;
+ let multi=/\bB[.)]\s+(?:skin|received|specimen)|\bpart b\b|second site|additional specimen|also received|\bspecimen b\b|\b2[.)]\s+(?:skin|soft tissue)/i.test(flat);
+ const dxFull=dxCandidates[0]||"";
+ let dxSeg=dxFull;
+ const MULTI_CUT=/\bB[.)]\s+[A-Za-z]|\bpart b\b|second site|additional specimen|also received|\s2[.)]\s+(?:skin|soft tissue)|;\s*[A-Za-z ,]{3,40}\s[-–]\s[A-Z]/i;
  const cutB=s=>{const c=(s||"").slice(1).search(MULTI_CUT);return c>=0?s.slice(0,c+1).trim():s};
  let multi2=false;
  if(dxSeg){
@@ -1190,9 +1191,118 @@ function parsePathologyReport(raw){
  if(!site)flags.push("Site not found");
  if(!accession)flags.push("No accession number — duplicate check unreliable");
  if(!specimenType)flags.push("Specimen/procedure type not found");
- return{accession,mrn,age,sex,provider,collected,received,reported,specimenType,site,dxText,dxDisplay:(dxText.length>100&&dx.name)?dx.name:dxText,dxName:dx.name||"",dxIcdSuggested:dx.icd||"",dxNoTumor:!!dx.noTumor,icdReported,margin,marginStatus,followup,ancillary,clinHistory:first("clin"),multiSpecimen:multi||multi2,blocking,flags,
-  needsReview:blocking.length>0,segmentsFound:Object.keys(segs)};
+ const P={accession,mrn,age,sex,provider,collected,received,reported,specimenType,site,dxText,dxDisplay:(dxText.length>100&&dx.name)?dx.name:dxText,dxName:dx.name||"",dxIcdSuggested:dx.icd||"",dxNoTumor:!!dx.noTumor,icdReported,margin,marginStatus,followup,ancillary,clinHistory:first("clin"),multiSpecimen:multi||multi2,blocking,flags,
+  needsReview:blocking.length>0,segmentsFound:Object.keys(segs),_comment:comment};
+ return _applyPathParts(P,{dxFull,specimenSeg:first("specimen"),marginSeg:first("margin"),grossSeg:first("gross")});
 }
+/* ---- 0.6.13.30: multi-specimen reports -> one record per specimen ---- */
+function _splitLabeledParts(text){
+ if(!text)return[];
+ const t=" "+String(text).trim()+" ";
+ const attempt=(re,seq)=>{
+  const ms=[];let m;re.lastIndex=0;
+  while((m=re.exec(t)))ms.push({label:m[1].toUpperCase(),idx:m.index,end:m.index+m[0].length});
+  const chain=[];let want=0;
+  if(seq[0]==="1"&&!ms.some(x=>x.label==="1")&&ms.some(x=>x.label==="2"))want=1;
+  for(const x of ms){if(x.label===seq[want]){chain.push(x);want++}}
+  if(chain.length<2)return[];
+  if(chain[0].idx>4){
+   // the segmenter can swallow a leading "1." — treat the text before "2." as part 1
+   if(seq[0]==="1"&&chain[0].label==="2"&&t.slice(0,chain[0].idx).trim().length>3){chain.unshift({label:"1",idx:0,end:0})}
+   else return[];
+  }
+  return chain.map((c,i)=>({label:c.label,text:t.slice(c.end,i+1<chain.length?chain[i+1].idx:t.length).trim()})).filter(x=>x.text);
+ };
+ let r=attempt(/(?<=\s)(?:(?:[Pp]art|[Ss]pecimen)\s+)?([A-H])\s*[.):]\s+(?=[A-Za-z"“(])/g,["A","B","C","D","E","F","G","H"]);
+ if(r.length>=2)return r;
+ return attempt(/(?<=\s)(?:(?:[Pp]art|[Ss]pecimen)\s+)?([1-8])\s*[.):]\s+(?=[A-Za-z"“(])/g,["1","2","3","4","5","6","7","8"]);
+}
+function _marginStatusOf(m){
+ const hasInv=/(?<!un)involved|\bpositive\b|extends to|present at (?:the )?\w+ margin|transected/i.test(m||""),hasClear=/uninvolved|\bnegative\b|free of|\bclear\b|not involved/i.test(m||"");
+ return hasInv?"Involved":(hasClear?"Uninvolved":"");
+}
+function _capSite(x){return x&&!/[a-z]/.test(x)?x.toLowerCase().replace(/^./,c=>c.toUpperCase()):x}
+function _buildPartFrom(txt,siteHint,specSec){
+ let t=String(txt||""),site="",spec="";
+ const pre=t.match(/^((?:skin|soft tissue)[^:]{0,100}):\s*/i);
+ if(pre){site=_siteFromSpecimenText(pre[1]);spec=_specimenTypeFrom(pre[1]);t=t.slice(pre[0].length)}
+ if(!site&&siteHint)site=siteHint;
+ if(!site&&specSec)site=_siteFromSpecimenText(specSec);
+ if(!spec&&specSec)spec=_specimenTypeFrom(specSec);
+ t=t.replace(/^\s*(?:[A-Z]\.|\d\.)\s*/,"").trim();
+ let s=t.split(/(?<=[A-Za-z\)])\.\s+(?=[A-Z])|\n/)[0].replace(/\.$/,"").trim();
+ if(s.length>240)s=s.slice(0,240).replace(/\s+\S*$/,"")+"…";
+ const dxText=s?_titleCaseDx(s):"";
+ let dx={name:"",icd:""};
+ if(dxText){dx=inferFinalDx(dxText);if(!dx.name){const lm=learnedMatchFor(dxText);if(lm)dx={name:lm.dxLabel,icd:lm.icd||"",learned:true}}}
+ const noTumor=/\bno (?:residual|evidence of|identifiable) (?:atypical )?(?:melanoma|melanocytic proliferation|carcinoma|tumor|neoplasm|malignancy)|scar\b[^.]{0,40}no residual/i.test(dxText);
+ if(noTumor)dx={name:"Post-excision scar, no residual tumor",icd:"Z85.- history / Z09 follow-up (correlate)",noTumor:true};
+ return{site:_capSite(site),specimenType:spec,dxText,dxDisplay:(dxText.length>100&&dx.name)?dx.name:dxText,dxName:dx.name||"",dxIcdSuggested:dx.icd||"",dxNoTumor:!!dx.noTumor};
+}
+function _applyPathParts(P,ctx){
+ if(!P.multiSpecimen)return P;
+ const full=ctx.dxFull||"";
+ let raw=[];
+ const lp=_splitLabeledParts(full);
+ if(lp.length>=2)raw=lp.map(x=>({label:x.label,text:x.text,siteHint:""}));
+ else{
+  let m=full.match(/^(.*?)\b(?:second|third|additional)\s+(?:site|specimen)\s*[-–:]\s*([^:\-–]{2,60}?)\s*[:\-–]\s*(.+)$/i);
+  if(m&&m[1].trim())raw=[{label:"A",text:m[1].trim(),siteHint:""},{label:"B",text:m[3].trim(),siteHint:_siteFromSpecimenText(m[2])}];
+  else{
+   m=full.match(/^(.*?);\s+([A-Za-z][A-Za-z ,]{2,40}?)\s[-–]\s+(.+)$/);
+   if(m&&m[1].trim())raw=[{label:"A",text:m[1].trim(),siteHint:""},{label:"B",text:m[3].trim(),siteHint:_siteFromSpecimenText(m[2])}];
+  }
+ }
+ let mBase=P.margin;
+ if(raw.length<2){
+  // the segmenter can end the diagnosis at a "Margins:" label, leaving "Second site - X: dx" in the margin text
+  const m=(ctx.marginSeg||"").match(/\b(?:second|third|additional)\s+(?:site|specimen)\s*[-–:]\s*([^:\-–]{2,60}?)\s*[:\-–]\s*(.+)$/i);
+  if(m&&full.trim()){raw=[{label:"A",text:full.trim(),siteHint:""},{label:"B",text:m[2].trim(),siteHint:_siteFromSpecimenText(m[1])}];mBase=(P.margin||"").replace(/\b(?:second|third|additional)\s+(?:site|specimen)\s*[-–:].*$/i,"").trim();}
+ }
+ if(raw.length<2)return P;   // could not split safely: keep the original "review by hand" block
+ const n=raw.length;
+ const spMap={};_splitLabeledParts(ctx.specimenSeg||"").forEach(x=>spMap[x.label]=x.text);
+ const grMap={};_splitLabeledParts(ctx.grossSeg||"").forEach(x=>grMap[x.label]=x.text);
+ const mMap={};const mp=_splitLabeledParts(ctx.marginSeg||"");mp.forEach(x=>mMap[x.label]=x.text);
+ const perPartMargin=mp.length>=2;
+ const parts=raw.map((r,i)=>{
+  if(i===0){
+   const bp=_buildPartFrom(r.text,"",spMap[r.label]);
+   const useBp=bp.dxText&&bp.dxName;   // prefer the part-level read when it is recognized; otherwise keep the whole-report read
+   return{label:r.label,site:_capSite(bp.site||P.site),specimenType:bp.specimenType||P.specimenType||_specimenTypeFrom(grMap[r.label]||""),
+    dxText:useBp?bp.dxText:P.dxText,dxDisplay:useBp?bp.dxDisplay:P.dxDisplay,dxName:useBp?bp.dxName:P.dxName,dxIcdSuggested:useBp?bp.dxIcdSuggested:P.dxIcdSuggested,dxNoTumor:useBp?bp.dxNoTumor:P.dxNoTumor};
+  }
+  {const b=_buildPartFrom(r.text,r.siteHint,spMap[r.label]);if(!b.specimenType)b.specimenType=_specimenTypeFrom(grMap[r.label]||"");return{label:r.label,...b}}
+ });
+ const isMal=pt=>/melanoma|carcinoma/i.test((pt.dxName||"")+" "+(pt.dxText||""))&&!pt.dxNoTumor;
+ const malIdx=parts.map((pt,i)=>isMal(pt)?i:-1).filter(i=>i>=0);
+ const baseBlock=P.blocking.filter(b=>!/^Several specimens/.test(b));
+ const baseFlags=P.flags.filter(f=>!/^Site not found|^Specimen\/procedure type not found|^Diagnosis not recognized/.test(f));
+ const sharedNote=perPartMargin?"":(malIdx.length===1?`Margin and recommendation text in this report is not labeled per specimen — it was assigned to specimen ${parts[malIdx[0]].label} (the only malignant one); verify`:"Margin and recommendation text in this report is not labeled per specimen — it is shown on every specimen; verify which one it describes");
+ const out=parts.map((pt,i)=>{
+  let margin,followup;
+  if(perPartMargin){margin=mMap[pt.label]||"";followup=[splitMarginIntoFields(margin).followup,P._comment||""].filter(Boolean).join("; ")}
+  else if(malIdx.length===1&&malIdx[0]!==i){margin="";followup=""}
+  else{margin=mBase;followup=P.followup}
+  const blocking=[...baseBlock];
+  if(!pt.dxText)blocking.push(`No final diagnosis found for specimen ${pt.label}`);
+  const flags=[`Specimen ${pt.label} of ${n} in this report — split automatically into its own record; confirm the site and diagnosis pairing`,...baseFlags];
+  if(sharedNote&&(margin||followup))flags.push(sharedNote);
+  if(!pt.site)flags.push("Site not found");
+  if(!pt.specimenType)flags.push("Specimen/procedure type not found");
+  if(pt.dxText&&!pt.dxName)flags.push("Diagnosis not recognized — will be filed flagged 'needs coding review'; right-click the Diagnosis row to teach PH");
+  let icdReported="";
+  if(P.icdReported){
+   const sug=(pt.dxIcdSuggested||"").slice(0,3),rep=P.icdReported.slice(0,3);
+   if(i===0&&(!sug||sug===rep))icdReported=P.icdReported;
+   else flags.push(i===0?`The report's ICD code (${P.icdReported}) does not match this specimen's diagnosis — not carried over`:`The report lists one ICD code (${P.icdReported}) for the whole report — not applied to specimen ${pt.label}`);
+  }
+  return{...P,...pt,label:undefined,partLabel:pt.label,partCount:n,marginPerPart:perPartMargin,margin,marginStatus:_marginStatusOf(margin),followup,icdReported,blocking,flags,needsReview:blocking.length>0,siblings:undefined,multiSpecimen:true};
+ });
+ const first=out[0];first.siblings=out.slice(1);
+ return first;
+}
+
 
 /* ---- Pathology Registry routing ---- */
 function guessDiagnosisGroupV2(dxName,dxText){
@@ -1203,20 +1313,20 @@ function guessDiagnosisGroupV2(dxName,dxText){
 }
 function pathCaseId(p,filename){
  const base=p.accession?p.accession:("F-"+String(filename||"report").replace(/\.[a-z0-9]+$/i,"").replace(/[^A-Za-z0-9]+/g,"-").slice(0,40));
- return"PATH-IMPORT-FILE-"+base;
+ return"PATH-IMPORT-FILE-"+base+(p.partCount>1?"-"+String(p.partLabel).replace(/[^A-Za-z0-9]/g,""):"");
 }
 function registryCaseFromPath(p,filename){
  const group=guessDiagnosisGroupV2(p.dxName,p.dxText);
  const malignant=/melanoma|carcinoma/.test(norm(p.dxName+" "+p.dxText))&&!p.dxNoTumor;
  const severeAtypia=/severe/.test(norm(p.dxName));
  const priority=(malignant||severeAtypia)?"High":"Routine";
- const clearExcision=p.specimenType==="Excision"&&p.marginStatus==="Uninvolved";
+ const clearExcision=p.specimenType==="Excision"&&p.marginStatus==="Uninvolved"&&!(p.partCount>1&&!p.marginPerPart);
  const dxDisplay=(p.dxDisplay||p.dxText||"(diagnosis not located)")+(p.icdReported?` (${p.icdReported})`:"");
  const today=new Date().toISOString().slice(0,10);
  const biopsy=p.collected||p.reported||"";
  const completion=clearExcision?(p.collected||p.reported):"";
  const next=clearExcision?"None — excision with uninvolved margins documented in this report.":(p.followup||"Review result; notify patient and determine definitive treatment if indicated.");
- const text=`Surgical pathology report imported from file (${filename}). Final diagnosis: ${p.dxText||"not located"}${p.icdReported?` (${p.icdReported})`:""}.${p.marginStatus?` Margin: ${p.marginStatus}.`:""}${p.followup?` Pathologist recommendation / follow-up: ${p.followup}.`:""}${p.specimenType?` Specimen: ${p.specimenType}.`:""}`;
+ const text=`Surgical pathology report imported from file (${filename}).${p.partCount>1?` Specimen ${p.partLabel} of ${p.partCount} in this report.`:""} Final diagnosis: ${p.dxText||"not located"}${p.icdReported?` (${p.icdReported})`:""}.${p.marginStatus?` Margin: ${p.marginStatus}.`:""}${p.followup?` Pathologist recommendation / follow-up: ${p.followup}.`:""}${p.specimenType?` Specimen: ${p.specimenType}.`:""}`;
  return{
   caseId:pathCaseId(p,filename),patientId:esc(p.mrn||"(not found in report)"),source:"file-import",provider:esc(p.provider||"Unassigned"),
   biopsy,report:p.reported||"",completion,completionType:clearExcision?"Excision with clear margins (from pathology report)":"",closedBy:clearExcision?"File import":"",
@@ -1248,19 +1358,26 @@ function sendPathItemsToRegistry(indices){
 }
 
 /* ---- 0.6.13.28: routing wrappers, Work Queue pathology review, intake-lab pathology panel ---- */
-function runPathologyDocument(filename,rawText,dt){
- const p=parsePathologyReport(rawText);
+function _pathItem(filename,rawText,dt,pAll){
+ const {siblings,...p}=pAll;
+ const multi=p.partCount>1;
  return{
-  id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000),rawText,filename,importedAt:new Date().toISOString(),
+  id:"WQ-"+Date.now()+"-"+Math.floor(Math.random()*1000)+(multi?"-"+String(p.partLabel).replace(/[^A-Za-z0-9]/g,""):""),rawText,filename,importedAt:new Date().toISOString(),
+  partLabel:multi?p.partLabel:"",partCount:multi?p.partCount:1,
   diagnosis:p.dxDisplay||"(no diagnosis located — needs review)",diagnosisStage:"Confirmed (pathology)",icd:p.icdReported||"",
   pathway:"pathology",serviceLabel:"Surgical pathology report — completed procedure; no prior authorization applies",
   missing:[],supported:[],paLikelihood:"not_applicable",relevanceVerdict:"clinical",relevanceHits:{clinical:[],admin:[]},
   docType:"surgical_pathology",docTypeConfidence:dt.confidence,pathData:p,
   registryState:p.needsReview?"needs_review":"awaiting",pathSelected:!p.needsReview&&!!p.dxName,
   assignedType:"role",assignedTo:"Unassigned",status:"Pending",
-  history:[{at:new Date().toISOString(),note:"Imported via batch; recognized as a surgical pathology report and routed to Pathology Registry review (no PA checklist)."}]
+  history:[{at:new Date().toISOString(),note:multi?`Imported via batch; one of ${p.partCount} specimens in this report (specimen ${p.partLabel}). Routed to Pathology Intake (no PA checklist).`:"Imported via batch; recognized as a surgical pathology report and routed to Pathology Registry review (no PA checklist)."}]
  };
 }
+function runPathologyDocuments(filename,rawText,dt){
+ const p=parsePathologyReport(rawText);
+ return[p,...(p.siblings||[])].map(x=>_pathItem(filename,rawText,dt,x));
+}
+function runPathologyDocument(filename,rawText,dt){return runPathologyDocuments(filename,rawText,dt)[0]}
 function runLabDocument(filename,rawText,dt){
  const rows=parseSemantic(rawText),dxRow=rows.find(r=>r.concept==="Diagnosis");
  return{
@@ -1279,6 +1396,11 @@ function runBatchDocument(filename,rawText){
  const it=runBatchDocumentPA(filename,rawText);
  it.docType=dt.type;it.docTypeConfidence=dt.confidence;
  return it;
+}
+function runBatchDocumentMulti(filename,rawText){
+ const dt=classifyDocumentType(rawText);
+ if(dt.type==="surgical_pathology")return runPathologyDocuments(filename,rawText,dt);
+ return[runBatchDocument(filename,rawText)];
 }
 function isNonPaItem(it){return it.docType==="surgical_pathology"||it.docType==="laboratory"}
 function typeBadge(it){
@@ -1305,7 +1427,7 @@ function renderPathRoutePanel(){
   const notes=[...p.blocking.map(b=>`<span class="pill" style="background:#fee2e2;color:#991b1b">${esc(b)}</span>`),...p.flags.map(f=>`<span class="pill" style="background:#fef3c7;color:#92400e">${esc(f)}</span>`)].join(" ")||'<span class="pill" style="background:#f0fdf4">None</span>';
   return `<tr${blocked?' style="background:#fef2f2"':""}>
    <td><input type="checkbox" class="pathPick" data-i="${i}" ${it.pathSelected&&!filedRow&&!blocked?"checked":""} ${filedRow||blocked?"disabled":""}></td>
-   <td>${esc(it.filename)}</td><td>${esc(p.accession||"—")}</td><td>${esc(p.collected||"—")}</td><td>${esc(p.reported||"—")}</td>
+   <td>${esc(it.filename)}${it.partCount>1?`<div class="mini"><span class="pill" style="background:#ede9fe;color:#5b21b6">Specimen ${esc(it.partLabel)} of ${it.partCount}</span></div>`:""}</td><td>${esc(p.accession||"—")}</td><td>${esc(p.collected||"—")}</td><td>${esc(p.reported||"—")}</td>
    <td>${esc(p.specimenType||"—")}<div class="mini">${esc(p.site||"site not found")}</div></td>
    <td><b>${esc(p.dxDisplay||p.dxText||"—")}</b>${p.dxName?`<div class="mini"><span class="pill">${esc(p.dxName)}</span>${p.icdReported?` ${esc(p.icdReported)}`:""}</div>`:'<div class="mini">not recognized</div>'}</td>
    <td>${esc(p.margin||"—")}</td><td>${esc((p.followup||"—").slice(0,120))}</td>
@@ -1397,7 +1519,7 @@ function readPathForm(){
  if(!dxText)p.blocking.push("No final diagnosis entered");
  if(!p.reported)p.blocking.push("No report date entered");
  if(dxText&&!p.dxName)p.flags.push("Diagnosis not recognized — will be filed flagged 'needs coding review'");
- p.needsReview=p.blocking.length>0;p._approved=!p.needsReview;p.multiSpecimen=base.multiSpecimen;
+ p.needsReview=p.blocking.length>0;p._approved=!p.needsReview;p.multiSpecimen=base.multiSpecimen;p.siblings=undefined;
  return p;
 }
 function pfSend(){
@@ -1601,20 +1723,21 @@ async function handleBatchImport(fileList){
  const progs=[$("batchProgress"),$("pathBatchProgress")].filter(Boolean);
  const prog={set textContent(t){progs.forEach(p=>{p.style.display="";p.textContent=t})},set className(c){progs.forEach(p=>{p.className=c})}};
  prog.className="notice";
- let done=0,failed=[];
+ let done=0,failed=[],extra=0;
  for(const file of files){
    prog.textContent=`Processing ${done+1} of ${files.length}: ${file.name}…`;
    try{
      const text=await extractFile(file);
-     const item=runBatchDocument(file.name,text);
-     workQueueItems.unshift(item);
+     const items=runBatchDocumentMulti(file.name,text);
+     extra+=items.length-1;
+     [...items].reverse().forEach(item=>workQueueItems.unshift(item));
    }catch(err){failed.push(file.name+" ("+err.message+")")}
    done++;
  }
  saveWorkQueue(workQueueItems);
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added to the worklist.`+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added.`+(extra?` ${extra} extra row${extra===1?"":"s"} created from reports with several specimens (one row per specimen).`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
@@ -1969,7 +2092,7 @@ function renderBiopsyPreState(){const w=parseWorkingDxValue(),diff=splitDiff($("
    yet taught, per the reviewed coding-integrity table. Skin cancers get a site-specific
    placeholder rather than a guessed fixed code, consistent with that same review. */
 function inferFinalDx(text){
- const low=norm(text).replace(/\b(?:no|without|absent|negative for)\s+(?:cytologic(?:al)?\s+|architectural\s+|significant\s+)?(?:atypia|dysplasia)\b/g,"no-atypia-term");
+ const low=norm(text).replace(/\b(?:no|without|absent|negative for)\s+(?:cytologic(?:al)?\s+|architectural\s+|significant\s+)?(?:atypia|dysplasia)\b/g,"noatypiaterm");
  // 0.6.13.23: more specific patterns (in-situ / Bowen disease, melanoma in situ) must be checked
  // BEFORE the bare invasive-carcinoma terms — confirmed against real de-identified pathology
  // report language that a report reading "Squamous Cell Carcinoma in situ - Bowen's Disease Type"
