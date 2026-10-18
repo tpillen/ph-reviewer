@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.13.30</title>
+<title>PH Alpha 0.6.14.0</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.13.30</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.14.0</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -249,13 +249,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="queue" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.13.6 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
+  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.14.0 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
   <div class="notice">Import several clinic documents at once below. Each is extracted, mapped, and scanned for missing PA evidence automatically — the results accumulate here as a persistent worklist instead of being overwritten by the next document, so a coordinator or provider can work through them and record each outcome.</div>
  </div>
  <div class="panel">
   <h3>Batch Import Documents</h3><div class="mini" style="margin-bottom:6px">Mixed batches are fine: clinic, consult and referral notes land in this worklist; surgical pathology reports are sent to <b>Pathology Intake</b>; laboratory results are labeled and kept out of the PA checklist.</div>
-  <label>Select multiple clinic documents (referral letters, new-patient, established-patient notes) — .txt, .rtf, .docx, .pdf, .png, .jpg
-   <input id="batchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg">
+  <label>Select one or more files — clinic documents (referral letters, new-patient, established-patient notes) as .txt, .rtf, .docx, .pdf, .png, .jpg; a .json case list loads straight into the Pathology Registry
+   <input id="batchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,.json,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg,application/json">
   </label>
   <div id="batchProgress" class="notice" style="margin-top:8px;display:none"></div>
  </div>
@@ -275,7 +275,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
      <option value="needs_attention">Needs attention (PA elements missing)</option>
      <option value="ready">Ready — fully supported</option>
      <option value="unlikely">PA unlikely — not needed</option>
-     <option value="not_applicable">Not applicable (pathology / lab results)</option>
+     <option value="check_formulary">Formulary check — depends on the plan</option>
+     <option value="not_applicable">Not applicable (pathology, lab, duplicates)</option>
     </select>
    </label>
    <label style="font-weight:400;flex:1">Filter by document type
@@ -287,6 +288,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
      <option value="surgical_pathology">Surgical pathology</option>
      <option value="laboratory">Laboratory</option>
      <option value="other">Unclassified</option>
+     <option value="duplicate">Duplicates (same content as another file)</option>
     </select>
    </label>
   </div>
@@ -298,13 +300,13 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.13.30 · surgical pathology reports, reviewed here and filed into the Pathology Registry</div></div></div>
+  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.14.0 · surgical pathology reports, biopsies awaiting pathology and result visits, reviewed here and filed into the Pathology Registry</div></div></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
   <h3>Import Pathology Reports</h3>
-  <label>Select pathology reports — .txt, .rtf, .docx, .pdf, .png, .jpg. Anything that turns out to be a clinic note is sent to the Work Queue instead.
-   <input id="pathBatchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg">
+  <label>Select one or more files — pathology reports as .txt, .rtf, .docx, .pdf, .png, .jpg, or a .json case list (loads straight into the Pathology Registry). Clinic notes go to the Work Queue; notes describing a biopsy done that day or a result discussion appear in the second table below.
+   <input id="pathBatchFileInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,.json,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg,application/json">
   </label>
   <div id="pathBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
  </div>
@@ -313,6 +315,12 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
    <div id="pathRouteTable"><div class="notice">No surgical pathology reports imported yet.</div></div>
    <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows in Pathology Registry</button></div>
    <div id="pathSendStatus" class="notice hidden" style="margin-top:8px"></div>
+  </div>
+  <div class="panel" id="clinicPathPanel">
+   <div class="row between"><div><h3>From Clinic Notes — Biopsies Awaiting Pathology &amp; Result Visits</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
+   <div id="clinicPathTable"><div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div></div>
+   <div class="row" style="margin-top:8px"><button id="clinicPathAll" class="btn secondary">Check all pending-pathology rows</button><button id="clinicPathNone" class="btn secondary">Uncheck all</button><button id="clinicPathFile" class="btn success">File checked rows as pending cases</button></div>
+   <div id="clinicPathStatus" class="notice hidden" style="margin-top:8px"></div>
   </div>
 </section>
 
@@ -1023,7 +1031,10 @@ function classifyDocumentType(t){
  const strong=["Gross description language","Microscopic description","Final diagnosis header","Accession / specimen number","Pathologist sign-out","Final pathology report / impression header"].filter(a=>P.hits.includes(a)).length;
  let type="other",top=0,second=0;
  const ranked=[["surgical_pathology",P.score],["clinic_note",C.score],["laboratory",L.score],["referral_consult",R.score]].sort((a,b)=>b[1]-a[1]);
- const isPath=(P.score>=6&&strong>=2&&P.score>C.score)||(P.score>=5&&strong>=1&&C.score<3&&P.hits.includes("Final diagnosis header"));
+ // 0.6.14.0: a referral letter or clinic note can say "final diagnosis", "requested by pathologist" and "specimen submitted"
+ // without being a report. A real report also has a gross or microscopic description, an accession number, or a final-report header.
+ const core=["Gross description language","Microscopic description","Accession / specimen number","Final pathology report / impression header"].filter(a=>P.hits.includes(a)).length;
+ const isPath=core>=1&&((P.score>=6&&strong>=2&&P.score>C.score)||(P.score>=5&&strong>=1&&C.score<3&&P.hits.includes("Final diagnosis header")));
  if(isPath)type="surgical_pathology";
  else if(L.score>=5&&L.score>P.score&&L.score>C.score)type="laboratory";
  else if(R.score>=4&&R.score>=C.score)type="referral_consult";
@@ -1325,12 +1336,13 @@ function registryCaseFromPath(p,filename){
  const today=new Date().toISOString().slice(0,10);
  const biopsy=p.collected||p.reported||"";
  const completion=clearExcision?(p.collected||p.reported):"";
- const next=clearExcision?"None — excision with uninvolved margins documented in this report.":(p.followup||"Review result; notify patient and determine definitive treatment if indicated.");
+ const next=clearExcision?"Notify the patient of the clear-margin result, then close the case (closure suggestion attached).":(p.followup||"Review result; notify patient and determine definitive treatment if indicated.");
  const text=`Surgical pathology report imported from file (${filename}).${p.partCount>1?` Specimen ${p.partLabel} of ${p.partCount} in this report.`:""} Final diagnosis: ${p.dxText||"not located"}${p.icdReported?` (${p.icdReported})`:""}.${p.marginStatus?` Margin: ${p.marginStatus}.`:""}${p.followup?` Pathologist recommendation / follow-up: ${p.followup}.`:""}${p.specimenType?` Specimen: ${p.specimenType}.`:""}`;
  return{
   caseId:pathCaseId(p,filename),patientId:esc(p.mrn||"(not found in report)"),source:"file-import",provider:esc(p.provider||"Unassigned"),
-  biopsy,report:p.reported||"",completion,completionType:clearExcision?"Excision with clear margins (from pathology report)":"",closedBy:clearExcision?"File import":"",
-  group,dx:esc(dxDisplay),site:esc(p.site||""),status:clearExcision?"Completed / Closed":"Open - Pending Completion",priority,
+  biopsy,report:p.reported||"",completion:"",completionType:"",closedBy:"",notifications:[],
+  closureSuggestion:clearExcision?{reason:"Excision with clear margins (from pathology report)",note:`Excision report shows uninvolved margins (${esc(filename)}${completion?`, ${completion}`:""}). Record the patient notification, then close.`,source:esc(filename)}:undefined,
+  group,dx:esc(dxDisplay),site:esc(p.site||""),status:"Open - Pending Completion",priority,
   possibleDuplicate:false,needsCodingReview:!p.icdReported||!p.dxName,referralPendingConfirmation:/\brefer(ral)?\b/i.test(p.followup||""),
   updates:[{date:p.reported||today,type:"Pathology result",enteredBy:"File import",text:esc(text),next:esc(next)}]
  };
@@ -1339,6 +1351,8 @@ function sendPathRecordToRegistry(p,filename){
  let cases=loadPathRegistry();if(cases===null)cases=[];
  const rec=registryCaseFromPath(p,filename);
  if(cases.some(c=>c.caseId===rec.caseId))return{status:"duplicate",caseId:rec.caseId};
+ const linked=linkReportToPendingCase(cases,rec);
+ if(linked){savePathRegistry(cases);return{status:"sent",caseId:linked.caseId}}
  rec.possibleDuplicate=cases.some(c=>c.patientId===rec.patientId&&c.site===rec.site&&c.dx===rec.dx&&c.biopsy===rec.biopsy);
  cases.unshift(rec);savePathRegistry(cases);
  return{status:"sent",caseId:rec.caseId};
@@ -1389,26 +1403,24 @@ function runLabDocument(filename,rawText,dt){
   history:[{at:new Date().toISOString(),note:"Imported via batch; recognized as a laboratory result and kept out of the PA checklist."}]
  };
 }
-function runBatchDocument(filename,rawText){
- const dt=classifyDocumentType(rawText);
- if(dt.type==="surgical_pathology")return runPathologyDocument(filename,rawText,dt);
- if(dt.type==="laboratory")return runLabDocument(filename,rawText,dt);
- const it=runBatchDocumentPA(filename,rawText);
- it.docType=dt.type;it.docTypeConfidence=dt.confidence;
- return it;
-}
+function runBatchDocument(filename,rawText){return runBatchDocumentMulti(filename,rawText)[0]}
 function runBatchDocumentMulti(filename,rawText){
  const dt=classifyDocumentType(rawText);
  if(dt.type==="surgical_pathology")return runPathologyDocuments(filename,rawText,dt);
- return[runBatchDocument(filename,rawText)];
+ if(dt.type==="laboratory")return[runLabDocument(filename,rawText,dt)];
+ return runBatchDocumentPAItems(filename,rawText,dt);   // 0.6.14.0: one item per trigger
 }
-function isNonPaItem(it){return it.docType==="surgical_pathology"||it.docType==="laboratory"}
+const NON_PA_PATHWAYS=["pending_pathology","path_result_visit","duplicate"];
+function isNonPaItem(it){return it.docType==="surgical_pathology"||it.docType==="laboratory"||NON_PA_PATHWAYS.includes(it.pathway)}
 function typeBadge(it){
  const t=it.docType||"clinic_note";
  const styles={surgical_pathology:"background:#ede9fe;color:#5b21b6",laboratory:"background:#ccfbf1;color:#115e59",clinic_note:"background:#dbeafe;color:#1e40af",referral_consult:"background:#fef3c7;color:#92400e",other:"background:#e5e7eb;color:#374151"};
  return `<span class="pill" style="${styles[t]||''}">${esc(DOC_TYPE_LABELS[t]||t)}</span>`;
 }
 function pathStatePill(it){
+ if(it.pathway==="duplicate")return`<span class="pill" style="background:#e5e7eb;color:#374151">Duplicate of ${esc(it.duplicateOf||"another file")}</span>`;
+ if(it.pathway==="pending_pathology")return it.registryState==="sent"?`<span class="pill" style="background:#dcfce7;color:#166534">Pending case filed${it.registryCaseId?" — "+esc(it.registryCaseId):""}</span>`:'<span class="pill" style="background:#ede9fe;color:#5b21b6">Awaiting report — file in Pathology Intake</span>';
+ if(it.pathway==="path_result_visit")return it.registryState==="sent"?`<span class="pill" style="background:#dcfce7;color:#166534">Recorded on ${esc(it.registryCaseId||"registry case")}</span>`:'<span class="pill" style="background:#ccfbf1;color:#115e59">Result visit — record in Pathology Intake</span>';
  if(it.docType==="laboratory")return'<span class="pill" style="background:#ccfbf1;color:#115e59">Lab — no module yet</span>';
  const st=it.registryState||"awaiting";
  const map={awaiting:["Ready for registry review","background:#dbeafe;color:#1e40af"],needs_review:["Needs review before filing","background:#fee2e2;color:#991b1b"],sent:["In Pathology Registry","background:#dcfce7;color:#166534"],duplicate:["Already in registry","background:#e5e7eb;color:#374151"]};
@@ -1416,6 +1428,7 @@ function pathStatePill(it){
  return `<span class="pill" style="${style}">${label}</span>`;
 }
 function renderPathRoutePanel(){
+ renderClinicPathPanel();
  const box=$("pathRouteTable");if(!box)return;
  const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.docType==="surgical_pathology"&&it.pathData);
  const filed=rows.filter(({it})=>it.registryState==="sent"||it.registryState==="duplicate").length;
@@ -1657,6 +1670,362 @@ function runBatchDocumentPA(filename,rawText){
   history:[{at:new Date().toISOString(),note:"Imported via batch and scanned for PA evidence."}]
  };
 }
+/* ================= 0.6.14.0: trigger-based routing for clinic, consult and referral notes =================
+   Before 0.6.14 every non-pathology document got ONE prior-authorization verdict, chosen from the
+   diagnosis alone (a psoriasis note always produced a Cosentyx PA, an eczema note a Dupixent PA),
+   and any note mentioning "biopsy" was treated as a biopsy-authorization request.
+   Now each note is read for what was actually done or ordered, and one Work Queue item is created per trigger:
+     - result-discussion visit (pathology reviewed with patient) -> Pathology Intake, updates the registry case
+     - biopsy / excision performed at this visit, specimen to pathology -> Pathology Intake, pending-pathology case
+     - PA-likely medication actually ordered in the plan (not merely discussed) -> PA item with evidence checklist
+     - procedure ordered or scheduled (Mohs, excision, phototherapy, laser, patch testing) -> PA item
+     - nothing found -> one "No PA trigger found" item, so no document disappears
+   Identical documents (the same note as PDF and Word) are caught by content and marked as duplicates. */
+const PA_LIKELY_MEDS=[
+ {name:"Dupilumab (Dupixent)",re:/\bdupilumab\b|\bdupixent\b/,tier:"high",paId:"dupilumab"},
+ {name:"Tralokinumab (Adbry)",re:/\btralokinumab\b|\badbry\b/,tier:"high"},
+ {name:"Lebrikizumab (Ebglyss)",re:/\blebrikizumab\b|\bebglyss\b/,tier:"high"},
+ {name:"Nemolizumab (Nemluvio)",re:/\bnemolizumab\b|\bnemluvio\b/,tier:"high"},
+ {name:"Secukinumab (Cosentyx)",re:/\bsecukinumab\b|\bcosentyx\b/,tier:"high",paId:"secukinumab"},
+ {name:"Adalimumab (Humira / biosimilar)",re:/\badalimumab\b|\bhumira\b|\bamjevita\b|\bhadlima\b|\bhyrimoz\b|\bcyltezo\b|\byusimry\b|\bsimlandi\b/,tier:"high",paId:"adalimumab"},
+ {name:"Ustekinumab (Stelara / biosimilar)",re:/\bustekinumab\b|\bstelara\b|\bwezlana\b/,tier:"high"},
+ {name:"Guselkumab (Tremfya)",re:/\bguselkumab\b|\btremfya\b/,tier:"high"},
+ {name:"Risankizumab (Skyrizi)",re:/\brisankizumab\b|\bskyrizi\b/,tier:"high"},
+ {name:"Tildrakizumab (Ilumya)",re:/\btildrakizumab\b|\bilumya\b/,tier:"high"},
+ {name:"Ixekizumab (Taltz)",re:/\bixekizumab\b|\btaltz\b/,tier:"high"},
+ {name:"Brodalumab (Siliq)",re:/\bbrodalumab\b|\bsiliq\b/,tier:"high"},
+ {name:"Bimekizumab (Bimzelx)",re:/\bbimekizumab\b|\bbimzelx\b/,tier:"high"},
+ {name:"Certolizumab (Cimzia)",re:/\bcertolizumab\b|\bcimzia\b/,tier:"high"},
+ {name:"Etanercept (Enbrel)",re:/\betanercept\b|\benbrel\b/,tier:"high"},
+ {name:"Infliximab (Remicade / biosimilar)",re:/\binfliximab\b|\bremicade\b/,tier:"high"},
+ {name:"Omalizumab (Xolair)",re:/\bomalizumab\b|\bxolair\b/,tier:"high"},
+ {name:"Spesolimab (Spevigo)",re:/\bspesolimab\b|\bspevigo\b/,tier:"high"},
+ {name:"Upadacitinib (Rinvoq)",re:/\bupadacitinib\b|\brinvoq\b/,tier:"high",paId:"upadacitinib"},
+ {name:"Abrocitinib (Cibinqo)",re:/\babrocitinib\b|\bcibinqo\b/,tier:"high"},
+ {name:"Baricitinib (Olumiant)",re:/\bbaricitinib\b|\bolumiant\b/,tier:"high"},
+ {name:"Ritlecitinib (Litfulo)",re:/\britlecitinib\b|\blitfulo\b/,tier:"high"},
+ {name:"Deuruxolitinib (Leqselvi)",re:/\bdeuruxolitinib\b|\bleqselvi\b/,tier:"high"},
+ {name:"Apremilast (Otezla)",re:/\bapremilast\b|\botezla\b/,tier:"high"},
+ {name:"Deucravacitinib (Sotyktu)",re:/\bdeucravacitinib\b|\bsotyktu\b/,tier:"high"},
+ {name:"Isotretinoin (iPLEDGE)",re:/\bisotretinoin\b|\babsorica\b|\bclaravis\b|\bamnesteem\b|\bzenatane\b|\bmyorisan\b|\baccutane\b/,tier:"high",paId:"isotretinoin"},
+ {name:"Ruxolitinib cream (Opzelura)",re:/\bruxolitinib\b|\bopzelura\b/,tier:"high"},
+ {name:"Roflumilast topical (Zoryve)",re:/\broflumilast\b|\bzoryve\b/,tier:"high"},
+ {name:"Tapinarof (Vtama)",re:/\btapinarof\b|\bvtama\b/,tier:"high"},
+ {name:"Crisaborole (Eucrisa)",re:/\bcrisaborole\b|\beucrisa\b/,tier:"high"},
+ {name:"Delgocitinib cream (Anzupgo)",re:/\bdelgocitinib\b|\banzupgo\b/,tier:"high"},
+ {name:"Calcipotriene / betamethasone",re:/\bcalcipotriene\b[^;\n]{0,40}\bbetamethasone\b|\benstilar\b|\btaclonex\b|\bwynzora\b/,tier:"formulary"},
+ {name:"Halobetasol / tazarotene (Duobrii)",re:/\bduobrii\b|\bhalobetasol\b[^;\n]{0,30}\btazarotene\b/,tier:"formulary"},
+ {name:"Tazarotene",re:/\btazarotene\b|\barazlo\b|\btazorac\b/,tier:"formulary"},
+ {name:"Trifarotene (Aklief)",re:/\btrifarotene\b|\baklief\b/,tier:"formulary"},
+ {name:"Clascoterone (Winlevi)",re:/\bclascoterone\b|\bwinlevi\b/,tier:"formulary"},
+ {name:"Clindamycin / adapalene / benzoyl peroxide (Cabtreo)",re:/\bcabtreo\b/,tier:"formulary"},
+ {name:"Minocycline foam (Amzeeq / Zilxi)",re:/\bamzeeq\b|\bzilxi\b|\bminocycline foam\b/,tier:"formulary"},
+ {name:"Sarecycline (Seysara)",re:/\bsarecycline\b|\bseysara\b/,tier:"formulary"},
+ {name:"Pimecrolimus (Elidel)",re:/\bpimecrolimus\b|\belidel\b/,tier:"formulary"},
+ {name:"Glycopyrronium cloth (Qbrexza)",re:/\bqbrexza\b|\bglycopyrronium tosylate\b/,tier:"formulary"},
+ {name:"Sofpironium (Sofdra)",re:/\bsofpironium\b|\bsofdra\b/,tier:"formulary"}
+];
+const PROC_KINDS=[
+ {kind:"mohs",label:"Mohs micrographic surgery",re:/\bmohs\b/,req:[
+  ["Diagnosis confirmed by pathology","carcinoma|melanoma in situ|lentigo maligna|pathology|biopsy-proven|biopsy proven"],
+  ["Anatomic site documented","face|nose|nasal|ear|lip|eyelid|scalp|hand|foot|genital|neck|trunk|cheek|temple|forehead|chin|ala|extremit"],
+  ["Lesion size documented","mm|cm"],
+  ["High-risk features / appropriate-use criteria","recurrent|aggressive|infiltrative|morpheaform|micronodular|poorly differentiated|perineural|immunosuppress|h-zone|high-risk|high risk|mask area|nasal ala|eyelid|lip|ear"]]},
+ {kind:"excision",label:"Surgical excision",re:/\bexcision\b|\bexcise\b|\bre-excision\b|\bwide local excision\b/,req:[
+  ["Diagnosis documented","cyst|lipoma|nevus|carcinoma|melanoma|keratosis|lesion|neoplasm"],
+  ["Lesion size documented","mm|cm"],
+  ["Symptoms / medical necessity (not cosmetic)","pain|painful|tender|inflam|infect|drain|ruptur|bleed|irritat|functional|impair|rapid|growing|enlarg|recurrent|catching|rubbing"],
+  ["Anatomic site documented","face|nose|ear|lip|eyelid|scalp|hand|foot|neck|back|chest|shoulder|arm|forearm|leg|thigh|abdomen|trunk|cheek|forehead"]]},
+ {kind:"phototherapy",label:"Phototherapy (NB-UVB / PUVA / excimer)",re:/\bphototherapy\b|\bnb-?uvb\b|\bnarrow-?band\b|\bpuva\b|\bexcimer\b/,req:[
+  ["Diagnosis documented","psoriasis|atopic dermatitis|eczema|vitiligo|mycosis fungoides|prurigo"],
+  ["Extent / severity documented","bsa|body surface area|moderate|severe|extensive|widespread"],
+  ["Topical therapy failure documented","failed|inadequate response|not controlled|despite|refractory"]]},
+ {kind:"laser",label:"Laser treatment (often treated as cosmetic — medical necessity needed)",re:/\blaser\b/,req:[
+  ["Diagnosis documented","rosacea|telangiectasia|hemangioma|port-wine|port wine|scar|psoriasis|vitiligo|wart|verruca"],
+  ["Medical necessity documented","bleed|pain|functional|symptomatic|failed|refractory|ulcer"]]},
+ {kind:"patch",label:"Patch testing",re:/\bpatch test(?:ing|s)?\b/,req:[
+  ["Suspected allergic contact dermatitis documented","allergic contact|contact dermatitis|suspected allergen|contact allergy"],
+  ["Exposure / history documented","exposure|occupation|product|cosmetic|metal|nickel|fragrance|history"]]}
+];
+const _NOT_ORDERED=/\b(?:consider|considering|discuss(?:ed|es|ion)?|options?|if (?:needed|necessary|indicated|insufficient|inadequate|frequent|no improvement|not improved|fails?|unresponsive|symptoms persist|patient desires|desired|enlarges)|may (?:start|consider|need|benefit)|would consider|future|declined|declines|refused|candidate for|eligib(?:le|ility)|reassess|versus|vs\.?|step-?up|return as needed|desires removal|or other modalities|not indicated|not recommended|no need for|any needed|as (?:needed|indicated)|depending on|based on (?:the )?(?:final )?(?:pathology|results))\b|\bif\b[^.;\n]{0,40}\b(?:confirmed|positive|malignan\w*|indicated|needed|required|present)\b|\bwith (?:the )?pathology results\b/;
+const _PROC_ORDERED=/\b(?:schedul(?:e|ed|ing)|refer(?:red|ral)?|will (?:perform|proceed|undergo|schedule|arrange)|plan(?:ned)? (?:for|to)|proceed(?:ing)? with|book(?:ed)?|arrange(?:d)?|start|begin|initiate|recommend(?:ed|s)?|order(?:ed)?|to be performed)\b/;
+const _PERFORMED=/\b(?:biops(?:y|ies)|excision|excised|shave|punch|curettage|ed&c|saucerization|procedure)\b[^.;\n]{0,120}\b(?:performed|done|obtained|completed|taken)\b|\bspecimens?\b[^.;\n]{0,30}\b(?:sent|submitted)\b[^.;\n]{0,20}\bpatholog|\bspecimen to patholog|\bsent (?:for|to) (?:histo)?patholog/;
+const _RESULT_VISIT=/\b(?:follow-?up|return(?:s|ed)?)\b[^.;\n]{0,30}\b(?:biopsy|pathology) results?\b|\bpatholog(?:y|ic) (?:results? )?(?:was |were )?(?:reviewed|discussed) with (?:the )?patient\b|\bpathology results?\s*:|\bdiscussion of (?:the )?(?:pathology|biopsy) results?\b|\breturns? (?:after|following) (?:an? |the )?(?:excisional |shave |punch |incisional )?biops|\bpatholog(?:y|ic) (?:review(?:ed)?|confirmed|demonstrates|shows|revealed|consistent with)\b|\bpathology\s*:/;
+const _PATH_PENDING=/\bpatholog(?:y|ic)\b[^.;\n]{0,25}\b(?:pending|to be finalized|not yet (?:back|available|final|finalized)|awaited)\b|\bpending (?:final )?patholog/;
+let _phSeq=0;
+function _newItemId(){_phSeq=(_phSeq+1)%100000;return"WQ-"+Date.now()+"-"+_phSeq+"-"+Math.floor(Math.random()*1000)}
+function _flatText(raw){return String(raw||"").replace(/\[\[PAGE \d+\]\]/g," ")}
+function planSectionOf(raw){
+ const flat=_flatText(raw);
+ const m=flat.match(/\b(?:ASSESSMENT|Assessment)\s*(?:\/|AND|and|&)\s*(?:PLAN|Plan)\b|\bRecommendations\s*\/\s*Plan\b|\bRECOMMENDATIONS\b|\bPLAN\b|\bPlan\s*:/);
+ if(!m)return{text:flat,found:false};
+ let s=flat.slice(m.index+m[0].length);
+ const end=s.search(/\b(?:PATIENT EDUCATION|COUNSELING|FOLLOW-UP\b(?!\s*(?:pending|in\b))|Electronically signed|Sincerely|We will continue to manage)/);
+ return{text:end>0?s.slice(0,end):s,found:true};
+}
+function planItemsOf(planText){return String(planText||"").split(/\n+|\s(?=\d{1,2}\.\s)|(?<=[.;])\s+(?=[A-Z])/).map(x=>x.replace(/^\s*\d{1,2}\.\s*/,"").trim()).filter(x=>x.length>2)}
+/* Two copies of the same document (e.g. the PDF and the Word file of one note) are duplicates when every word of
+   the shorter copy is found in the longer one — the PDF usually carries extra letterhead/footer text. Checked on
+   178 synthetic files: all 30 PDF/Word pairs matched, and no two different notes did (template-built notes that
+   differ only by site or diagnosis are correctly kept apart). */
+function _docWords(t){return String(t||"").toLowerCase().replace(/\[\[page \d+\]\]/g," ").replace(/[^a-z0-9]+/g," ").trim().split(" ").filter(Boolean)}
+function isDuplicateContent(a,b){
+ let A=_docWords(a),B=_docWords(b);if(A.length>B.length)[A,B]=[B,A];
+ if(A.length<20||A.length<0.6*B.length)return false;
+ const bag=new Map();B.forEach(x=>bag.set(x,(bag.get(x)||0)+1));
+ let miss=0;for(const x of A){const c=bag.get(x)||0;if(c>0)bag.set(x,c-1);else miss++}
+ return miss<=Math.max(2,Math.floor(A.length*0.005));
+}
+function findDuplicateOf(rawText,pool){return pool.find(it=>it.rawText&&it.pathway!=="duplicate"&&isDuplicateContent(rawText,it.rawText))||null}
+function _isoDate(s){
+ if(!s)return"";const t=String(s).trim();let m=t.match(/^(\d{4})-(\d{2})-(\d{2})/);if(m)return m[0];
+ m=t.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);if(m)return`${m[3]}-${m[1].padStart(2,"0")}-${m[2].padStart(2,"0")}`;
+ const d=new Date(t);return isNaN(d)?"":d.toISOString().slice(0,10);
+}
+function dateOfServiceOf(raw){const m=_flatText(raw).match(/\b(?:Date of Service|DOS|Date of Visit|Visit Date|seen in our clinic on)\s*:?\s*([A-Z][a-z]+ \d{1,2},? \d{4}|\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2})/);return m?_isoDate(m[1]):""}
+function mrnOf(raw){const m=_flatText(raw).match(/\b(?:MRN|Medical Record Number)\s*:?\s*([A-Za-z0-9\-]{4,20})\b/);return m&&!/^\[|^mrn$/i.test(m[1])?m[1]:""}
+function _siteFromNote(raw,rows){
+ const flat=_flatText(raw);
+ const bad=/\b(?:cyst|lipoma|nevus|carcinoma|neoplasm|keratosis|atypical|pigmented|lesion|growth|mass|tumou?r|wart|indeterminate|epidermal|inclusion|sebaceous|seborrheic|basal|squamous|melanocytic|dysplastic)\b/i;
+ const tries=[
+  /\b(?:lesion|cyst|lipoma|nevus|mole|papule|nodule|plaque|growth|mass) (?:on|of|at|from) (?:the )?((?:left|right|bilateral|mid|upper|lower|central|medial|lateral|posterior|anterior|dorsal|ventral)?\s?[a-z \-]{2,40}?)(?=[.,;:(\n]|\s+(?:with|that|present|performed|under|was|is|measuring|for|highly|suspicious|concerning|clinically|which)\b)/i,
+  /\b(?:biopsy|excision|shave biopsy|punch biopsy|excisional biopsy)\s+(?:of|from|at)\s+(?:the\s+)?((?:left|right)?[a-z ,\-]{2,50}?)\s+(?:lesion|nodule|papule|plaque|cyst|performed|site|was|under)\b/i,
+  /\bbiopsy performed at\s+([a-z ,\-]{3,60}?)(?=[.;\n])/i,
+  /\b((?:left|right) [a-z \-]{3,35}):\s/i
+ ];
+ for(const re of tries){const m=flat.match(re);if(m){const v=m[1].replace(/\s+/g," ").replace(/\s+[A-Z]{2,}\b.*$/,"").replace(/(?:\s+(?:suspicious|concerning|changing|new|growing|lesion|area))+$/i,"").trim();if(v&&!bad.test(v)&&!/^(?:the )?(?:skin|body)$/i.test(v))return v}}
+ const r=(rows||[]).find(x=>x.concept==="Biopsy site")||(rows||[]).find(x=>x.concept==="Body location");
+ return r?String(r.value||""):"";
+}
+function _visitNote(raw,docType){
+ const n=norm(_flatText(raw));
+ const plan=n.match(/\b(hmo|medicaid|medi-cal|managed care|medicare advantage|referral (?:number|#|required|on file)|authorization (?:number|#))\b/);
+ const isNew=docType==="referral_consult"||/\bnew patient\b|\breferr(?:al|ed) (?:for|to) dermatolog/.test(n);
+ if(!isNew&&!plan)return"";
+ return plan?`Visit / referral authorization: plan details found ("${plan[1]}") — confirm a referral or authorization is on file for this visit.`:"Visit / referral authorization: depends on the patient's plan (HMO, Medicaid managed care, some Medicare Advantage). No plan type found in this document — check eligibility.";
+}
+function _checklist(req,rawText){return req.map(r=>{const e=findEvidence(r[1],rawText);return{label:r[0],status:e?"Found":"Missing",evidence:e}})}
+function detectDocumentTriggers(rawText,rows){
+ const flat=_flatText(rawText),n=norm(flat);
+ const plan=planSectionOf(rawText),items=planItemsOf(plan.text);
+ const out={resultVisit:null,pending:null,meds:[],procs:[],discussedOnly:[]};
+ if(_RESULT_VISIT.test(n)){
+  let pathDx="";const m=flat.match(/\bPathology results?\s*:\s*([^.\n]{3,160})/i)||flat.match(/\bPathology (?:was |were )?reviewed with (?:the )?patient\s*:\s*([^.\n]{3,160})/i)||flat.match(/\bPathology(?: review(?:ed)?)?\s*:\s*([^.\n]{3,160})/i)||flat.match(/\bPathology (?:confirmed|consistent with|demonstrates|shows|revealed)\s+([^.\n]{3,160})/i);
+  if(m)pathDx=m[1].replace(/\s*\((?:specific|to be)[^)]*\)\s*$/i,"").trim();
+  if(!pathDx&&_PATH_PENDING.test(n))pathDx=null;   // result not back yet: handled below as pending pathology
+  const planLow=norm(plan.text);
+  const strongVisit=/\b(?:follow-?up|return(?:s|ed)?)\b[^.;\n]{0,30}\b(?:biopsy|pathology) results?\b|\bpatholog(?:y|ic) (?:results? )?(?:was |were )?(?:reviewed|discussed) with (?:the )?patient\b|\bdiscussion of (?:the )?(?:pathology|biopsy) results?\b/.test(n);
+  if(pathDx!==null&&(pathDx||strongVisit))out.resultVisit={date:dateOfServiceOf(rawText),pathDx,site:_siteFromNote(rawText,rows),mrn:mrnOf(rawText),planText:items.join(" · ").slice(0,400),
+   actions:{referral:/\brefer(?:ral|red)?\b/.test(planLow),mohs:/\bmohs\b/.test(planLow),excision:/\bexcision\b|\bre-excision\b/.test(planLow),edc:/\bed&c\b|electrodesiccation|curettage/.test(planLow),
+    noFurtherTx:/no further (?:treatment|therapy|intervention)|reassur|benign[^.]{0,40}no (?:treatment|further)|routine (?:skin )?(?:surveillance|monitoring|follow-up)|continued (?:skin )?surveillance|observation/.test(planLow),
+    treatedAlready:/treated by (?:electrodesiccation|ed&c|the biopsy|curettage|excision)|adequately treated|at the time of (?:the )?biopsy|definitive treatment (?:was )?(?:completed|performed)|completely excised/.test(planLow)}};
+ }
+ const priorBiopsyPending=!out.resultVisit&&_PATH_PENDING.test(n)&&/\breturns? (?:after|following) (?:an? |the )?(?:excisional |shave |punch |incisional )?biops/.test(n);
+ if(!out.resultVisit&&(priorBiopsyPending||_PERFORMED.test(norm(plan.found?plan.text:flat)))){
+  const assess=norm(flat.slice(Math.max(0,flat.search(/ASSESSMENT|Assessment/))));
+  const procLine=items.find(x=>_PERFORMED.test(norm(x)))||"";
+  const diff=(n.match(/\b(?:suspicion for|concern for|rule out|r\/o|possible|suspected|differential(?: diagnosis)?(?: includes)?:?)\s+([a-z ,\/]*?(?:carcinoma|melanoma|keratosis|nevus|keratoacanthoma|bcc|scc)[a-z ]{0,30})/)||[])[1]||"";
+  out.pending={prior:priorBiopsyPending&&!_PERFORMED.test(norm(plan.found?plan.text:flat)),date:dateOfServiceOf(rawText),site:_siteFromNote(rawText,rows),mrn:mrnOf(rawText),procedure:procLine.slice(0,200),differential:diff.trim(),
+   high:/carcinoma|melanoma|\bbcc\b|\bscc\b|atypi|keratoacanthoma|uncertain behavior|d48\.5/.test(assess+" "+diff)};
+ }
+ const seenMed=new Set(),seenProc=new Set();
+ items.forEach(line=>{
+  const l=norm(line);
+  PA_LIKELY_MEDS.forEach(med=>{
+   if(seenMed.has(med.name)||!med.re.test(l))return;
+   if(_NOT_ORDERED.test(l)){out.discussedOnly.push(med.name+" (discussed, not ordered)");return}
+   seenMed.add(med.name);out.meds.push({med,line});
+  });
+  PROC_KINDS.forEach(pk=>{
+   if(seenProc.has(pk.kind)||!pk.re.test(l))return;
+   if(_PERFORMED.test(l))return;                      // done today: handled as pending pathology, not an authorization
+   if(_NOT_ORDERED.test(l)||!_PROC_ORDERED.test(l)){out.discussedOnly.push(pk.label.split(" (")[0]+" (discussed, not ordered)");return}
+   seenProc.add(pk.kind);out.procs.push({pk,line});
+  });
+ });
+ return out;
+}
+function runBatchDocumentPAItems(filename,rawText,dt){
+ const rows=parseSemantic(rawText);
+ const dxRow=rows.find(r=>r.concept==="Diagnosis"),icdRow=rows.find(r=>r.concept==="ICD-10");
+ const relevance=classifyDocumentRelevance(rawText);
+ const docType=dt?dt.type:"clinic_note";
+ const base=()=>({id:_newItemId(),rawText,filename,importedAt:new Date().toISOString(),
+  diagnosis:dxRow?dxRow.value:"(no diagnosis detected — needs review)",diagnosisStage:dxRow?dxRow.stage:"",icd:icdRow?icdRow.value:"",
+  relevanceVerdict:relevance.verdict,relevanceHits:{clinical:relevance.clinicalHits,admin:relevance.adminHits},
+  docType,docTypeConfidence:dt?dt.confidence:0,assignedType:"role",assignedTo:"Unassigned",status:"Pending",missing:[],supported:[],
+  visitNote:_visitNote(rawText,docType)});
+ const tr=detectDocumentTriggers(rawText,rows),out=[];
+ if(tr.resultVisit){
+  const rv=tr.resultVisit;
+  out.push({...base(),pathway:"path_result_visit",paLikelihood:"not_applicable",resultVisit:rv,registryState:"unfiled",
+   serviceLabel:`Pathology result discussed with patient at this visit${rv.pathDx?` — ${rv.pathDx}`:""}. Records the patient notification on the registry case.`,
+   history:[{at:new Date().toISOString(),note:"Imported via batch; recognized as a result-discussion visit and routed to Pathology Intake (no PA checklist)."}]});
+ }
+ if(tr.pending){
+  const pd=tr.pending;
+  out.push({...base(),pathway:"pending_pathology",paLikelihood:"not_applicable",pending:pd,registryState:"unfiled",
+   serviceLabel:pd.prior?"Biopsy done at an earlier visit — pathology still pending. Check whether a pending case already exists before filing.":"Biopsy / excision done at this visit — awaiting the pathology report. Office biopsy is done, so no authorization request is created.",
+   history:[{at:new Date().toISOString(),note:"Imported via batch; procedure performed at visit with specimen to pathology. Routed to Pathology Intake as a pending-pathology case."}]});
+ }
+ tr.meds.forEach(({med,line})=>{
+  let req=null,label=med.name;
+  if(med.paId){const drug=PA_DRUGS.find(d=>d.id===med.paId);if(drug){let di=drug.dx.findIndex(x=>x.req[0][1].split("|").some(t=>norm((dxRow&&dxRow.value)||rawText).includes(t.trim())));if(di<0)di=0;req=drug.dx[di].req;label=drug.name+" — "+drug.dx[di].name}}
+  if(!req)req=[["Diagnosis documented",(dxRow&&dxRow.value?norm(dxRow.value).split(/[^a-z]+/).filter(w=>w.length>4).join("|"):"")||"diagnosis|assessment"],["Severity documented","mild|moderate|severe|bsa|body surface area|easi|pasi|iga|pga|dlqi|hurley"],["Prior therapy tried / failed","failed|inadequate response|not controlled|tried|intolerant|refractory|despite"],["Objective measure","bsa|body surface area|easi|pasi|iga|pga|itch nrs|dlqi|lesion count"]];
+  if(med.tier==="formulary")req=[["Prior generic / first-line therapy tried","failed|inadequate response|not controlled|tried|despite|refractory|previously used|prior treatment"]];
+  const rowsC=_checklist(req,rawText),missing=rowsC.filter(r=>r.status==="Missing").map(r=>r.label);
+  out.push({...base(),pathway:"medication",medication:med.name,orderLine:line.slice(0,240),
+   serviceLabel:med.tier==="formulary"?`${med.name} — formulary / step-therapy check (PA depends on the patient's plan)`:label,
+   missing,supported:rowsC.filter(r=>r.status==="Found").map(r=>r.label),
+   paLikelihood:med.tier==="formulary"?"check_formulary":(missing.length?"needs_attention":"ready"),
+   history:[{at:new Date().toISOString(),note:`Imported via batch; PA-likely medication ordered in the plan: "${line.slice(0,160)}".`}]});
+ });
+ tr.procs.forEach(({pk,line})=>{
+  const rowsC=_checklist(pk.req,rawText),missing=rowsC.filter(r=>r.status==="Missing").map(r=>r.label);
+  out.push({...base(),pathway:"procedure",procedure:pk.label,orderLine:line.slice(0,240),serviceLabel:pk.label+" — check whether the payer requires authorization",
+   missing,supported:rowsC.filter(r=>r.status==="Found").map(r=>r.label),paLikelihood:missing.length?"needs_attention":"ready",
+   history:[{at:new Date().toISOString(),note:`Imported via batch; procedure ordered or scheduled: "${line.slice(0,160)}".`}]});
+ });
+ if(!out.length){
+  out.push({...base(),pathway:"none",paLikelihood:"unlikely",
+   serviceLabel:"No prior-authorization trigger found (no PA-likely medication ordered, no procedure scheduled)"+(tr.discussedOnly.length?`. Discussed only: ${[...new Set(tr.discussedOnly)].join(", ")}`:""),
+   history:[{at:new Date().toISOString(),note:"Imported via batch; no PA trigger found in the plan."}]});
+ }else if(tr.discussedOnly.length){out.forEach(it=>it.discussedOnly=[...new Set(tr.discussedOnly)])}
+ return out;
+}
+function duplicateItem(filename,rawText,dt,orig){
+ return{id:_newItemId(),rawText,filename,importedAt:new Date().toISOString(),diagnosis:orig.diagnosis||"",diagnosisStage:"",icd:orig.icd||"",
+  docType:dt?dt.type:(orig.docType||"other"),docTypeConfidence:dt?dt.confidence:0,pathway:"duplicate",duplicateOf:orig.filename,paLikelihood:"not_applicable",
+  serviceLabel:`Duplicate of ${orig.filename} — same content, not queued again`,missing:[],supported:[],relevanceVerdict:"clinical",relevanceHits:{clinical:[],admin:[]},
+  assignedType:"role",assignedTo:"Unassigned",status:"Pending",history:[{at:new Date().toISOString(),note:`Imported via batch; same content as ${orig.filename}. Kept for the record, not queued.`}]};
+}
+
+/* ---- 0.6.14.0: pending-pathology cases and result-discussion visits -> Pathology Registry ---- */
+function _siteWords(s){return norm(s).replace(/[^a-z ]/g," ").split(/\s+/).filter(w=>w&&!["the","of","area","region","site","aspect","skin","lesion","and"].includes(w))}
+function _sitesMatch(a,b){
+ const A=_siteWords(a),B=_siteWords(b);if(!A.length||!B.length)return false;
+ const lat=x=>x.includes("left")?"L":x.includes("right")?"R":"";
+ if(lat(A)&&lat(B)&&lat(A)!==lat(B))return false;
+ const core=x=>x.filter(w=>w!=="left"&&w!=="right");const ca=core(A),cb=core(B);if(!ca.length||!cb.length)return false;
+ const hit=ca.filter(w=>cb.includes(w)).length;return hit/Math.min(ca.length,cb.length)>=0.6;
+}
+function _realId(id){return!!id&&!/^\(|^\[|not found|unspecified|see source/i.test(String(id))}
+function matchRegistryCaseForResult(rv,cases){
+ const open=(cases||[]).filter(c=>!String(c.status||"").startsWith("Completed"));
+ const group=rv.pathDx?guessDiagnosisGroupV2(rv.pathDx,rv.pathDx):"";
+ const byId=_realId(rv.mrn)?open.filter(c=>c.patientId===rv.mrn):[];
+ const pool=byId.length?byId:open;
+ const hits=pool.filter(c=>_sitesMatch(rv.site,c.site)&&(!group||group==="Other / Benign"||c.group===group||c.group==="Pending pathology"));
+ return hits.length===1?hits[0]:null;
+}
+function _caseBaseId(prefix,filename){return prefix+String(filename||"note").replace(/\.[a-z0-9]+$/i,"").replace(/[^A-Za-z0-9]+/g,"-").slice(0,40)}
+function filePendingCase(it){
+ let cases=loadPathRegistry();if(cases===null)cases=[];
+ const pd=it.pending||{};const caseId=_caseBaseId("PATH-PENDING-",it.filename);
+ if(cases.some(c=>c.caseId===caseId))return{status:"duplicate",caseId};
+ const working=[it.diagnosis&&!/no diagnosis detected/.test(it.diagnosis)?it.diagnosis:"",pd.differential?`differential: ${pd.differential}`:""].filter(Boolean).join("; ");
+ cases.unshift({caseId,patientId:esc(pd.mrn||"(see source document)"),source:"clinic-note",provider:"Unassigned",biopsy:pd.date||"",report:"",completion:"",completionType:"",closedBy:"",
+  group:"Pending pathology",dx:esc("Pending pathology"+(working?` — working dx: ${working}`:"")),site:esc(pd.site||""),status:"Open - Pending Completion",priority:pd.high?"High":"Routine",
+  awaitingReport:true,notifications:[],sourceDocument:it.filename,
+  updates:[{date:pd.date||new Date().toISOString().slice(0,10),type:"Procedure",enteredBy:"From clinic note",text:esc(`Procedure performed at visit (${it.filename}): ${pd.procedure||"biopsy / excision"}. Specimen to pathology.`),next:"Await final pathology report."}]});
+ savePathRegistry(cases);return{status:"sent",caseId};
+}
+function recordResultVisitOnRegistry(it){
+ let cases=loadPathRegistry();if(cases===null)cases=[];
+ const rv=it.resultVisit||{},date=rv.date||new Date().toISOString().slice(0,10);
+ let c=matchRegistryCaseForResult(rv,cases),created=false;
+ if(!c){
+  const caseId=_caseBaseId("PATH-VISIT-",it.filename);
+  if(cases.some(x=>x.caseId===caseId))return{status:"duplicate",caseId};
+  const group=guessDiagnosisGroupV2(rv.pathDx||"",rv.pathDx||"");
+  const malignant=/melanoma|carcinoma/i.test(rv.pathDx||"")||/severe/i.test(rv.pathDx||"");
+  c={caseId,patientId:esc(rv.mrn||"(see source document)"),source:"clinic-note",provider:"Unassigned",biopsy:"",report:"",completion:"",completionType:"",closedBy:"",
+   group,dx:esc(rv.pathDx||"(result named in note)"),site:esc(rv.site||""),status:"Open - Pending Completion",priority:malignant?"High":"Routine",notifications:[],sourceDocument:it.filename,
+   updates:[{date,type:"Pathology result",enteredBy:"From clinic note",text:esc(`Case created from a result-discussion visit (${it.filename}); the pathology report itself has not been filed. Result named in note: ${rv.pathDx||"not stated"}.`),next:"File the pathology report when available."}]};
+  cases.unshift(c);created=true;
+ }
+ c.notifications=Array.isArray(c.notifications)?c.notifications:[];
+ c.notifications.push({date,method:"In person at visit",by:"From clinic note",success:true,note:esc(`Result discussed at visit (${it.filename}).`),source:it.filename});
+ c.updates.push({date,type:"Patient notification",enteredBy:"From clinic note",text:esc(`Pathology result discussed with patient in person (${it.filename}). Plan: ${rv.planText||"see note"}`),next:esc(rv.actions&&rv.actions.referral?"Confirm the referral appointment happened and obtain the consult note.":rv.actions&&(rv.actions.mohs||rv.actions.excision||rv.actions.edc)?"Confirm definitive treatment is scheduled and completed.":"Close the case if no further treatment is needed.")});
+ const a=rv.actions||{},high=c.priority==="High";
+ if(a.treatedAlready)c.closureSuggestion={reason:"Definitive treatment completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
+ else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Benign — patient notified, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
+ else if(a.referral)c.referralPendingConfirmation=true;
+ savePathRegistry(cases);
+ return{status:created?"created":"matched",caseId:c.caseId};
+}
+function renderClinicPathPanel(){
+ const box=$("clinicPathTable");if(!box)return;
+ const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.pathway==="pending_pathology"||it.pathway==="path_result_visit");
+ const done=rows.filter(({it})=>it.registryState==="sent").length;
+ if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} waiting · ${done} filed`;
+ if(!rows.length){box.innerHTML='<div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div>';return}
+ const cases=loadPathRegistry()||[];
+ box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>What happened</th><th>Date</th><th>Site</th><th>Working dx / result</th><th>Plan / next step</th><th>Registry</th><th></th></tr></thead><tbody>'+
+ rows.map(({it,i})=>{
+  const isPend=it.pathway==="pending_pathology",d=isPend?(it.pending||{}):(it.resultVisit||{}),filed=it.registryState==="sent";
+  const match=!isPend&&!filed?matchRegistryCaseForResult(d,cases):null;
+  const regCell=filed?`<span class="pill" style="background:#dcfce7;color:#166534">${esc(it.registryCaseId||"Filed")}</span>`:isPend?'<span class="pill" style="background:#dbeafe;color:#1e40af">Not filed yet</span>':(match?`<span class="pill" style="background:#e0e7ff;color:#3730a3">Matches ${esc(match.caseId)}</span>`:'<span class="pill" style="background:#fef3c7;color:#92400e">No open case matched — will create one</span>');
+  return `<tr>
+   <td>${isPend&&!filed?`<input type="checkbox" class="clinicPathPick" data-i="${i}" ${it.pathSelected?"checked":""}>`:""}</td>
+   <td>${esc(it.filename)}</td>
+   <td>${isPend?'<span class="pill" style="background:#ede9fe;color:#5b21b6">Biopsy / excision — awaiting report</span>':'<span class="pill" style="background:#ccfbf1;color:#115e59">Result discussed with patient</span>'}</td>
+   <td>${esc(d.date||"—")}</td><td>${esc(d.site||"—")}</td>
+   <td>${isPend?esc([it.diagnosis,d.differential?"diff: "+d.differential:""].filter(Boolean).join(" · ")):`<b>${esc(d.pathDx||"—")}</b>`}</td>
+   <td style="min-width:220px">${esc(String(isPend?(d.procedure||"—"):(d.planText||"—")).slice(0,160))}${String(isPend?(d.procedure||""):(d.planText||"")).length>160?"…":""}</td>
+   <td>${regCell}</td>
+   <td><div class="row" style="flex-wrap:nowrap">${!isPend&&!filed?`<button class="btn success clinicResultRecord" data-i="${i}" style="min-height:32px;padding:5px 9px">${match?"Record on case":"Create case"}</button>`:""}<button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></div></td></tr>`;
+ }).join("")+'</tbody></table>';
+ box.querySelectorAll(".clinicPathPick").forEach(c=>c.onchange=()=>{workQueueItems[Number(c.dataset.i)].pathSelected=c.checked;saveWorkQueue(workQueueItems)});
+ box.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
+ box.querySelectorAll(".pathRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Pathology intake item removed",it.filename)});
+ box.querySelectorAll(".clinicResultRecord").forEach(b=>b.onclick=()=>{
+  const it=workQueueItems[Number(b.dataset.i)],r=recordResultVisitOnRegistry(it);
+  if(r.status!=="duplicate"){it.registryState="sent";it.registryCaseId=r.caseId;it.history.push({at:new Date().toISOString(),note:`${r.status==="matched"?"Recorded on":"Created"} Pathology Registry case ${r.caseId}: patient notified in person.`})}
+  saveWorkQueue(workQueueItems);renderWorkQueueTable();
+  const st=$("clinicPathStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=r.status==="duplicate"?`A case for this note already exists (${r.caseId}).`:`${r.status==="matched"?"Recorded the in-person notification on":"Created"} ${r.caseId}. Open the Pathology Registry to review or close it.`;
+  addAudit("Result visit recorded in registry",`${it.filename} → ${r.caseId} (${r.status})`);
+ });
+}
+function clinicPathSelectAll(on){workQueueItems.forEach(it=>{if(it.pathway==="pending_pathology"&&it.registryState!=="sent")it.pathSelected=on});saveWorkQueue(workQueueItems);renderClinicPathPanel()}
+function clinicPathFileChecked(){
+ const st=$("clinicPathStatus");st.classList.remove("hidden");
+ const picks=workQueueItems.filter(it=>it.pathway==="pending_pathology"&&it.pathSelected&&it.registryState!=="sent");
+ if(!picks.length){st.className="notice warn";st.textContent="Nothing is checked. Check the pending-pathology rows to file.";return}
+ let added=0,dup=0;
+ picks.forEach(it=>{const r=filePendingCase(it);if(r.status==="duplicate"){dup++;it.registryState="sent";it.registryCaseId=r.caseId;return}it.registryState="sent";it.registryCaseId=r.caseId;added++;it.history.push({at:new Date().toISOString(),note:`Filed as pending-pathology case ${r.caseId}.`})});
+ saveWorkQueue(workQueueItems);renderWorkQueueTable();
+ st.className="notice ok";st.textContent=`Filed ${added} pending-pathology case(s) in the Pathology Registry${dup?`; ${dup} already there`:""}. They stay open as "awaiting report" until the pathology report is filed.`;
+ addAudit("Pending pathology cases filed",`${added} added, ${dup} already present.`);
+}
+/* When a pathology report is filed, attach it to a matching pending case (same real patient ID + same site)
+   instead of creating a second case. With placeholder IDs nothing is linked automatically. */
+function linkReportToPendingCase(cases,rec){
+ if(!_realId(rec.patientId))return null;
+ const hits=cases.filter(c=>c.awaitingReport&&!String(c.status).startsWith("Completed")&&c.patientId===rec.patientId&&_sitesMatch(c.site,rec.site));
+ if(hits.length!==1)return null;
+ const c=hits[0];
+ Object.assign(c,{report:rec.report,dx:rec.dx,group:rec.group,priority:rec.priority==="High"?"High":c.priority,awaitingReport:false,needsCodingReview:rec.needsCodingReview,referralPendingConfirmation:rec.referralPendingConfirmation||c.referralPendingConfirmation,linkedReportCaseId:rec.caseId});
+ if(rec.closureSuggestion)c.closureSuggestion=rec.closureSuggestion;
+ c.updates.push(...rec.updates);
+ return c;
+}
+
+/* ---- 0.6.14.0: structured JSON case lists come in through the same file picker ---- */
+function importRegistryJson(text,filename){
+ let imported;try{imported=JSON.parse(text)}catch(e){throw new Error("not valid JSON")}
+ if(!Array.isArray(imported))throw new Error("expected a JSON array of case records");
+ let cases=loadPathRegistry();if(cases===null)cases=[];
+ const ids=new Set(cases.map(c=>c.caseId));let added=0,skipped=0;
+ imported.forEach(rec=>{
+  if(!rec||!rec.caseId||ids.has(rec.caseId)){skipped++;return}
+  cases.push({caseId:esc(rec.caseId),patientId:esc(rec.patientId||""),source:"bulk-import",noSourceDocument:true,importFile:filename,provider:esc(rec.provider||"Unassigned"),biopsy:rec.biopsy||"",report:rec.report||"",completion:rec.completion||"",completionType:esc(rec.completionType||""),closedBy:esc(rec.closedBy||""),group:esc(rec.group||"Other / Benign"),dx:esc(rec.dx||"(diagnosis not specified)"),site:esc(rec.site||""),status:rec.completion?"Completed / Closed":"Open - Pending Completion",priority:rec.priority==="High"?"High":"Routine",possibleDuplicate:!!rec.possibleDuplicate,needsCodingReview:!!rec.needsCodingReview,referralPendingConfirmation:!!rec.referralPendingConfirmation,notifications:Array.isArray(rec.notifications)?rec.notifications:[],updates:Array.isArray(rec.updates)?rec.updates.map(u=>({date:u.date||"",type:esc(u.type||"Other"),enteredBy:esc(u.enteredBy||"JSON import"),text:esc(u.text||""),next:esc(u.next||"")})):[]});
+  ids.add(rec.caseId);added++;
+ });
+ savePathRegistry(cases);
+ return{added,skipped};
+}
+
 function renderTeamMembers(){
  const box=$("teamMemberList");if(!box)return;
  box.innerHTML=teamMembers.length?teamMembers.map((n,i)=>`<span class="pill">${esc(n)} <button class="rmTeam" data-i="${i}" style="border:0;background:transparent;cursor:pointer;color:var(--bad);font-weight:700">×</button></span>`).join(" "):'<div class="mini">No named individuals added yet — roles (Coordinator, Provider, Nursing) are always available.</div>';
@@ -1673,28 +2042,32 @@ function relevanceBadge(verdict){
  return `<span class="pill" style="${styles[verdict]||''}">${esc(labels[verdict]||verdict)}</span>`;
 }
 function paLikelihoodBadge(likelihood){
- const styles={"needs_attention":"background:#fee2e2;color:#991b1b","ready":"background:#dcfce7;color:#166534","unlikely":"background:#e5e7eb;color:#374151","not_applicable":"background:#e0e7ff;color:#3730a3"};
- const labels={"needs_attention":"Needs attention","ready":"Ready — supported","unlikely":"PA unlikely","not_applicable":"N/A — completed result"};
+ const styles={"needs_attention":"background:#fee2e2;color:#991b1b","ready":"background:#dcfce7;color:#166534","unlikely":"background:#e5e7eb;color:#374151","not_applicable":"background:#e0e7ff;color:#3730a3","check_formulary":"background:#fef3c7;color:#92400e"};
+ const labels={"needs_attention":"Needs attention","ready":"Ready — supported","unlikely":"PA unlikely","not_applicable":"N/A — no PA request","check_formulary":"Formulary check"};
  return `<span class="pill" style="${styles[likelihood]||''}">${esc(labels[likelihood]||likelihood||"—")}</span>`;
 }
 function renderWorkQueueTable(){
  const box=$("workQueueTable");if(!box)return;
  renderPathRoutePanel();
- {const pa=workQueueItems.filter(it=>!isNonPaItem(it)).length,np=workQueueItems.filter(it=>it.docType==="surgical_pathology").length,lb=workQueueItems.filter(it=>it.docType==="laboratory").length;
+ {const pa=workQueueItems.filter(it=>!isNonPaItem(it)).length,np=workQueueItems.filter(it=>it.docType==="surgical_pathology").length,lb=workQueueItems.filter(it=>it.docType==="laboratory").length,
+   pend=workQueueItems.filter(it=>it.pathway==="pending_pathology").length,rvis=workQueueItems.filter(it=>it.pathway==="path_result_visit").length,dups=workQueueItems.filter(it=>it.pathway==="duplicate").length;
   $("queueCountBadge").textContent=pa+" PA document"+(pa===1?"":"s");
   const ptr=$("wqOtherPointer");
   if(ptr){const parts=[];
    if(np)parts.push(`<b>${np}</b> surgical pathology report${np===1?"":"s"} ${np===1?"is":"are"} in <a href="#" id="goPathIntake">Pathology Intake</a>`);
    if(lb)parts.push(`<b>${lb}</b> laboratory result${lb===1?"":"s"} labeled (no lab module yet — shown when the type filter is set to Laboratory or All types)`);
+   if(pend||rvis)parts.push(`<b>${pend}</b> note${pend===1?"":"s"} with a biopsy/excision awaiting pathology and <b>${rvis}</b> result-discussion visit${rvis===1?"":"s"} are in <a href="#" id="goPathIntake2">Pathology Intake</a>`);
+   if(dups)parts.push(`<b>${dups}</b> duplicate file${dups===1?"":"s"} recognized and not queued (filter: Duplicates)`);
    ptr.innerHTML=parts.length?`<div class="notice" style="margin-bottom:8px">${parts.join(" · ")}.</div>`:"";
-   const g=$("goPathIntake");if(g)g.onclick=e=>{e.preventDefault();showView("pathintake")};}}
+   const g=$("goPathIntake");if(g)g.onclick=e=>{e.preventDefault();showView("pathintake")};
+   const g2=$("goPathIntake2");if(g2)g2.onclick=e=>{e.preventDefault();showView("pathintake")};}}
  if(!workQueueItems.length){box.innerHTML='<div class="notice">No documents imported yet — use Batch Import above.</div>';return}
  // 0.6.13.21: filter by PA likelihood while keeping each row's original array index intact, so
  // assign/status/remove/open actions still target the correct underlying item after filtering.
  const filterVal=$("paLikelihoodFilter")?$("paLikelihoodFilter").value:"all";
  const typeVal=$("docTypeFilter")?$("docTypeFilter").value:"pa";
  const dtOf=it=>it.docType||"clinic_note";
- const indexed=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>(filterVal==="all"||it.paLikelihood===filterVal)&&(typeVal==="all"||(typeVal==="pa"?!isNonPaItem(it):dtOf(it)===typeVal)));
+ const indexed=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>(filterVal==="all"||it.paLikelihood===filterVal)&&(typeVal==="all"||(typeVal==="pa"?!isNonPaItem(it):typeVal==="duplicate"?it.pathway==="duplicate":dtOf(it)===typeVal)));
  if(!indexed.length){box.innerHTML=typeVal==="pa"&&!workQueueItems.some(it=>!isNonPaItem(it))?'<div class="notice">No prior-authorization documents yet — import clinic, consult or referral notes above.</div>':`<div class="notice">No items match this filter.</div>`;return}
  box.innerHTML='<table><thead><tr><th>Document</th><th>Type</th><th>Relevance</th><th>PA Likelihood</th><th>Diagnosis</th><th>Pathway / Service</th><th>Missing evidence</th><th>Assigned to</th><th>Status</th><th></th></tr></thead><tbody>'+
   indexed.map(({it,i})=>{
@@ -1706,7 +2079,7 @@ function renderWorkQueueTable(){
    <td>${it.relevanceVerdict?relevanceBadge(it.relevanceVerdict):'<span class="mini">—</span>'}</td>
    <td>${paLikelihoodBadge(it.paLikelihood)}</td>
    <td>${esc(it.diagnosis)}${it.icd?` (${esc(it.icd)})`:""}${it.diagnosisStage?`<div class="mini"><span class="pill">${esc(it.diagnosisStage)}</span></div>`:""}</td>
-   <td>${esc(it.serviceLabel)}</td>
+   <td>${esc(it.serviceLabel)}${it.orderLine?`<div class="mini">Ordered: “${esc(it.orderLine)}”</div>`:""}${it.visitNote?`<div class="mini">${esc(it.visitNote)}</div>`:""}</td>
    <td>${isNonPaItem(it)?pathStatePill(it):(it.missing.length?it.missing.map(m=>`<span class="pill" style="background:#fef2f2">${esc(m)}</span>`).join(""):'<span class="pill" style="background:#f0fdf4">None</span>')}</td>
    <td><select class="wqAssign" data-i="${i}">${assignOptionsHtml(it.assignedType,it.assignedTo)}</select></td>
    <td>${isNonPaItem(it)?'<span class="mini">No PA status</span>':`<select class="wqStatus" data-i="${i}">${["Pending","Submitted","Approved","Denied","Completed"].map(s=>`<option value="${s}"${it.status===s?" selected":""}>${s}</option>`).join("")}</select>`}</td>
@@ -1723,13 +2096,17 @@ async function handleBatchImport(fileList){
  const progs=[$("batchProgress"),$("pathBatchProgress")].filter(Boolean);
  const prog={set textContent(t){progs.forEach(p=>{p.style.display="";p.textContent=t})},set className(c){progs.forEach(p=>{p.className=c})}};
  prog.className="notice";
- let done=0,failed=[],extra=0;
+ let done=0,failed=[],extra=0,dups=0,made=0,jsonAdded=0,jsonSkipped=0;
  for(const file of files){
    prog.textContent=`Processing ${done+1} of ${files.length}: ${file.name}…`;
    try{
+     if(/\.json$/i.test(file.name)){const r=importRegistryJson(await file.text(),file.name);jsonAdded+=r.added;jsonSkipped+=r.skipped;done++;continue}
      const text=await extractFile(file);
-     const items=runBatchDocumentMulti(file.name,text);
-     extra+=items.length-1;
+     const dupOf=findDuplicateOf(text,workQueueItems);
+     let items;
+     if(dupOf){items=[duplicateItem(file.name,text,classifyDocumentType(text),dupOf)];dups++}
+     else{items=runBatchDocumentMulti(file.name,text);const pathRows=items.filter(x=>x.docType==="surgical_pathology").length;if(pathRows>1)extra+=pathRows-1}
+     made+=items.length;
      [...items].reverse().forEach(item=>workQueueItems.unshift(item));
    }catch(err){failed.push(file.name+" ("+err.message+")")}
    done++;
@@ -1737,7 +2114,7 @@ async function handleBatchImport(fileList){
  saveWorkQueue(workQueueItems);
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} documents scanned and added.`+(extra?` ${extra} extra row${extra===1?"":"s"} created from reports with several specimens (one row per specimen).`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
@@ -1762,7 +2139,7 @@ function syncCurrentDocumentToQueue(){
  const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);
  if(!it){alert("The linked Work Queue item could not be found (it may have been removed).");return}
  const rescanned=runBatchDocument(it.filename,ingestState.raw);
- Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported,paLikelihood:rescanned.paLikelihood,relevanceVerdict:rescanned.relevanceVerdict,relevanceHits:rescanned.relevanceHits,docType:rescanned.docType,docTypeConfidence:rescanned.docTypeConfidence});
+ Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported,paLikelihood:rescanned.paLikelihood,relevanceVerdict:rescanned.relevanceVerdict,relevanceHits:rescanned.relevanceHits,docType:rescanned.docType,docTypeConfidence:rescanned.docTypeConfidence,pending:rescanned.pending,resultVisit:rescanned.resultVisit,medication:rescanned.medication,procedure:rescanned.procedure,orderLine:rescanned.orderLine,visitNote:rescanned.visitNote});
  if(rescanned.docType==="surgical_pathology"&&it.registryState!=="sent"&&it.registryState!=="duplicate"){it.pathData=ingestState.path||rescanned.pathData;it.registryState=rescanned.registryState}
  it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document Intake Lab."});
  saveWorkQueue(workQueueItems);
@@ -2211,6 +2588,7 @@ $("teamMemberAdd").onclick=()=>{const n=$("teamMemberInput").value.trim();if(!n)
 $("clearQueueBtn").onclick=()=>{if(confirm("Clear the entire batch worklist? This cannot be undone.")){workQueueItems=[];saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Work queue cleared","Manual clear from Work Queue tab.")}};
 $("paLikelihoodFilter").onchange=renderWorkQueueTable;
 $("docTypeFilter").onchange=renderWorkQueueTable;
+$("clinicPathAll").onclick=()=>clinicPathSelectAll(true);$("clinicPathNone").onclick=()=>clinicPathSelectAll(false);$("clinicPathFile").onclick=clinicPathFileChecked;
 $("pathSelectClean").onclick=()=>pathRouteSelect("clean");$("pathSelectAll").onclick=()=>pathRouteSelect("all");$("pathSelectNone").onclick=()=>pathRouteSelect("none");$("pathSendBtn").onclick=pathRouteSend;
 $("pfSend").onclick=pfSend;$("pfSave").onclick=pfSave;$("pfDx").oninput=refreshPathFormCoding;
 $("docTypeOverride").onchange=()=>{if(($("rawSource").value||"").trim())extractAndMap()};
