@@ -81,6 +81,10 @@ a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:70
    <label>Biopsy Date<input id="biopsyDate" type="date"></label>
    <label>Final Report Date<input id="reportDate" type="date"></label>
   </div>
+  <div class="grid two" style="margin-top:12px">
+   <label>Biopsy site (correct it here if PH read it wrong)<input id="caseSite" placeholder="e.g. left forearm"></label>
+   <label>Final diagnosis (correct it here if PH read it wrong)<input id="caseDx"></label>
+  </div>
   <div class="grid four" style="margin-top:12px">
    <div class="metric"><span>Biopsy → Report</span><strong id="d1">—</strong></div>
    <div class="metric"><span>Report → Notified</span><strong id="dN">—</strong></div>
@@ -295,7 +299,7 @@ function openCase(id){lastRowId=id;$("reportViewer").classList.add("hidden");$("
  active.updates=active.updates||[];
  $("casePanel").classList.remove("hidden");
  $("caseTitle").textContent=`${active.caseId} — ${active.patientId}`.replace(/&amp;/g,"&");
- {const sel=$("biopsyProvider");if(active.provider&&![...sel.options].some(o=>o.value===active.provider)){const o=document.createElement("option");o.textContent=active.provider.replace(/&amp;/g,"&");o.value=active.provider;sel.appendChild(o)}sel.value=active.provider||"Unassigned";}$("biopsyDate").value=active.biopsy||"";$("reportDate").value=active.report||"";
+ {const sel=$("biopsyProvider");if(active.provider&&![...sel.options].some(o=>o.value===active.provider)){const o=document.createElement("option");o.textContent=active.provider.replace(/&amp;/g,"&");o.value=active.provider;sel.appendChild(o)}sel.value=active.provider||"Unassigned";}$("biopsyDate").value=active.biopsy||"";$("reportDate").value=active.report||"";$("caseSite").value=String(active.site||"").replace(/&amp;/g,"&");$("caseDx").value=String(active.dx||"").replace(/&amp;/g,"&");
  $("contactDate").value=today();$("closeDate").value=today();$("planDate").value=today();$("planDue").value=active.planDue||"";$("planText").value="";$("planMsg").innerHTML="";$("newUpdateDate").value=today();
  ["detailsMsg"].forEach(x=>$(x).textContent="");["contactMsg","closeMsg"].forEach(x=>$(x).innerHTML="");
  renderCase();$("casePanel").scrollIntoView({behavior:"smooth"});
@@ -442,7 +446,12 @@ function reopenCase(){
  save();renderCase();render();showMsg("closeMsg",true,"Case reopened and back on the open worklist.");
 }
 $("addUpdateBtn").onclick=()=>{if(!active)return;const text=$("newUpdateText").value.trim();if(!text)return alert("Enter update text.");active.updates.push({date:$("newUpdateDate").value,type:$("newUpdateType").value,enteredBy:$("enteredBy").value,text:esc(text),next:esc($("newNextAction").value)});$("newUpdateText").value="";$("newNextAction").value="";save();renderCase();render()};
-$("saveCaseBtn").onclick=()=>{if(!active)return;active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;if(active.report&&active.awaitingReport)active.awaitingReport=false;save();renderCase();render();$("detailsMsg").textContent="Saved."};
+$("saveCaseBtn").onclick=()=>{if(!active)return;
+ const site=$("caseSite").value.trim(),dx=$("caseDx").value.trim(),oldSite=String(active.site||"").replace(/&amp;/g,"&"),oldDx=String(active.dx||"").replace(/&amp;/g,"&"),ch=[];
+ if(site!==oldSite){ch.push(`site "${oldSite||"not recorded"}" → "${site}"`);active.site=esc(site)}
+ if(dx&&dx!==oldDx){ch.push(`diagnosis "${oldDx}" → "${dx}"`);active.dx=esc(dx)}
+ if(ch.length)active.updates.push({date:today(),type:"Provider review",enteredBy:"Registry user",text:esc("Corrected after checking the source report: "+ch.join("; ")+"."),next:""});
+ active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;if(active.report&&active.awaitingReport)active.awaitingReport=false;save();renderCase();render();$("detailsMsg").textContent="Saved."};
 function save(){localStorage.setItem(KEY,JSON.stringify(cases))}
 $("groupFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;
 $("resetBtn").onclick=()=>{if(!confirm("Replace the whole registry with the three demo cases? Imported and hand-entered cases will be removed. This cannot be undone."))return;cases=structuredClone(seed);save();active=null;$("casePanel").classList.add("hidden");render();$("adminStatus").textContent="Demo data restored."};
