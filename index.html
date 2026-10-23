@@ -299,7 +299,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a></div>
+  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><div class="row"><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a><button class="btn primary" id="exportWorklistBtn" title="Save everything imported so far as one .json file to send to a colleague">Export worklist (one file)</button></div></div>
+  <div id="exportStatus" class="notice hidden" style="margin-top:8px"></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -2089,8 +2090,37 @@ function linkReportToPendingCase(cases,rec){
 }
 
 /* ---- 0.6.14.0: structured JSON case lists come in through the same file picker ---- */
+/* 0.6.14.1: one-file hand-off. The export holds every worklist case with its history plus every imported
+   document with its original text, so the receiver gets the same worklist and View pathology report works.
+   The receiver loads it with the normal Choose Files button; nothing already in their browser is overwritten. */
+const EXPORT_TAG="ph-pathology-worklist";
+function exportWorklist(){
+ const cases=loadPathRegistry()||[];
+ const data={phExport:EXPORT_TAG,format:1,appVersion:"0.6.14.1",exportedAt:new Date().toISOString(),cases,documents:workQueueItems};
+ const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+ const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`PH-worklist-${new Date().toISOString().slice(0,10)}.json`;
+ document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+ const st=$("exportStatus");st.classList.remove("hidden");st.className="notice ok";
+ st.innerHTML=`Saved <b>${a.download}</b> to your Downloads folder: ${cases.length} case${cases.length===1?"":"s"} and ${workQueueItems.length} document${workQueueItems.length===1?"":"s"}. Send that one file. The other person opens PH, goes to <b>6. Pathology Worklist</b>, clicks <b>Choose Files</b> and picks it.`;
+ addAudit("Worklist exported",`${cases.length} cases, ${workQueueItems.length} documents → ${a.download}`);
+}
+function importWorklistExport(data){
+ let cases=loadPathRegistry();if(cases===null)cases=[];
+ const ids=new Set(cases.map(c=>c.caseId));let added=0,skipped=0,docs=0;
+ // a case already here is replaced only when the file's copy has more history (it was worked further)
+ (data.cases||[]).forEach(c=>{if(!c||!c.caseId){skipped++;return}
+  if(ids.has(c.caseId)){const i=cases.findIndex(x=>x.caseId===c.caseId);if((c.updates||[]).length>(cases[i].updates||[]).length){cases[i]=c;added++}else skipped++;return}
+  cases.push(c);ids.add(c.caseId);added++});
+ savePathRegistry(cases);
+ const have=new Set(workQueueItems.map(it=>it.id));
+ (data.documents||[]).forEach(it=>{if(it&&it.id&&!have.has(it.id)){workQueueItems.push(it);have.add(it.id);docs++}});
+ saveWorkQueue(workQueueItems);
+ addAudit("Worklist file loaded",`${added} cases added, ${skipped} already present, ${docs} documents added.`);
+ return{added,skipped,docs};
+}
 function importRegistryJson(text,filename){
  let imported;try{imported=JSON.parse(text)}catch(e){throw new Error("not valid JSON")}
+ if(imported&&imported.phExport===EXPORT_TAG)return importWorklistExport(imported);
  if(!Array.isArray(imported))throw new Error("expected a JSON array of case records");
  let cases=loadPathRegistry();if(cases===null)cases=[];
  const ids=new Set(cases.map(c=>c.caseId));let added=0,skipped=0;
@@ -2173,11 +2203,11 @@ async function handleBatchImport(fileList){
  const progs=[$("batchProgress"),$("pathBatchProgress")].filter(Boolean);
  const prog={set textContent(t){progs.forEach(p=>{p.style.display="";p.textContent=t})},set className(c){progs.forEach(p=>{p.className=c})}};
  prog.className="notice";
- let done=0,failed=[],extra=0,dups=0,made=0,jsonAdded=0,jsonSkipped=0;
+ let done=0,failed=[],extra=0,dups=0,made=0,jsonAdded=0,jsonSkipped=0,jsonDocs=0;
  for(const file of files){
    prog.textContent=`Processing ${done+1} of ${files.length}: ${file.name}…`;
    try{
-     if(/\.json$/i.test(file.name)){const r=importRegistryJson(await file.text(),file.name);jsonAdded+=r.added;jsonSkipped+=r.skipped;done++;continue}
+     if(/\.json$/i.test(file.name)){const r=importRegistryJson(await file.text(),file.name);jsonAdded+=r.added;jsonSkipped+=r.skipped;jsonDocs+=r.docs||0;done++;continue}
      const text=await extractFile(file);
      const dupOf=findDuplicateOf(text,workQueueItems);
      let items;
@@ -2192,7 +2222,7 @@ async function handleBatchImport(fileList){
  const auto=autoFileToWorklist();
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending||auto.visits)?` Pathology worklist: ${auto.reports} report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report added; ${auto.visits} result visit${auto.visits===1?"":"s"} recorded, ${auto.signed} signed off.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending||auto.visits)?` Pathology worklist: ${auto.reports} report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report added; ${auto.visits} result visit${auto.visits===1?"":"s"} recorded, ${auto.signed} signed off.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` Worklist / JSON files: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the pathology worklist${jsonDocs?` with ${jsonDocs} original document${jsonDocs===1?"":"s"}`:""}${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
@@ -2669,6 +2699,7 @@ $("paLikelihoodFilter").onchange=renderWorkQueueTable;
 $("docTypeFilter").onchange=renderWorkQueueTable;
 $("clinicPathAll").onclick=()=>clinicPathSelectAll(true);$("clinicPathNone").onclick=()=>clinicPathSelectAll(false);$("clinicPathFile").onclick=clinicPathFileChecked;
 $("pathSelectClean").onclick=()=>pathRouteSelect("clean");$("pathSelectAll").onclick=()=>pathRouteSelect("all");$("pathSelectNone").onclick=()=>pathRouteSelect("none");$("pathSendBtn").onclick=pathRouteSend;
+$("exportWorklistBtn").onclick=exportWorklist;
 $("pfSend").onclick=pfSend;$("pfSave").onclick=pfSave;$("pfDx").oninput=refreshPathFormCoding;
 $("docTypeOverride").onchange=()=>{if(($("rawSource").value||"").trim())extractAndMap()};
 autoFileToWorklist();
