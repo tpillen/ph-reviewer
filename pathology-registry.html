@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PH Pathology Tracking Registry Alpha 0.2.0</title>
+<title>PH Pathology Tracking Registry Alpha 0.2.1</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
@@ -28,7 +28,7 @@ details summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
-<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.2.0 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
+<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.2.1 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
 <div class="wrap">
 <div class="panel grid five">
  <div class="metric"><span>Open cases</span><strong id="openCount"></strong></div>
@@ -62,7 +62,7 @@ details summary{cursor:pointer;font-weight:700}
 </div>
 
 <div class="panel hidden" id="casePanel">
- <div class="row" style="justify-content:space-between"><h2 id="caseTitle" style="margin:0"></h2><span id="caseStepBadge"></span></div>
+ <div class="row" style="justify-content:space-between"><h2 id="caseTitle" style="margin:0"></h2><span class="row"><span id="caseStepBadge"></span><button class="secondary" id="jumpCloseBtn">Remove from worklist ↓</button></span></div>
  <div id="caseSource" class="source" style="margin-top:4px"></div>
  <div id="suggestBox" class="suggest hidden"></div>
 
@@ -97,16 +97,17 @@ details summary{cursor:pointer;font-weight:700}
  </div>
 
  <div class="section" id="closeSection">
-  <h3>2. Close case</h3>
+  <h3>2. Remove from worklist (close case)</h3>
+  <div class="source" style="margin-bottom:8px">Choose why the patient is coming off the worklist. The case stays in the registry with its history and can be reopened.</div>
   <div id="closeForm">
    <div class="grid four">
     <label>Closure date<input id="closeDate" type="date"></label>
-    <label>Reason the case is complete<select id="closeReason"></select></label>
+    <label>Reason for removal<select id="closeReason"></select></label>
     <label>Closed by<select id="closedBy"><option></option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
     <label>Closure note<input id="closeNote" placeholder="e.g. Mohs completed 9/14, clear margins"></label>
    </div>
    <div class="source" id="reasonHint" style="margin-top:4px"></div>
-   <div class="row" style="margin-top:8px"><button class="success" id="closeCaseBtn">Close case</button></div>
+   <div class="row" style="margin-top:8px"><button class="success" id="closeCaseBtn">Remove from worklist</button></div>
   </div>
   <div id="closedSummary" class="hidden"></div>
   <div id="closeMsg"></div>
@@ -171,6 +172,7 @@ const CLOSE_REASONS=[
  {r:"Patient declined recommended treatment (documented)",high:true,notify:true,note:true,hint:"Informed refusal documented. Note required."},
  {r:"Lost to follow-up — contact attempts exhausted",high:true,notify:false,attempts:3,hint:"Requires at least 3 recorded contact attempts, including a mailed letter."},
  {r:"Patient deceased or transferred care",high:true,notify:false,note:true,hint:"Note required (date and source of information)."},
+ {r:"Duplicate or entered in error",high:true,notify:false,note:true,hint:"Use when this case repeats another case or was created by mistake. Note required: name the case it duplicates or the error."},
  {r:"Other documented closure",high:true,notify:true,note:true,hint:"Note required."}
 ];
 const seed=[
@@ -290,12 +292,12 @@ function renderCase(){
  // close / closed
  const reasons=CLOSE_REASONS.map(x=>x.r);const curR=$("closeReason").value;fillSelect($("closeReason"),reasons,true);if(curR)$("closeReason").value=curR;updateReasonHint();
  if(closed){
-  $("closeForm").classList.add("hidden");$("closedSummary").classList.remove("hidden");
+  $("closeForm").classList.add("hidden");$("closedSummary").classList.remove("hidden");$("jumpCloseBtn").classList.add("hidden");
   const cl=active.closure||{date:active.completion,reason:active.completionType,by:active.closedBy,note:""};
   $("closedSummary").innerHTML=`<div class="msg ok"><b>Closed ${cl.date||""}</b> · ${cl.reason||"reason not recorded"}${cl.by?` · by ${cl.by}`:""}${cl.note?`<div>${cl.note}</div>`:""}</div>
    <div class="grid two" style="margin-top:8px"><label>Reason for reopening<input id="reopenReason" placeholder="e.g. margins involved on re-review"></label><div class="row" style="align-items:flex-end"><button class="secondary" id="reopenBtn">Reopen case</button></div></div>`;
   $("reopenBtn").onclick=reopenCase;
- }else{$("closeForm").classList.remove("hidden");$("closedSummary").classList.add("hidden")}
+ }else{$("closeForm").classList.remove("hidden");$("closedSummary").classList.add("hidden");$("jumpCloseBtn").classList.remove("hidden")}
  $("updateHistory").innerHTML=(active.updates||[]).slice().sort((a,b)=>String(a.date).localeCompare(b.date)).map(u=>`<div class="panel" style="margin-bottom:8px"><b>${u.date||"Date not recorded"} · ${u.type}</b><div>${u.text}</div><div class="source">Entered by: ${u.enteredBy||"—"} · Next: ${u.next||"—"}</div></div>`).join("")||'<div class="source">No updates yet.</div>';
 }
 function updateMethodHint(){
@@ -304,6 +306,7 @@ function updateMethodHint(){
 }
 function updateReasonHint(){const r=CLOSE_REASONS.find(x=>x.r===$("closeReason").value);$("reasonHint").textContent=r?r.hint:"Choose why this case is complete."}
 function showMsg(id,ok,text){$(id).innerHTML=`<div class="msg ${ok?"ok":"bad"}">${text}</div>`}
+$("jumpCloseBtn").onclick=()=>$("closeSection").scrollIntoView({behavior:"smooth"});
 $("contactMethod").onchange=updateMethodHint;$("closeReason").onchange=updateReasonHint;
 $("recordContactBtn").onclick=()=>{
  if(!active)return;
@@ -329,7 +332,7 @@ $("closeCaseBtn").onclick=()=>{
   if(r.notify&&ns.notified&&needsDirect(active)&&!ns.direct)problems.push("High-priority case: record a direct notification (phone — spoke with patient, or in person) first.");
   if(r.attempts&&(ns.attempts<r.attempts||ns.letters<1))problems.push(`Lost to follow-up needs at least ${r.attempts} recorded contact attempts including a mailed letter (currently ${ns.attempts} attempt${ns.attempts===1?"":"s"}, ${ns.letters} letter${ns.letters===1?"":"s"}).`);
   if(r.note&&!note)problems.push("A closure note is required for this reason.");
-  if(active.awaitingReport&&!/deceased|lost to follow-up|declined/i.test(reason))problems.push("No pathology report has been filed for this case yet.");
+  if(active.awaitingReport&&!/deceased|lost to follow-up|declined|duplicate/i.test(reason))problems.push("No pathology report has been filed for this case yet.");
  }
  if(problems.length)return showMsg("closeMsg",false,"Not closed:<br>• "+problems.join("<br>• "));
  active.closure={date,reason,by,note:esc(note)};
@@ -337,7 +340,7 @@ $("closeCaseBtn").onclick=()=>{
  active.updates.push({date,type:"Case closed",enteredBy:by,text:esc(reason+(note?": "+note:"")),next:"None — case closed."});
  delete active.closureSuggestion;
  $("closeNote").value="";save();renderCase();render();
- showMsg("closeMsg",true,"Case closed. It has left the open worklist and stays in the registry with its history.");
+ showMsg("closeMsg",true,"Removed from the worklist (case closed). It stays in the registry with its history.");
 };
 function reopenCase(){
  const why=($("reopenReason")||{}).value||"";
