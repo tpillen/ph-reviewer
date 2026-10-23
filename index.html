@@ -299,7 +299,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><div class="row"><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a><button class="btn primary" id="exportWorklistBtn" title="Save everything imported so far as one .json file to send to a colleague">Export worklist (one file)</button></div></div>
+  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><div class="row"><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a><button class="btn danger" id="clearPathBtn" title="Empty the pathology worklist (asks first)">Clear pathology worklist</button><button class="btn primary" id="exportWorklistBtn" title="Save everything imported so far as one .json file to send to a colleague">Export worklist (one file)</button></div></div>
   <div id="exportStatus" class="notice hidden" style="margin-top:8px"></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
@@ -2675,7 +2675,23 @@ $("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("s
 $("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
 
 $("feedbackBtn").onclick=()=>$("feedbackModal").classList.remove("hidden");$("closeFeedback").onclick=()=>$("feedbackModal").classList.add("hidden");$("submitFeedback").onclick=async()=>{const comment=$("feedbackComment").value.trim();if(!comment)return;const record={id:"CO-"+Date.now(),reviewer:"Todd Pillen, PA-C/SA",type:"Reviewer feedback",module:"Alpha 0.6.13",priority:"Routine",comment,caseId:"Synthetic reviewer",url:location.href,appVersion:VERSION,environment:"Reviewer",createdAt:new Date().toISOString(),status:"New"};try{const res=await fetch("https://ph-feedback.tpillen104.workers.dev/",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(record)});if(!res.ok)throw new Error("Server "+res.status);$("feedbackStatus").className="notice ok";$("feedbackStatus").textContent="Feedback submitted.";$("feedbackComment").value=""}catch(e){$("feedbackStatus").className="notice warn";$("feedbackStatus").textContent="Feedback could not be submitted: "+e.message}};
-$("resetBtn").onclick=()=>{if(confirm("Reset the synthetic 0.6.13 reviewer session?"))location.reload()};
+// 0.6.14.1: Reset Demo really resets: imported documents, the PA work queue and the pathology worklist are cleared
+// (the worklist comes back with its 3 demo cases). Mapping memory, team members and the ICD list are kept.
+$("resetBtn").onclick=()=>{
+ if(!confirm("Reset Demo clears every imported document, the prior-authorization Work Queue and the pathology worklist (it comes back with the 3 demo cases). Mapping memory and team members are kept.\n\nThe live site and the /test/ page share this data in this browser, so both are reset.\n\nExport the worklist first if you want to keep it. Continue?"))return;
+ [WORK_QUEUE_KEY,PATH_REGISTRY_KEY,BIOPSY_KEY].forEach(k=>{try{localStorage.removeItem(k)}catch{}});
+ location.reload();
+};
+$("clearPathBtn").onclick=()=>{
+ const n=(loadPathRegistry()||[]).length;
+ if(!confirm(`Clear the pathology worklist? This removes all ${n} case(s), open and completed, and the pathology reports and clinic notes they came from. Prior-authorization items are not touched.\n\nThe live site and the /test/ page share this data in this browser, so both are cleared.\n\nExport the worklist first if you want to keep it. This cannot be undone. Continue?`))return;
+ savePathRegistry([]);
+ const before=workQueueItems.length;
+ workQueueItems=workQueueItems.filter(it=>!(it.docType==="surgical_pathology"||it.pathway==="pending_pathology"||it.pathway==="path_result_visit"));
+ saveWorkQueue(workQueueItems);renderWorkQueueTable();
+ addAudit("Pathology worklist cleared",`${n} cases and ${before-workQueueItems.length} pathology documents removed.`);
+ const st=$("exportStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=`Pathology worklist cleared: ${n} case(s) and ${before-workQueueItems.length} document(s) removed. Load files with Choose Files to start again.`;
+};
 
 $("biopsyEpisodeId").value=newBiopsyId();
 /* 0.6.13.8: informational CPT hint only — technique-based biopsy codes are stable regardless of
