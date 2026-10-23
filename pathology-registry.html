@@ -163,9 +163,12 @@ const CONTACT_METHODS=[
  {m:"Phone — no answer",notified:false},
  {m:"Unable to reach — wrong or disconnected number",notified:false}
 ];
+/* Earlier versions used these labels; closure suggestions saved with them still map to the current list. */
+const LEGACY_REASONS={"Benign — patient notified, no further treatment needed":"Results and plan given to patient — no further treatment needed","Definitive treatment completed":"Definitive care completed"};
 const CLOSE_REASONS=[
- {r:"Benign — patient notified, no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient informed."},
- {r:"Definitive treatment completed",high:true,notify:true,hint:"Excision, Mohs, ED&C, destruction or a completed topical course. Add what was done and when in the note."},
+ {r:"Definitive care completed",high:true,notify:true,hint:"Excision, Mohs, ED&C, destruction or a completed topical course. Add what was done and when in the note."},
+ {r:"Results and plan given to patient — no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient told the result and the plan. Not allowed for high-priority cases."},
+ {r:"Definitive care initiated — treatment scheduled or started",high:false,notify:true,note:true,hint:"Patient told the result and treatment is booked or under way. Note required (what and when). High-priority cases stay open until care is completed."},
  {r:"Excision with clear margins (from pathology report)",high:true,notify:true,hint:"The excision report shows uninvolved margins; patient informed."},
  {r:"Referred out — patient seen by specialist",high:true,notify:true,hint:"Confirmation that the referral visit happened (consult note on file)."},
  {r:"Referred out — management completed",high:true,notify:true,hint:"The receiving specialist has documented completed management."},
@@ -182,7 +185,7 @@ const seed=[
   {date:"2026-07-05",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"Final pathology received; Mohs recommended.",next:"Notify patient and schedule Mohs."},
   {date:"2026-07-06",type:"Patient notification",enteredBy:"Medical Assistant",text:"Phone — spoke with patient: Patient notified of diagnosis.",next:"Schedule Mohs."}]},
  {caseId:"PATH-SYN-002",patientId:"PT-SYN-001",provider:"Mallory Heath, PA-C",biopsy:"2026-07-10",report:"2026-07-13",completion:"2026-07-29",completionType:"Definitive treatment completed",closedBy:"Mallory Heath, PA-C",group:"Squamous Cell Carcinoma",dx:"Squamous Cell Carcinoma in situ",site:"Right forearm",status:"Completed / Closed",priority:"High",
-  closure:{date:"2026-07-29",reason:"Definitive treatment completed",by:"Mallory Heath, PA-C",note:"ED&C completed."},
+  closure:{date:"2026-07-29",reason:"Definitive care completed",by:"Mallory Heath, PA-C",note:"ED&C completed."},
   notifications:[{date:"2026-07-14",method:"Phone — spoke with patient",by:"Medical Assistant",success:true,note:""}],updates:[
   {date:"2026-07-13",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"SCC in situ confirmed.",next:"Schedule ED&C."},
   {date:"2026-07-14",type:"Patient notification",enteredBy:"Medical Assistant",text:"Phone — spoke with patient.",next:"Schedule ED&C."},
@@ -288,7 +291,7 @@ function renderCase(){
  // suggestion
  const sg=active.closureSuggestion;
  if(sg&&!closed){$("suggestBox").classList.remove("hidden");$("suggestBox").innerHTML=`<b>Suggested closure</b> (from ${esc(sg.source||"import")}): ${esc(sg.reason)}<div class="source">${esc(sg.note||"")}</div><div class="row" style="margin-top:6px"><button class="primary" id="useSuggestBtn">Use this suggestion</button><button class="secondary" id="dismissSuggestBtn">Dismiss</button></div>`;
-  $("useSuggestBtn").onclick=()=>{$("closeReason").value=sg.reason;$("closeNote").value=String(sg.note||"").replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">");updateReasonHint();$("closeSection").scrollIntoView({behavior:"smooth"})};
+  $("useSuggestBtn").onclick=()=>{$("closeReason").value=LEGACY_REASONS[sg.reason]||sg.reason;$("closeNote").value=String(sg.note||"").replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">");updateReasonHint();$("closeSection").scrollIntoView({behavior:"smooth"})};
   $("dismissSuggestBtn").onclick=()=>{active.updates.push({date:today(),type:"Provider review",enteredBy:"Registry user",text:`Closure suggestion dismissed: ${esc(sg.reason)}.`,next:""});delete active.closureSuggestion;save();renderCase();render()};
  }else $("suggestBox").classList.add("hidden");
  // close / closed
@@ -329,7 +332,7 @@ $("closeCaseBtn").onclick=()=>{
  if(!date)problems.push("Enter the closure date.");
  if(!by)problems.push("Choose who is closing the case.");
  if(r){
-  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia); it cannot be closed as benign.");
+  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia). It stays on the worklist until definitive care is completed, referred care is confirmed, or another high-priority reason applies.");
   if(r.notify&&!ns.notified)problems.push("Record the patient notification first (section 1).");
   if(r.notify&&ns.notified&&needsDirect(active)&&!ns.direct)problems.push("High-priority case: record a direct notification (phone — spoke with patient, or in person) first.");
   if(r.attempts&&(ns.attempts<r.attempts||ns.letters<1))problems.push(`Lost to follow-up needs at least ${r.attempts} recorded contact attempts including a mailed letter (currently ${ns.attempts} attempt${ns.attempts===1?"":"s"}, ${ns.letters} letter${ns.letters===1?"":"s"}).`);
@@ -375,7 +378,10 @@ if(EMBEDDED){
  new ResizeObserver(sendHeight).observe(document.body);sendHeight();
 }
 function reloadFromStore(){const fresh=load();if(!fresh)return;cases=fresh;if(active){active=cases.find(c=>c.caseId===active.caseId)||null;if(active)renderCase();else $("casePanel").classList.add("hidden")}render()}
-window.addEventListener("message",e=>{if(e.data==="ph-registry-reload")reloadFromStore()});
+window.addEventListener("message",e=>{
+ if(e.data==="ph-registry-reload")reloadFromStore();
+ else if(e.data&&e.data.ph==="open-case"){reloadFromStore();if(cases.some(c=>c.caseId===e.data.id)){openCase(e.data.id);if(EMBEDDED)parent.postMessage({ph:"registry-scroll",y:$("casePanel").offsetTop},"*")}}
+});
 window.addEventListener("storage",e=>{if(e.key===KEY)reloadFromStore()});
 render();
 </script>
