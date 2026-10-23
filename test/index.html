@@ -323,7 +323,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   </div>
   <div class="panel" id="pathMasterPanel">
    <div class="row between"><div><h3>Pathology worklist</h3><div class="source">One row per patient result, from the day of the biopsy until sign-off. Imported reports and same-day biopsies land here automatically. Open a row, record the call to the patient, then remove it from the worklist with the reason (plan provided, Mohs scheduled, referred, care completed and so on). Signed-off cases move to the Completed repository.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
-   <iframe id="registryFrame" src="pathology-registry.html?v=0.6.14.1-10231626" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
+   <iframe id="registryFrame" src="about:blank" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
   </div>
 </section>
 
@@ -567,6 +567,8 @@ function renderAudit(){$("auditList").innerHTML=audit.length?audit.map(a=>`<div 
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>showView(n.dataset.view));
 if(location.hash==="#pathintake")showView("pathintake");
+// load the embedded worklist fresh each time so a cached copy never shows an older version
+{const f=document.getElementById("registryFrame");if(f)f.src="pathology-registry.html?t="+Date.now()}
 
 async function sha256Text(text){try{const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("")}catch{return"unavailable"}}
 function normalized(t){return String(t||"").replace(/\u00a0/g," ").replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
