@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.14.1</title>
+<title>PH Alpha 0.6.15.0</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,22 +58,19 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.14.1</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.15.0</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
 <div class="shell">
 <aside>
  <h3>Workflow</h3>
- <button class="nav active" data-view="documentIntake">0. Document Intake Lab</button>
- <button class="nav" data-view="intake">1. Intake</button>
- <button class="nav" data-view="visit">2. Visit Authorization</button>
- <button class="nav" data-view="soap">3. Structured SOAP</button>
- <button class="nav" data-view="treatment">4. Treatment Authorization</button>
- <button class="nav" data-view="queue">5. Work Queue (PA)</button>
- <button class="nav" data-view="pathintake">6. Pathology Worklist</button>
- <button class="nav hidden" data-view="biopsy" title="Hidden in 0.6.14.1: biopsy tracking now happens in the Pathology Worklist">7. Biopsy / Pathology</button>
- <button class="nav" data-view="learning">8. Mapping Memory</button>
+ <button class="nav active" data-view="documentIntake">0. Document / Data Intake Portal</button>
+ <button class="nav" data-view="manual">1. Manual Clinical Intake</button>
+ <button class="nav" data-view="queue">2. Work Queue (PA)</button>
+ <button class="nav" data-view="pathintake">3. Pathology Worklist</button>
+ <button class="nav hidden" data-view="biopsy" title="Hidden in 0.6.14.1: biopsy tracking now happens in the Pathology Worklist">Biopsy / Pathology</button>
+ <button class="nav" data-view="learning">4. Mapping Memory</button>
  <button class="nav" data-view="audit">Audit</button>
 </aside>
 
@@ -84,7 +81,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="documentIntake" class="view">
  <div class="panel">
-  <div class="row between"><div><h2>Clinical Document Intake & Semantic Mapping Lab</h2><div class="source">Alpha 0.6.13.22 · clinical document intelligence + encounter-directed authorization routing + learned mapping + batch triage</div></div><span class="badge">Consolidated Build</span></div>
+  <div class="row between"><div><h2>Document / Data Intake Portal</h2><div class="source">Alpha 0.6.13.22 · clinical document intelligence + encounter-directed authorization routing + learned mapping + batch triage</div></div><span class="badge">Consolidated Build</span></div>
   <div class="notice">Obvious clinical concepts map directly to HPI, Medication Table, Objective, Assessment, Plan, and PA evidence. Outside records remain separate from the legal encounter until intentionally accepted. Right-click any unmapped or diagnosis field to correct/teach the mapping — PH remembers the correction for future documents. This build also includes: multi-document contamination and non-clinical-document detection, automatic medication/diagnosis matching for the PA checklist, severity-threshold checking (BSA/PASI/EASI vs. typical payer minimums), and a batch Work Queue with PA-likelihood triage (Unlikely / Needs attention / Ready).</div>
  </div>
 
@@ -92,10 +89,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <h3>1. Source Document Intake</h3>
   <div class="grid two">
    <div>
-    <label>Main intake: load one or many documents (synthetic/de-identified only). PH sorts each one: prior-authorization items go to 5. Work Queue, pathology reports and biopsy notes go to 6. Pathology Worklist, worklist files are restored. A single document also opens here for review.<input id="clinicalFileInput" type="file" multiple accept=".json,application/json,.txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
+    <label>Main intake: load one or many documents (synthetic/de-identified only). PH sorts each one: prior-authorization items go to 2. Work Queue, pathology reports and biopsy notes go to 3. Pathology Worklist, worklist files are restored. A single document also opens here for review. No digital record for a patient? Use <b>1. Manual Clinical Intake</b>.<input id="clinicalFileInput" type="file" multiple accept=".json,application/json,.txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
     <div class="row"><button id="clearBtn" class="btn secondary">Clear</button></div>
     <div id="labBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
-    <div id="labRouteLinks" class="row hidden" style="margin-top:6px"><button class="btn secondary" id="labGoQueue">Go to 5. Work Queue</button><button class="btn secondary" id="labGoPath">Go to 6. Pathology Worklist</button></div>
+    <div id="labRouteLinks" class="row hidden" style="margin-top:6px"><button class="btn secondary" id="labGoQueue">Go to 2. Work Queue</button><button class="btn secondary" id="labGoPath">Go to 3. Pathology Worklist</button></div>
     <div id="sourceMeta" class="source" style="margin-top:8px">No source loaded.</div>
     <div id="extractStatus" class="notice" style="margin-top:8px">Select a file or load the synthetic note.</div>
     <div id="docTypeBar" class="notice hidden" style="margin-top:8px"></div>
@@ -213,39 +210,62 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  </div>
 </section>
 
-<section id="intake" class="view hidden">
- <div class="panel"><h2>Patient Intake</h2><div class="grid two">
-  <label>Patient Name<input id="patientName" value="Jordan Ellis"></label><label>MRN<input id="mrn" value="SYN-ACNE-001"></label>
-  <label>Date of Birth<input id="dob" type="date" value="1980-04-15"></label><label>Payer<input id="payer" value="Example Payer"></label>
- </div><label>Chief Complaint<textarea id="chiefComplaint">Acne follow-up.</textarea></label><label>Prior Treatments<textarea id="priorTreatments"></textarea></label></div>
-</section>
+<section id="manual" class="view hidden">
+ <div class="panel">
+  <div class="row between"><div><h2>Manual Clinical Intake</h2><div class="source">Alpha 0.6.15.0 · one screen for the occasional patient whose records are not digital (replaces the old Intake, Visit Authorization, Structured SOAP and Treatment Authorization tabs)</div></div><span class="badge">Manual entry</span></div>
+  <div class="notice">Most records should come in through <b>0. Document / Data Intake Portal</b>. Use this screen only when something has to be typed in. When you press <b>Send to worklists</b>, PH turns this form into a note and sorts it with the same rules as an imported document: prior-authorization items go to 2. Work Queue, biopsies and pathology go to 3. Pathology Worklist. Any digital documents you attach below go through the same sorting and are linked to this patient. Synthetic data only.</div>
+  <div class="row" style="margin-top:10px"><button id="manualExample" class="btn secondary">Fill synthetic example</button><button id="manualClear" class="btn secondary">Clear form</button></div>
+ </div>
 
-<section id="visit" class="view hidden">
- <div class="panel"><h2>Visit Authorization Gate</h2><div class="notice ok">Synthetic test environment: visit authorization is cleared for provider evaluation.</div></div>
-</section>
+ <div class="panel">
+  <h3>1. Patient and visit</h3>
+  <div class="grid two">
+   <label>Patient Name<input id="patientName" value="Jordan Ellis"></label><label>MRN (required)<input id="mrn" value="SYN-ACNE-001"></label>
+   <label>Date of Birth (checked for identity, not saved in the note)<input id="dob" type="date" value="1980-04-15"></label><label>Payer / plan<input id="payer" value="Example Payer" placeholder="e.g. Example HMO, Medicaid managed care"></label>
+   <label>Visit type<select id="manualVisitType"><option value="established">Established patient follow-up</option><option value="new">New patient visit</option><option value="referral">Referral / consult</option></select></label>
+   <label>Visit date<input id="manualVisitDate" type="date"></label>
+  </div>
+  <div id="manualVisitAuth" class="notice ok" style="margin-top:10px">Visit authorization: established follow-up, no visit authorization check needed.</div>
+  <label>Chief Complaint<textarea id="chiefComplaint">Acne follow-up.</textarea></label><label>Prior Treatments (what was tried and how it went)<textarea id="priorTreatments"></textarea></label>
+ </div>
 
-<section id="soap" class="view hidden">
- <div class="panel"><h2>Structured Dermatology SOAP</h2><div class="notice">Only accepted mappings are populated here. The preserved external source remains separate.</div></div>
- <div class="panel"><h3>S — Subjective</h3><label>HPI / Subjective Narrative<textarea id="subjectiveNarrative"></textarea></label></div>
- <div class="panel"><h3>O — Objective</h3><div class="grid three">
-  <label>Body Location<input id="bodyLocation"></label>
-  <label>Morphology<input id="morphology" placeholder="Supports multiple values, e.g. Comedonal + Inflammatory"></label>
-  <label>Lesion Types<input id="lesionTypes"></label>
-  <label>Severity<input id="clinicalSeverity"></label>
-  <label>BSA %<input id="bsa"></label>
-  <label>IGA/PGA<input id="iga"></label>
-  <label>PASI (psoriasis)<input id="pasi" placeholder="Psoriasis Area & Severity Index"></label>
-  <label>EASI (atopic dermatitis)<input id="easi" placeholder="Eczema Area & Severity Index"></label>
-  <label>DLQI<input id="dlqi" placeholder="Dermatology Life Quality Index"></label>
-  <label>Itch NRS<input id="itchNrs" placeholder="0-10 numeric rating scale"></label>
-  <label>Hurley stage (HS)<input id="hurleyStage" placeholder="I / II / III"></label>
- </div><label>Objective Narrative<textarea id="objectiveNarrative"></textarea></label></div>
- <div class="panel"><h3>A/P — Assessment and Plan</h3><div class="grid two"><label>Diagnosis<input id="diagnosis"></label><label>ICD-10<input id="icd10"></label></div><label>Assessment Narrative<textarea id="assessmentNarrative"></textarea></label><label>Plan Narrative<textarea id="planNarrative"></textarea></label></div>
- <div class="panel"><h3>Medication Table</h3><div id="soapMedTable"></div></div>
-</section>
+ <div class="panel">
+  <h3>2. Clinical findings</h3>
+  <div class="mini" style="margin-bottom:6px">Fields filled automatically when you press "Accept Auto-Mapped Clinical Fields" in the Intake Portal also land here, so a digital document and typed entry can be combined.</div>
+  <h4>S · Subjective</h4><label>HPI / Subjective Narrative<textarea id="subjectiveNarrative"></textarea></label>
+  <h4 style="margin-top:12px">O · Objective</h4><div class="grid three">
+   <label>Body Location<input id="bodyLocation"></label>
+   <label>Morphology<input id="morphology" placeholder="Supports multiple values, e.g. Comedonal + Inflammatory"></label>
+   <label>Lesion Types<input id="lesionTypes"></label>
+   <label>Severity<input id="clinicalSeverity"></label>
+   <label>BSA %<input id="bsa"></label>
+   <label>IGA/PGA<input id="iga"></label>
+   <label>PASI (psoriasis)<input id="pasi" placeholder="Psoriasis Area & Severity Index"></label>
+   <label>EASI (atopic dermatitis)<input id="easi" placeholder="Eczema Area & Severity Index"></label>
+   <label>DLQI<input id="dlqi" placeholder="Dermatology Life Quality Index"></label>
+   <label>Itch NRS<input id="itchNrs" placeholder="0-10 numeric rating scale"></label>
+   <label>Hurley stage (HS)<input id="hurleyStage" placeholder="I / II / III"></label>
+  </div><label>Objective Narrative<textarea id="objectiveNarrative"></textarea></label>
+  <h4 style="margin-top:12px">A/P · Assessment and Plan</h4><div class="grid two"><label>Diagnosis<input id="diagnosis"></label><label>ICD-10<input id="icd10"></label></div><label>Assessment Narrative<textarea id="assessmentNarrative"></textarea></label><label>Plan Narrative (medications ordered, procedures, biopsies; PH looks for prior-authorization items here)<textarea id="planNarrative"></textarea></label>
+  <details style="margin-top:8px"><summary class="mini">Medication table (from an accepted document)</summary><div id="soapMedTable"></div></details>
+ </div>
 
-<section id="treatment" class="view hidden">
- <div class="panel"><h2>Treatment Prior Authorization</h2><div class="notice">Use the FDA/Payer Evidence Workbench in Document Intake to assemble requirement-by-requirement evidence. Denials add payer-specific candidate rules rather than modifying FDA baseline rules.</div><label>Authorization Summary<textarea id="treatmentSummary" style="min-height:350px"></textarea></label></div>
+ <div class="panel">
+  <h3>3. Attach digital documents for this patient (optional)</h3>
+  <label>Referral letters, prior notes, pathology reports, lab results: .txt, .rtf, .docx, .pdf, .png, .jpg. They are sorted the same way as in the Intake Portal and tagged with this patient's MRN.
+   <input id="manualAttachInput" type="file" multiple accept=".txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg">
+  </label>
+  <div id="manualAttachList" class="mini" style="margin-top:6px">No documents attached.</div>
+ </div>
+
+ <div class="panel">
+  <h3>4. Send</h3>
+  <div class="row"><button id="manualSend" class="btn primary">Send to worklists</button></div>
+  <div id="manualStatus" class="notice hidden" style="margin-top:8px"></div>
+  <div id="labBatchProgressManual" class="notice" style="margin-top:8px;display:none"></div>
+  <div id="manualRouteLinks" class="row hidden" style="margin-top:6px"><button class="btn secondary" id="manualGoQueue">Go to 2. Work Queue</button><button class="btn secondary" id="manualGoPath">Go to 3. Pathology Worklist</button></div>
+  <details style="margin-top:10px"><summary class="mini">Treatment authorization summary (filled by the evidence workbench in the Intake Portal)</summary><textarea id="treatmentSummary" style="min-height:250px"></textarea></details>
+ </div>
 </section>
 
 <section id="queue" class="view hidden">
@@ -296,7 +316,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <div id="wqOtherPointer"></div>
   <div id="workQueueTable"><div class="notice">No documents imported yet — use Batch Import above.</div></div>
  </div>
- <div class="panel"><h3>Current Single-Document Gaps</h3><div class="mini" style="margin-bottom:6px">From the document currently loaded in the Document Intake Lab (tab 0) — separate from the batch worklist above.</div><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div>
+ <div class="panel"><h3>Current Single-Document Gaps</h3><div class="mini" style="margin-bottom:6px">From the document currently loaded in the Document / Data Intake Portal (tab 0) — separate from the batch worklist above.</div><div id="workQueue" class="notice">Missing PA evidence will be listed here after a PA evidence scan.</div></div>
 </section>
 
 <section id="pathintake" class="view hidden">
@@ -379,7 +399,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <section id="learning" class="view hidden">
  <div class="panel">
   <div class="row between"><div><h2>Mapping Memory</h2><div class="source">Every learned diagnosis/lesion correction, and how often it has fired since</div></div><span class="badge learn-badge" id="learnedCountBadge2">0 learned mappings</span></div>
-  <div class="notice">Right-click (or long-press) any concept row in the Document Intake Lab to add or correct a mapping here. PH matches future source phrasing against this table before falling back to the built-in diagnosis patterns, so verbiage variability across referring providers and OCR output gets absorbed over time instead of producing repeated unmapped rows.</div>
+  <div class="notice">Right-click (or long-press) any concept row in the Document / Data Intake Portal to add or correct a mapping here. PH matches future source phrasing against this table before falling back to the built-in diagnosis patterns, so verbiage variability across referring providers and OCR output gets absorbed over time instead of producing repeated unmapped rows.</div>
  </div>
  <div class="panel">
   <h3>Learned Diagnosis / Lesion Mappings</h3>
@@ -411,7 +431,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script>
 "use strict";
-const VERSION="0.6.13.30", $=id=>document.getElementById(id);
+const VERSION="0.6.15.0", $=id=>document.getElementById(id);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const norm=s=>String(s||"").toLowerCase().replace(/[–—]/g,"-");
 const RULES_KEY="ph0613-payer-rules", OUTCOME_KEY="ph0613-pa-outcomes", LEARN_KEY="ph0613-learned-dx-map";
@@ -1590,9 +1610,9 @@ function pfSend(){
  const p=readPathForm();
  if(p.needsReview){st.className="notice warn";st.textContent="Cannot file yet: "+p.blocking.join("; ")+".";return}
  const r=sendPathRecordToRegistry(p,ingestState.filename||"report");
- if(ingestState.linkedQueueId){const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);if(it){it.pathData=p;it.docType="surgical_pathology";it.registryState=r.status==="sent"?"sent":"duplicate";it.registryCaseId=r.caseId;it.diagnosis=p.dxDisplay;it.icd=p.icdReported;it.history.push({at:new Date().toISOString(),note:`Reviewed in Document Intake Lab and ${r.status==="sent"?"filed to":"matched in"} the Pathology Registry as ${r.caseId}.`});saveWorkQueue(workQueueItems);renderWorkQueueTable()}}
+ if(ingestState.linkedQueueId){const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);if(it){it.pathData=p;it.docType="surgical_pathology";it.registryState=r.status==="sent"?"sent":"duplicate";it.registryCaseId=r.caseId;it.diagnosis=p.dxDisplay;it.icd=p.icdReported;it.history.push({at:new Date().toISOString(),note:`Reviewed in Document / Data Intake Portal and ${r.status==="sent"?"filed to":"matched in"} the Pathology Registry as ${r.caseId}.`});saveWorkQueue(workQueueItems);renderWorkQueueTable()}}
  st.className=r.status==="sent"?"notice ok":"notice warn";
- st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. It is on the Pathology Worklist (tab 6).`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
+ st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. It is on the Pathology Worklist (tab 3).`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
  addAudit("Pathology report filed to registry",`${ingestState.filename||"report"} → ${r.caseId} (${r.status}).`);
 }
 function pfSave(){
@@ -1601,7 +1621,7 @@ function pfSave(){
  const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);if(!it){st.className="notice warn";st.textContent="The linked Work Queue item could not be found.";return}
  const p=readPathForm();it.pathData=p;it.diagnosis=p.dxDisplay||it.diagnosis;it.icd=p.icdReported;
  if(it.registryState!=="sent"&&it.registryState!=="duplicate"){it.registryState=p.needsReview?"needs_review":"awaiting";it.pathSelected=!p.needsReview}
- it.history.push({at:new Date().toISOString(),note:"Pathology fields corrected in Document Intake Lab."});
+ it.history.push({at:new Date().toISOString(),note:"Pathology fields corrected in Document / Data Intake Portal."});
  saveWorkQueue(workQueueItems);renderWorkQueueTable();
  st.className="notice ok";st.textContent="Corrections saved to the Work Queue item.";
 }
@@ -2103,7 +2123,7 @@ function exportWorklist(){
  const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download=`PH-worklist-${new Date().toISOString().slice(0,10)}.json`;
  document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
  const st=$("exportStatus");st.classList.remove("hidden");st.className="notice ok";
- st.innerHTML=`Saved <b>${a.download}</b> to your Downloads folder: ${cases.length} case${cases.length===1?"":"s"} and ${workQueueItems.length} document${workQueueItems.length===1?"":"s"}. Send that one file. The other person opens PH, goes to <b>6. Pathology Worklist</b>, clicks <b>Choose Files</b> and picks it.`;
+ st.innerHTML=`Saved <b>${a.download}</b> to your Downloads folder: ${cases.length} case${cases.length===1?"":"s"} and ${workQueueItems.length} document${workQueueItems.length===1?"":"s"}. Send that one file. The other person opens PH, goes to <b>3. Pathology Worklist</b>, clicks <b>Choose Files</b> and picks it.`;
  addAudit("Worklist exported",`${cases.length} cases, ${workQueueItems.length} documents → ${a.download}`);
 }
 function importWorklistExport(data){
@@ -2199,10 +2219,11 @@ function renderWorkQueueTable(){
  document.querySelectorAll(".wqRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];const wasFlagged=it.relevanceVerdict&&it.relevanceVerdict!=="clinical";workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit(wasFlagged?"Work queue item purged (non-clinical)":"Work queue item removed",it.filename+(wasFlagged?` [relevance: ${it.relevanceVerdict}]`:""))});
  document.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
 }
-async function handleBatchImport(fileList){
+async function handleBatchImport(fileList,opts){
  const files=[...fileList];
- if(!files.length)return;
- const progs=[$("batchProgress"),$("pathBatchProgress"),$("labBatchProgress")].filter(Boolean);
+ if(!files.length)return{created:[],failed:[]};
+ const progs=(opts&&opts.progress?[$(opts.progress)]:[$("batchProgress"),$("pathBatchProgress"),$("labBatchProgress")]).filter(Boolean);
+ const created=[];
  const prog={set textContent(t){progs.forEach(p=>{p.style.display="";p.textContent=t})},set className(c){progs.forEach(p=>{p.className=c})}};
  prog.className="notice";
  let done=0,failed=[],extra=0,dups=0,made=0,jsonAdded=0,jsonSkipped=0,jsonDocs=0;
@@ -2216,18 +2237,20 @@ async function handleBatchImport(fileList){
      if(dupOf){items=[duplicateItem(file.name,text,classifyDocumentType(text),dupOf)];dups++}
      else{items=runBatchDocumentMulti(file.name,text);const pathRows=items.filter(x=>x.docType==="surgical_pathology").length;if(pathRows>1)extra+=pathRows-1}
      made+=items.length;
-     [...items].reverse().forEach(item=>workQueueItems.unshift(item));
+     [...items].reverse().forEach(item=>workQueueItems.unshift(item));created.push(...items);
    }catch(err){failed.push(file.name+" ("+err.message+")")}
    done++;
  }
+ if(opts&&opts.tag)created.forEach(opts.tag);   // 0.6.15.0: Manual Clinical Intake links attachments to its patient before filing
  saveWorkQueue(workQueueItems);
  const auto=autoFileToWorklist();
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
  prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending||auto.visits)?` Pathology worklist: ${auto.reports} report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report added; ${auto.visits} result visit${auto.visits===1?"":"s"} recorded, ${auto.signed} signed off.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` Worklist / JSON files: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the pathology worklist${jsonDocs?` with ${jsonDocs} original document${jsonDocs===1?"":"s"}`:""}${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
+ return{created,failed};
 }
-/* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
+/* 0.6.13.7: round-trip between the Work Queue worklist and the Document / Data Intake Portal — opening an
    item loads its original text back into the interactive editor (right-click mapping, biopsy
    module, everything already built), and a linked "sync back" updates the worklist row with
    whatever was corrected, without losing the assignment/status/history already recorded. */
@@ -2251,7 +2274,7 @@ function syncCurrentDocumentToQueue(){
  const rescanned=runBatchDocument(it.filename,ingestState.raw);
  Object.assign(it,{rawText:ingestState.raw,diagnosis:rescanned.diagnosis,diagnosisStage:rescanned.diagnosisStage,icd:rescanned.icd,pathway:rescanned.pathway,serviceLabel:rescanned.serviceLabel,missing:rescanned.missing,supported:rescanned.supported,paLikelihood:rescanned.paLikelihood,relevanceVerdict:rescanned.relevanceVerdict,relevanceHits:rescanned.relevanceHits,docType:rescanned.docType,docTypeConfidence:rescanned.docTypeConfidence,pending:rescanned.pending,resultVisit:rescanned.resultVisit,medication:rescanned.medication,procedure:rescanned.procedure,orderLine:rescanned.orderLine,visitNote:rescanned.visitNote});
  if(rescanned.docType==="surgical_pathology"&&it.registryState!=="sent"&&it.registryState!=="duplicate"){it.pathData=ingestState.path||rescanned.pathData;it.registryState=rescanned.registryState}
- it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document Intake Lab."});
+ it.history.push({at:new Date().toISOString(),note:"Re-scanned after corrections made in Document / Data Intake Portal."});
  saveWorkQueue(workQueueItems);
  renderWorkQueueTable();
  $("linkedQueueNotice").className="notice ok";
@@ -2272,7 +2295,7 @@ function acceptMappings(){
  $("planNarrative").value=[...rows.filter(r=>r.dest.includes("Plan")).map(r=>r.evidence)].filter((v,i,a)=>a.indexOf(v)===i).join(" ");
  $("priorTreatments").value=[...rows.filter(r=>r.dest.includes("HPI / Treatment History")).map(r=>`${r.value} (${r.medStatus||"historical"})`)].join("; ");
  const meds=rows.filter(r=>r.concept==="Medication");$("soapMedTable").innerHTML=meds.length?meds.map(r=>`<div class="map-item"><b>${esc(r.value)}</b><span class="pill">${esc(r.medStatus||r.context)}</span><div class="mini">${esc(r.evidence)}</div></div>`).join(""):'<div class="notice">No medication entries.</div>';
- ingestState.accepted=true;addAudit("Mappings accepted","Auto-mapped clinical fields populated into the structured SOAP draft. Original source remains preserved separately.");alert("Auto-mapped clinical fields were populated into the SOAP draft. The external source remains preserved separately.")
+ ingestState.accepted=true;addAudit("Mappings accepted","Auto-mapped clinical fields populated into the structured SOAP draft. Original source remains preserved separately.");alert("Auto-mapped clinical fields were copied into 1. Manual Clinical Intake, where you can add to them and attach more documents. The external source remains preserved separately.")
 }
 
 function loadRules(){try{return JSON.parse(localStorage.getItem(RULES_KEY)||"[]")}catch{return[]}}
@@ -2660,7 +2683,7 @@ function splitMarginIntoFields(marginText){
  clauses.forEach(c=>{(actionRe.test(c)?followup:ancillary).push(c.replace(/\.$/,""))});
  return{ancillary:ancillary.join("; ").trim(),followup:followup.join("; ").trim()};
 }
-function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document Intake Lab on a future document with this same finding to teach PH the pattern.")}
+function extractFinalDiagnosis(){const t=$("pathFinalText").value.trim();if(!t){alert("Paste the final pathology impression first.");return}const dx=inferFinalDx(t);if(dx.name){$("pathFinalDx").value=dx.name;if(dx.icd)$("pathFinalIcd").value=dx.icd}else{alert("No recognized diagnosis pattern found in this pathology text — enter the diagnosis and ICD-10 code by hand. Once entered, right-click the Diagnosis row in Document / Data Intake Portal on a future document with this same finding to teach PH the pattern.")}
  const marginMatch=t.match(/margin status\s*:\s*([^\n]+(?:\n(?!\s*$)[^\n]+)*)/i);
  if(marginMatch){
    const {ancillary,followup}=splitMarginIntoFields(marginMatch[0]);
@@ -2672,15 +2695,107 @@ function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
 $("clearBtn").onclick=()=>{try{resetDocTypeUI()}catch(e){};ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
-/* 0.6.14.1: the Document Intake Lab picker is the main intake port. Every file goes through the batch sorter
+/* 0.6.14.1: the Document / Data Intake Portal picker is the main intake port. Every file goes through the batch sorter
    (PA items -> Work Queue, pathology -> Pathology Worklist, worklist .json -> restored). When exactly one clinical
    document is chosen it is also opened here for review, as before. */
 $("labGoQueue").onclick=()=>showView("queue");$("labGoPath").onclick=()=>showView("pathintake");
 $("clinicalFileInput").onchange=async e=>{const files=[...(e.target.files||[])];e.target.value="";if(!files.length)return;
  await handleBatchImport(files);$("labRouteLinks").classList.remove("hidden");
  const docs=files.filter(x=>!/\.json$/i.test(x.name));
- if(docs.length!==1){$("extractStatus").textContent=docs.length?`${docs.length} documents sorted. Use the buttons above to work them, or Open on any row to review one here.`:"Worklist file loaded into 6. Pathology Worklist.";return}
+ if(docs.length!==1){$("extractStatus").textContent=docs.length?`${docs.length} documents sorted. Use the buttons above to work them, or Open on any row to review one here.`:"Worklist file loaded into 3. Pathology Worklist.";return}
  const f=docs[0];$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name);const it=workQueueItems.find(x=>x.filename===f.name);if(it)ingestState.linkedQueueId=it.id}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
+/* 0.6.15.0: Manual Clinical Intake. One screen replaces Intake, Visit Authorization, Structured SOAP and Treatment
+   Authorization. The typed form becomes a plain-text note and goes through the same sorter as an imported file
+   (handleBatchImport), so PA triggers, pathology routing, duplicate checks and every safety rule apply unchanged.
+   Attached files go through the same sorter and are tagged with this patient's MRN where the file has none. */
+let manualAttachments=[];
+const MANUAL_FIELDS=["patientName","mrn","dob","payer","chiefComplaint","priorTreatments","subjectiveNarrative","bodyLocation","morphology","lesionTypes","clinicalSeverity","bsa","iga","pasi","easi","dlqi","itchNrs","hurleyStage","objectiveNarrative","diagnosis","icd10","assessmentNarrative","planNarrative"];
+function manualVal(id){return($(id).value||"").trim()}
+function renderManualVisitAuth(){
+ const vt=$("manualVisitType").value,payer=norm(manualVal("payer")),box=$("manualVisitAuth");
+ const plan=payer.match(/\b(hmo|medicaid|medi-cal|managed care|medicare advantage)\b/);
+ if(vt==="established"&&!plan){box.className="notice ok";box.textContent="Visit authorization: established follow-up, no visit authorization check needed.";return}
+ box.className="notice warn";
+ box.textContent=plan?`Visit authorization: the plan looks like ${plan[1].toUpperCase()==="HMO"?"an HMO":plan[1]}. Confirm a referral or authorization is on file for this visit.`:"Visit authorization: new patient or referral visit. Whether it needs a referral or authorization depends on the patient's plan (HMO, Medicaid managed care, some Medicare Advantage). Check eligibility.";
+}
+function manualHasClinical(){return["chiefComplaint","subjectiveNarrative","objectiveNarrative","diagnosis","assessmentNarrative","planNarrative"].some(id=>manualVal(id))}
+function composeManualNote(){
+ const v=manualVal,date=$("manualVisitDate").value||new Date().toISOString().slice(0,10);
+ const vt={established:"Established patient follow-up",new:"New patient visit",referral:"Referral / consult visit (referred for dermatology evaluation)"}[$("manualVisitType").value];
+ const scores=[["Body location","bodyLocation"],["Morphology","morphology"],["Lesion types","lesionTypes"],["Severity","clinicalSeverity"],["BSA","bsa"],["IGA","iga"],["PASI","pasi"],["EASI","easi"],["DLQI","dlqi"],["Itch NRS","itchNrs"],["Hurley stage","hurleyStage"]]
+  .filter(([,id])=>v(id)).map(([k,id])=>`${k}: ${v(id)}${id==="bsa"&&!/%/.test(v(id))?"%":""}`);
+ const L=["DERMATOLOGY NOTE (typed in Manual Clinical Intake)",`Patient: ${v("patientName")}`,`MRN: ${v("mrn")}`];
+ if(v("dob"))L.push("DOB: verified at intake (not stored in this note)");
+ if(v("payer"))L.push(`Payer: ${v("payer")}`);
+ L.push(`Visit: ${vt}`,`Encounter Date: ${date}`);
+ if(v("chiefComplaint"))L.push("",`Chief Complaint: ${v("chiefComplaint")}`);
+ if(v("subjectiveNarrative"))L.push("",`History of Present Illness: ${v("subjectiveNarrative")}`);
+ if(v("priorTreatments"))L.push(`Prior therapies: ${v("priorTreatments")}`);
+ if(v("objectiveNarrative")||scores.length)L.push("",`Exam: ${v("objectiveNarrative")}`.trim(),...scores);
+ if(v("diagnosis"))L.push("",`Diagnosis: ${v("diagnosis")}${v("icd10")?` (${v("icd10")})`:""}`);
+ if(v("assessmentNarrative"))L.push(`Assessment: ${v("assessmentNarrative")}`);
+ if(v("planNarrative"))L.push("","PLAN:",v("planNarrative"));
+ L.push("","Entered by: Manual Clinical Intake (synthetic test environment)");
+ return L.join("\n");
+}
+function renderManualAttachments(){
+ const box=$("manualAttachList");
+ if(!manualAttachments.length){box.textContent="No documents attached.";return}
+ box.innerHTML=manualAttachments.map((f,i)=>`<span class="pill">${esc(f.name)} <a href="#" class="manualDetach" data-i="${i}" title="Remove">✕</a></span>`).join(" ")+` <span>${manualAttachments.length} attached. They are sent when you press Send to worklists.</span>`;
+ document.querySelectorAll(".manualDetach").forEach(a=>a.onclick=e=>{e.preventDefault();manualAttachments.splice(Number(a.dataset.i),1);renderManualAttachments()});
+}
+async function sendManualIntake(){
+ const st=$("manualStatus");st.classList.remove("hidden");
+ const mrn=manualVal("mrn");
+ if(!mrn||!/^[A-Za-z0-9\-]{4,20}$/.test(mrn)){st.className="notice warn";st.textContent="Enter the patient's MRN (4 to 20 letters, numbers or dashes) so the note and attachments stay linked to the right patient.";return}
+ const typed=manualHasClinical();
+ if(!typed&&!manualAttachments.length){st.className="notice warn";st.textContent="Nothing to send yet. Type the clinical findings, attach a document, or both.";return}
+ const files=[];
+ if(typed){const name=`Manual intake ${mrn} ${$("manualVisitDate").value||new Date().toISOString().slice(0,10)}.txt`;files.push(new File([composeManualNote()],name,{type:"text/plain"}))}
+ files.push(...manualAttachments);
+ const tag=it=>{
+  it.manualIntakeMrn=mrn;
+  const filled=[];
+  if(it.pathData&&!it.pathData.mrn){it.pathData.mrn=mrn;filled.push("pathology report")}
+  if(it.pending&&!it.pending.mrn){it.pending.mrn=mrn;filled.push("biopsy")}
+  if(it.resultVisit&&!it.resultVisit.mrn){it.resultVisit.mrn=mrn;filled.push("result visit")}
+  (it.history=it.history||[]).push({at:new Date().toISOString(),note:`Sent from Manual Clinical Intake for MRN ${mrn}${filled.length?` (the document had no MRN, so this patient's MRN was applied)`:""}.`});
+ };
+ st.className="notice";st.textContent="Sending…";$("manualSend").disabled=true;
+ let r;try{r=await handleBatchImport(files,{tag,progress:"labBatchProgressManual"})}finally{$("manualSend").disabled=false}
+ const c=r.created,none=c.filter(it=>it.pathway==="none"),pa=c.filter(it=>!isNonPaItem(it)&&it.pathway!=="none"),path=c.filter(it=>it.docType==="surgical_pathology"||it.pathway==="pending_pathology"||it.pathway==="path_result_visit"),dup=c.filter(it=>it.pathway==="duplicate");
+ const parts=[];
+ if(pa.length)parts.push(`${pa.length} prior-authorization item${pa.length===1?"":"s"} in 2. Work Queue (${pa.map(it=>esc(it.serviceLabel||it.medication||it.diagnosis)).join("; ")})`);
+ if(path.length)parts.push(`${path.length} item${path.length===1?"":"s"} for 3. Pathology Worklist`);
+ if(dup.length)parts.push(`${dup.length} duplicate${dup.length===1?"":"s"} of something already imported (not queued again)`);
+ if(none.length)parts.push(`${none.length} document${none.length===1?"":"s"} with no prior-authorization trigger (kept on the Work Queue for reference${none.some(it=>it.visitNote)?"; check the visit authorization note":""})`);
+ const other=c.length-pa.length-path.length-dup.length-none.length;
+ if(other>0)parts.push(`${other} other document${other===1?"":"s"} (lab or unclassified) kept on the Work Queue under "All types"`);
+ st.className=r.failed.length?"notice warn":"notice ok";
+ st.innerHTML=`Sent ${typed?"the typed note":""}${typed&&manualAttachments.length?" and ":""}${manualAttachments.length?`${manualAttachments.length} attached document${manualAttachments.length===1?"":"s"}`:""} for MRN ${esc(mrn)}. `+(parts.length?parts.join("; ")+".":"No prior-authorization or pathology items were found, so nothing needs action.")+(r.failed.length?` Could not read: ${esc(r.failed.join("; "))}`:"");
+ $("manualRouteLinks").classList.remove("hidden");
+ addAudit("Manual clinical intake sent",`MRN ${mrn}: ${typed?"typed note":"no typed note"}, ${manualAttachments.length} attachment(s), ${c.length} item(s) created.`);
+ manualAttachments=[];renderManualAttachments();
+}
+function fillManualExample(){
+ const ex={patientName:"Avery Synthetic",mrn:"SYN-PSO-204",dob:"1979-06-02",payer:"Example Commercial PPO",chiefComplaint:"Psoriasis flare, worsening over 6 months.",
+  priorTreatments:"Clobetasol 0.05% ointment twice daily for 3 months (inadequate response); methotrexate 15 mg weekly for 4 months (failed, stopped for elevated liver enzymes); narrowband UVB phototherapy 3x weekly for 12 weeks (inadequate response).",
+  subjectiveNarrative:"Plaques on elbows, knees, scalp and lower back, itching and cracking. Sleep disturbed. Affecting work.",
+  bodyLocation:"Elbows, knees, scalp, lower back",morphology:"Well-demarcated erythematous plaques with silvery scale",lesionTypes:"Plaques",clinicalSeverity:"Moderate to severe",bsa:"14",iga:"3 - Moderate",pasi:"16.2",easi:"",dlqi:"15",itchNrs:"7",hurleyStage:"",
+  objectiveNarrative:"Thick scaly plaques on bilateral elbows and knees, scalp and lumbosacral area. Nails with pitting.",
+  diagnosis:"Plaque psoriasis, moderate to severe",icd10:"L40.0",
+  assessmentNarrative:"Moderate to severe plaque psoriasis, BSA 14%, PASI 16.2, DLQI 15, failed topical steroid, methotrexate and phototherapy.",
+  planNarrative:"1. Start adalimumab (Humira) 80 mg loading dose, then 40 mg every other week, pending payer authorization.\n2. Baseline TB test and hepatitis B panel before first dose.\n3. Continue clobetasol to resistant plaques as needed.\n4. Follow up in 12 weeks."};
+ Object.entries(ex).forEach(([k,v])=>{$(k).value=v});$("manualVisitType").value="established";renderManualVisitAuth();
+}
+$("manualVisitDate").value=new Date().toISOString().slice(0,10);
+$("manualVisitType").onchange=renderManualVisitAuth;$("payer").oninput=renderManualVisitAuth;
+$("manualAttachInput").onchange=e=>{manualAttachments.push(...[...(e.target.files||[])]);e.target.value="";renderManualAttachments()};
+$("manualSend").onclick=sendManualIntake;
+$("manualExample").onclick=fillManualExample;
+$("manualClear").onclick=()=>{if(!confirm("Clear every field on this form and remove the attached documents? Items already sent to the worklists are not affected."))return;MANUAL_FIELDS.forEach(id=>{$(id).value=""});$("manualVisitType").value="established";$("manualVisitDate").value=new Date().toISOString().slice(0,10);manualAttachments=[];renderManualAttachments();renderManualVisitAuth();$("manualStatus").classList.add("hidden");$("manualRouteLinks").classList.add("hidden")};
+$("manualGoQueue").onclick=()=>showView("queue");$("manualGoPath").onclick=()=>showView("pathintake");
+renderManualVisitAuth();
 $("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("syncQueueBtn").onclick=syncCurrentDocumentToQueue;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
 $("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
 
