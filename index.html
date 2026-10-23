@@ -555,7 +555,9 @@ $("signoffBtn").onclick=()=>{const it=workQueueItems[discardIdx];if(!it)return $
   saveWorkQueue(workQueueItems);renderWorkQueueTable();
  }
  discardIdx=-1;$("discardModal").classList.add("hidden");
- const f=$("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage({ph:"open-case",id},"*");
+ // open the case in its own tab (the worklist below refreshes when it is saved); fall back to the embedded panel
+ const w=window.open(`pathology-registry.html?case=${encodeURIComponent(id)}`,"_blank");
+ if(!w){const f=$("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage({ph:"open-case",id},"*")}
 };
 $("discardReason").onchange=()=>$("discardMsg").textContent="";
 $("discardCancel").onclick=()=>{discardIdx=-1;$("discardModal").classList.add("hidden")};
