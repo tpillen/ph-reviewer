@@ -299,7 +299,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one place for pathology follow-up. <b>New reports to file</b> (top): check what PH read from each incoming report or clinic note, then file it. <b>Master worklist</b> (below): every filed case stays here until the patient is notified and definitive care is done, then it is removed with a reason and moves to the <b>Completed repository</b>.</div></div><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to master worklist ↓</a></div>
+  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -310,19 +310,19 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <div id="pathBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
  </div>
   <div class="panel" id="pathRoutePanel">
-   <div class="row between"><div><h3>New reports to file: surgical pathology</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>Reports that need a check before they go on the worklist</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
    <div id="pathRouteTable"><div class="notice">No surgical pathology reports imported yet.</div></div>
    <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows onto master worklist</button></div>
    <div id="pathSendStatus" class="notice hidden" style="margin-top:8px"></div>
   </div>
   <div class="panel" id="clinicPathPanel">
-   <div class="row between"><div><h3>New reports to file: clinic notes (biopsies awaiting pathology &amp; result visits)</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>Clinic notes that need action (result visits to record on a case)</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
    <div id="clinicPathTable"><div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div></div>
    <div class="row" style="margin-top:8px"><button id="clinicPathAll" class="btn secondary">Check all pending-pathology rows</button><button id="clinicPathNone" class="btn secondary">Uncheck all</button><button id="clinicPathFile" class="btn success">File checked rows as pending cases</button></div>
    <div id="clinicPathStatus" class="notice hidden" style="margin-top:8px"></div>
   </div>
   <div class="panel" id="pathMasterPanel">
-   <div class="row between"><div><h3>Master worklist &amp; completed repository</h3><div class="source">Cases filed above appear here right away. Open a case to record the patient notification, then use "Remove from worklist" with a reason once definitive care is done.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
+   <div class="row between"><div><h3>Pathology worklist</h3><div class="source">One row per patient result, from the day of the biopsy until sign-off. Imported reports and same-day biopsies land here automatically. Open a row, record the call to the patient, then remove it from the worklist with the reason (plan provided, Mohs scheduled, referred, care completed and so on). Signed-off cases move to the Completed repository.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
    <iframe id="registryFrame" src="pathology-registry.html" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
   </div>
 </section>
@@ -1455,10 +1455,13 @@ function pathStatePill(it){
 function renderPathRoutePanel(){
  renderClinicPathPanel();
  const box=$("pathRouteTable");if(!box)return;
- const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.docType==="surgical_pathology"&&it.pathData);
+ let rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.docType==="surgical_pathology"&&it.pathData);
  const filed=rows.filter(({it})=>it.registryState==="sent"||it.registryState==="duplicate").length;
- $("pathRouteBadge").textContent=`${rows.length-filed} waiting · ${filed} filed`;
- if(!rows.length){box.innerHTML='<div class="notice">No surgical pathology reports imported yet. Reports recognized in a batch appear here instead of in the prior-authorization checklist.</div>';return}
+ $("pathRouteBadge").textContent=`${rows.length-filed} need review · ${filed} on worklist`;
+ if(!rows.length){box.innerHTML='<div class="notice">No surgical pathology reports imported yet. Reports recognized in a batch go straight onto the pathology worklist below.</div>';return}
+ // 0.6.14.1: filed reports live on the worklist below; only reports that still need a check stay here
+ rows=rows.filter(({it})=>it.registryState!=="sent"&&it.registryState!=="duplicate");
+ if(!rows.length){box.innerHTML=`<div class="notice ok">${filed===1?"The imported report is":`All ${filed} imported reports are`} on the pathology worklist below.</div>`;return}
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>Accession</th><th>Biopsy</th><th>Reported</th><th>Specimen / site</th><th>Final diagnosis</th><th>Margin</th><th>Follow-up</th><th>Review notes</th><th>Registry</th><th></th></tr></thead><tbody>'+
  rows.map(({it,i})=>{
   const p=it.pathData,filedRow=it.registryState==="sent"||it.registryState==="duplicate",blocked=p.needsReview&&!p._approved;
@@ -1485,6 +1488,17 @@ function pathRouteSelect(mode){
   it.pathSelected=mode==="all"?true:(mode==="clean"?!!p.dxName:false);
  });
  saveWorkQueue(workQueueItems);renderPathRoutePanel();
+}
+/* 0.6.14.1: one list. Biopsies done in clinic and pathology reports that need no manual check go straight onto
+   the pathology worklist; only reports with review notes wait above it. Pending cases are filed first so a
+   matching report links to its pending case instead of opening a second one. */
+function autoFileToWorklist(){
+ let pend=0;
+ workQueueItems.forEach(it=>{if(it.pathway==="pending_pathology"&&it.registryState!=="sent"){const r=filePendingCase(it);it.registryState="sent";it.registryCaseId=r.caseId;if(r.status!=="duplicate"){pend++;it.history.push({at:new Date().toISOString(),note:`Placed on the pathology worklist as ${r.caseId} (awaiting report).`})}}});
+ const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.registryState!=="sent"&&it.registryState!=="duplicate"&&!(it.pathData.needsReview&&!it.pathData._approved))idx.push(i)});
+ const r=idx.length?sendPathItemsToRegistry(idx):{added:0,dup:0};
+ if(pend||r.added){saveWorkQueue(workQueueItems);addAudit("Placed on pathology worklist",`${r.added} report(s), ${pend} biopsy(ies) awaiting report.`)}
+ return{reports:r.added,pending:pend};
 }
 function pathRouteSend(){
  const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.pathSelected&&it.registryState!=="sent"&&it.registryState!=="duplicate")idx.push(i)});
@@ -1975,17 +1989,19 @@ function recordResultVisitOnRegistry(it){
  c.updates.push({date,type:"Patient notification",enteredBy:"From clinic note",text:esc(`Pathology result discussed with patient in person (${it.filename}). Plan: ${rv.planText||"see note"}`),next:esc(rv.actions&&rv.actions.referral?"Confirm the referral appointment happened and obtain the consult note.":rv.actions&&(rv.actions.mohs||rv.actions.excision||rv.actions.edc)?"Confirm definitive treatment is scheduled and completed.":"Close the case if no further treatment is needed.")});
  const a=rv.actions||{},high=c.priority==="High";
  if(a.treatedAlready)c.closureSuggestion={reason:"Definitive care completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
- else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Results and plan given to patient — no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
+ else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Results given — benign, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
  else if(a.referral)c.referralPendingConfirmation=true;
  savePathRegistry(cases);
  return{status:created?"created":"matched",caseId:c.caseId};
 }
 function renderClinicPathPanel(){
  const box=$("clinicPathTable");if(!box)return;
- const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.pathway==="pending_pathology"||it.pathway==="path_result_visit");
+ let rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.pathway==="pending_pathology"||it.pathway==="path_result_visit");
  const done=rows.filter(({it})=>it.registryState==="sent").length;
- if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} waiting · ${done} filed`;
+ if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} need action · ${done} on worklist`;
  if(!rows.length){box.innerHTML='<div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div>';return}
+ rows=rows.filter(({it})=>it.registryState!=="sent");
+ if(!rows.length){box.innerHTML=`<div class="notice ok">${done===1?"The clinic note is":`All ${done} clinic notes are`} on the pathology worklist below.</div>`;return}
  const cases=loadPathRegistry()||[];
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>What happened</th><th>Date</th><th>Site</th><th>Working dx / result</th><th>Plan / next step</th><th>Registry</th><th></th></tr></thead><tbody>'+
  rows.map(({it,i})=>{
@@ -2138,9 +2154,10 @@ async function handleBatchImport(fileList){
    done++;
  }
  saveWorkQueue(workQueueItems);
+ const auto=autoFileToWorklist();
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending)?` ${auto.reports} pathology report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report went onto the pathology worklist.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
@@ -2619,6 +2636,7 @@ $("clinicPathAll").onclick=()=>clinicPathSelectAll(true);$("clinicPathNone").onc
 $("pathSelectClean").onclick=()=>pathRouteSelect("clean");$("pathSelectAll").onclick=()=>pathRouteSelect("all");$("pathSelectNone").onclick=()=>pathRouteSelect("none");$("pathSendBtn").onclick=pathRouteSend;
 $("pfSend").onclick=pfSend;$("pfSave").onclick=pfSave;$("pfDx").oninput=refreshPathFormCoding;
 $("docTypeOverride").onchange=()=>{if(($("rawSource").value||"").trim())extractAndMap()};
+autoFileToWorklist();
 renderPathRoutePanel();
 renderTeamMembers();renderWorkQueueTable();
 renderBiopsyPreState();renderBiopsyHistory();renderLearnedMapTable();renderIcdReferenceTable();updateLearnedBadge();
