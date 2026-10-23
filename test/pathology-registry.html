@@ -47,7 +47,7 @@ a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:70
   <h2 style="margin:0">Pathology worklist: open results</h2>
   <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
  </div>
- <div class="source">Every case still in follow-up. High priority first, then longest since biopsy. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
+ <div class="source">Every case still in follow-up. Sorted by risk group (autoimmune / immunosuppression, melanoma, aggressive rare cancers, invasive SCC, BCC), then priority, then longest since biopsy. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
  <div style="overflow:auto;margin-top:10px">
   <table><thead><tr><th>Case</th><th>Diagnosis</th><th>Provider</th><th>Next step</th><th>Days Open</th><th>Days Since Last Update</th><th>Priority</th><th></th></tr></thead><tbody id="followupRows"></tbody></table>
  </div>
@@ -262,13 +262,24 @@ function nextStep(c){
  return{t:"Ready to close",k:"step-ready"};
 }
 function stepBadge(c){const s=nextStep(c);return`<span class="badge ${s.k}">${s.t}</span>`}
-/* Worklist order: priority first (High, then any middle level, then Routine), then longest since biopsy. */
+/* Worklist order (Todd, 2026-10-23): diagnosis risk group first, then priority, then longest since biopsy.
+   Autoimmune blistering / immunosuppression cases rank above cancers because they are followed weekly. */
+const RISK_TIERS=[
+ {label:"Autoimmune / immunosuppression",re:/pemphig|dermatitis herpetiformis|linear iga|epidermolysis bullosa acquisita|dermatomyositis|lupus|vasculitis|pyoderma gangrenosum|immunobullous|autoimmune blister|subepidermal blister|intraepidermal acantholytic blister/},
+ {label:"Melanoma",re:/melanoma/},
+ {label:"Aggressive rare cancer",re:/merkel|sebaceous carcinoma|dermatofibrosarcoma|angiosarcoma|atypical fibroxanthoma|pleomorphic dermal sarcoma|microcystic adnexal|porocarcinoma|extramammary paget|kaposi|mycosis fungoides|cutaneous (?:t|b)-cell lymphoma|lymphoma|leiomyosarcoma/},
+ {label:"Invasive SCC",re:/squamous cell carcinoma|\bscc\b/,not:/in situ|bowen/},
+ {label:"BCC / SCC in situ",re:/basal cell carcinoma|\bbcc\b|squamous cell carcinoma in situ|scc in situ|bowen/}
+];
+function riskTier(c){const t=String((c.dx||"")+" "+(c.group||"")).toLowerCase();const i=RISK_TIERS.findIndex(x=>x.re.test(t)&&!(x.not&&x.not.test(t)));return i<0?RISK_TIERS.length:i}
 function priorityRank(c){const p=String(c.priority||"").toLowerCase();return p==="high"?0:/routine|low/.test(p)?2:1}
+// cases in a risk group are high priority (direct contact before sign-off, no benign sign-off)
+function normalizePriorities(){let n=0;cases.forEach(c=>{if(!isClosed(c)&&riskTier(c)<RISK_TIERS.length&&c.priority!=="High"){c.priority="High";n++}});if(n)save()}
 function renderFollowup(){
  const t=today(),staleDays=Number($("staleThreshold").value)||14;
  const open=cases.filter(c=>!isClosed(c))
   .map(c=>({c,daysOpen:daysNum(c.biopsy||c.report,t),daysSinceUpdate:daysNum(lastUpdateDate(c),t)}))
-  .sort((a,b)=>priorityRank(a.c)-priorityRank(b.c)||(b.daysOpen||0)-(a.daysOpen||0));
+  .sort((a,b)=>riskTier(a.c)-riskTier(b.c)||priorityRank(a.c)-priorityRank(b.c)||(b.daysOpen||0)-(a.daysOpen||0));
  $("followupRows").innerHTML=open.length?open.map(({c,daysOpen,daysSinceUpdate})=>{
   const stale=daysSinceUpdate!==null&&daysSinceUpdate>=staleDays;
   return `<tr data-id="${esc(c.caseId)}"${c.referralPendingConfirmation?' style="background:#fef2f2"':""}>
@@ -278,12 +289,12 @@ function renderFollowup(){
    <td>${stepBadge(c)}</td>
    <td>${daysOpen===null?"—":daysOpen+" d"}</td>
    <td>${daysSinceUpdate===null?"—":daysSinceUpdate+" d"}${stale?' <span class="badge stale">⚠ STALE</span>':""}</td>
-   <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td>
+   <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span>${riskTier(c)<RISK_TIERS.length?`<div class="source">${RISK_TIERS[riskTier(c)].label}</div>`:""}</td>
    <td><a class="primary linkbtn" href="pathology-registry.html?case=${encodeURIComponent(c.caseId)}" target="_blank" onclick="lastRowId='${c.caseId}'">Update plan</a></td>
   </tr>`;
  }).join(""):'<tr><td colspan="8" class="source">No open cases — every case has been closed.</td></tr>';
 }
-function render(){
+function render(){normalizePriorities();
  const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf="Completed / Closed",pf=$("providerFilter").value||"All";
  $("groupFilter").innerHTML='<option>All</option>'+groups.map(g=>`<option ${g===gf?"selected":""}>${g}</option>`).join("");
  const filtered=cases.filter(c=>(gf==="All"||c.group===gf)&&(sf==="All"||c.status===sf)&&(pf==="All"||c.provider===pf)).sort((a,b)=>String(a.group).localeCompare(b.group)||String(a.dx).localeCompare(b.dx)||String(a.biopsy).localeCompare(b.biopsy));

@@ -323,7 +323,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   </div>
   <div class="panel" id="pathMasterPanel">
    <div class="row between"><div><h3>Pathology worklist</h3><div class="source">One row per patient result, from the day of the biopsy until sign-off. Imported reports and same-day biopsies land here automatically. Open a row, record the call to the patient, then remove it from the worklist with the reason (plan provided, Mohs scheduled, referred, care completed and so on). Signed-off cases move to the Completed repository.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
-   <iframe id="registryFrame" src="pathology-registry.html" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
+   <iframe id="registryFrame" src="pathology-registry.html?v=0.6.14.1-10231626" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
   </div>
 </section>
 
@@ -1356,8 +1356,9 @@ function pathCaseId(p,filename){
 function registryCaseFromPath(p,filename){
  const group=guessDiagnosisGroupV2(p.dxName,p.dxText);
  const malignant=/melanoma|carcinoma/.test(norm(p.dxName+" "+p.dxText))&&!p.dxNoTumor;
+ const autoimmune=/pemphig|dermatitis herpetiformis|linear iga|dermatomyositis|lupus|vasculitis|pyoderma gangrenosum/.test(norm(p.dxName+" "+p.dxText));
  const severeAtypia=/severe/.test(norm(p.dxName));
- const priority=(malignant||severeAtypia)?"High":"Routine";
+ const priority=(malignant||severeAtypia||autoimmune)?"High":"Routine";
  const clearExcision=p.specimenType==="Excision"&&p.marginStatus==="Uninvolved"&&!(p.partCount>1&&!p.marginPerPart);
  const dxDisplay=(p.dxDisplay||p.dxText||"(diagnosis not located)")+(p.icdReported?` (${p.icdReported})`:"");
  const today=new Date().toISOString().slice(0,10);
