@@ -24,6 +24,8 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 .suggest{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:12px}
 .contact{padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}.contact:last-child{border-bottom:0}
 details summary{cursor:pointer;font-weight:700}
+.reportText{white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:480px;overflow:auto;margin-top:6px}
+.reportText mark{background:#fef08a;padding:0 2px}
 a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap}
 @media(max-width:900px){.four,.five,.two,.three{grid-template-columns:1fr}.wrap{padding:10px}}
 </style>
@@ -54,6 +56,8 @@ a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:70
 <div class="panel hidden" id="casePanel">
  <div class="row" style="justify-content:space-between"><h2 id="caseTitle" style="margin:0"></h2><span class="row"><span id="caseStepBadge"></span><button class="secondary" id="jumpCloseBtn">Remove from worklist ↓</button></span></div>
  <div id="caseSource" class="source" style="margin-top:4px"></div>
+ <div class="row" style="margin-top:8px"><button class="secondary" id="viewReportBtn">View pathology report</button><span class="source">Check the diagnosis and site PH read against the original document before choosing a plan.</span></div>
+ <div id="reportViewer" class="section hidden" style="background:#f8fafc"></div>
  <div id="suggestBox" class="suggest hidden"></div>
 
  <div class="section" id="planSection" style="border:2px solid var(--blue)">
@@ -286,7 +290,7 @@ function render(){
  renderFollowup();
 }
 function fillSelect(sel,items,blank){sel.innerHTML=(blank?'<option value=""></option>':"")+items.map(x=>`<option>${esc(x)}</option>`).join("")}
-function openCase(id){lastRowId=id;
+function openCase(id){lastRowId=id;$("reportViewer").classList.add("hidden");$("viewReportBtn").textContent="View pathology report";
  active=cases.find(c=>c.caseId===id);if(!active)return;
  active.updates=active.updates||[];
  $("casePanel").classList.remove("hidden");
@@ -316,7 +320,8 @@ function renderCase(){
   $("dismissSuggestBtn").onclick=()=>{active.updates.push({date:today(),type:"Provider review",enteredBy:"Registry user",text:`Closure suggestion dismissed: ${esc(sg.reason)}.`,next:""});delete active.closureSuggestion;save();renderCase();render()};
  }else $("suggestBox").classList.add("hidden");
  // close / closed
- const reasons=CLOSE_REASONS.map(x=>x.r);const curR=$("closeReason").value;fillSelect($("closeReason"),reasons,true);if(curR)$("closeReason").value=curR;updateReasonHint();
+ // high-priority (malignant / severe atypia) cases never see the benign reasons
+ const reasons=CLOSE_REASONS.filter(x=>x.high||active.priority!=="High").map(x=>x.r);const curR=$("closeReason").value;fillSelect($("closeReason"),reasons,true);if(curR)$("closeReason").value=curR;updateReasonHint();
  if(closed){
   $("closeForm").classList.add("hidden");$("closedSummary").classList.remove("hidden");$("jumpCloseBtn").classList.add("hidden");
   const cl=active.closure||{date:active.completion,reason:active.completionType,by:active.closedBy,note:""};
@@ -372,6 +377,30 @@ $("closeCaseBtn").onclick=()=>{
 /* After an update or sign-off: in the Update plan tab, close the tab (the worklist in the other tab refreshes
    from storage). On the worklist page itself, close the case panel and return to where the user left off. */
 let lastRowId="";
+/* The original documents live in the main app's imported-document list (same browser storage). A case can
+   point to several: the report, a pending-biopsy note, a result-visit note. */
+const DOC_KEY="ph0613-work-queue";
+function sourceDocsFor(c){
+ let items=[];try{items=JSON.parse(localStorage.getItem(DOC_KEY)||"[]")}catch{}
+ const names=new Set([c.sourceDocument].filter(Boolean));
+ (c.updates||[]).forEach(u=>{const m=String(u.text||"").match(/(?:imported from file|clinic note|visit) \(([^)]+)\)/g);(m||[]).forEach(x=>names.add(x.replace(/^.*\(/,"").replace(/\)$/,"")))});
+ const seen=new Set();
+ return items.filter(it=>it.rawText&&(it.registryCaseId===c.caseId||names.has(it.filename))).filter(it=>{const k=it.filename+"|"+it.rawText.length;if(seen.has(k))return false;seen.add(k);return true});
+}
+function markTerms(text,terms){
+ let h=esc(text);
+ terms.filter(t=>t&&t.length>3).forEach(t=>{const e=esc(t).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");h=h.replace(new RegExp(e,"gi"),m=>`<mark>${m}</mark>`)});
+ return h;
+}
+$("viewReportBtn").onclick=()=>{
+ const v=$("reportViewer");if(!active)return;
+ if(!v.classList.contains("hidden")){v.classList.add("hidden");$("viewReportBtn").textContent="View pathology report";return}
+ const docs=sourceDocsFor(active),dx=String(active.dx||"").replace(/&amp;/g,"&").replace(/\s*\([A-Z]\d[\d.]*\)\s*$/,""),site=String(active.site||"").replace(/&amp;/g,"&");
+ v.innerHTML=`<h3 style="margin:0 0 4px">Source document${docs.length===1?"":"s"}</h3><div class="source">PH read: <b>${esc(dx)||"no diagnosis"}</b> · site <b>${esc(site)||"not recorded"}</b>. Matches are highlighted below.</div>`+
+  (docs.length?docs.map(d=>`<div style="margin-top:10px"><b>${esc(d.filename)}</b>${d.partCount>1?` <span class="source">(specimen ${esc(d.partLabel)} of ${d.partCount})</span>`:""}<div class="reportText">${markTerms(d.rawText,[dx,site])}</div></div>`).join(""):
+  `<div class="msg bad">The original document is not stored in this browser. It may have come from a JSON case list, been loaded on another computer or browser, or been cleared by Reset Demo.</div>`);
+ v.classList.remove("hidden");$("viewReportBtn").textContent="Hide pathology report";
+};
 function finishCaseWork(msgId,msg){
  if(FOCUS){
   $(msgId).innerHTML=`<div class="msg ok">${msg} Closing this tab…</div>`;
