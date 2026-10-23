@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>PH Pathology Tracking Registry Alpha 0.2.0</title>
+<title>PH Pathology Tracking Registry Alpha 0.2.1</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:Arial,Helvetica,sans-serif}
@@ -24,11 +24,14 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:8px;borde
 .suggest{background:#eff6ff;border:1px solid #bfdbfe;border-radius:10px;padding:10px;margin-top:12px}
 .contact{padding:6px 0;border-bottom:1px dashed var(--line);font-size:13px}.contact:last-child{border-bottom:0}
 details summary{cursor:pointer;font-weight:700}
+.reportText{white-space:pre-wrap;font-family:Consolas,Menlo,monospace;font-size:12.5px;background:#fff;border:1px solid var(--line);border-radius:8px;padding:10px;max-height:480px;overflow:auto;margin-top:6px}
+.reportText mark{background:#fef08a;padding:0 2px}
+a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:700;text-decoration:none;white-space:nowrap}
 @media(max-width:900px){.four,.five,.two,.three{grid-template-columns:1fr}.wrap{padding:10px}}
 </style>
 </head>
 <body>
-<header><h1>PH Pathology Tracking Registry</h1><div>Alpha 0.2.0 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
+<header><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h1>PH Pathology Tracking Registry </h1><a href="index.html#pathintake" style="color:#fff;background:rgba(255,255,255,.18);padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700">← Back to PH Pathology Worklist</a></div><div>Alpha 0.2.1 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
 <div class="wrap">
 <div class="panel grid five">
  <div class="metric"><span>Open cases</span><strong id="openCount"></strong></div>
@@ -37,34 +40,39 @@ details summary{cursor:pointer;font-weight:700}
  <div class="metric"><span>High priority open</span><strong id="highCount"></strong></div>
  <div class="metric"><span>Closed</span><strong id="closedCount"></strong></div>
 </div>
-<div class="panel source">Pathology reports (PDF, image, fax, text), clinic notes and <b>.json case lists</b> are all loaded in the main PH app through <b>Pathology Intake → Choose Files</b>. PH files what it recognizes into this registry. A case leaves the open worklist only when it is closed with a reason; closed cases stay in the registry with their full history.</div>
+<div class="panel source" id="standaloneNote">Pathology reports (PDF, image, fax, text), clinic notes and <b>.json case lists</b> are all loaded in the main PH app through <b>Pathology Intake → Choose Files</b>. PH files what it recognizes into this registry. A case leaves the open worklist only when it is closed with a reason; closed cases stay in the registry with their full history.</div>
 
 <div class="panel followup-panel">
  <div class="row" style="justify-content:space-between">
-  <h2 style="margin:0">⚠ Open Worklist — Needs Follow-Up</h2>
+  <h2 style="margin:0">Pathology worklist: open results</h2>
   <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
  </div>
- <div class="source">Every case that is not closed. Unconfirmed referrals first, then oldest open. Closing a case requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
+ <div class="source">Every case still in follow-up. Sorted by risk group (autoimmune / immunosuppression, melanoma, aggressive rare cancers, invasive SCC, BCC), then priority, then longest since biopsy. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
  <div style="overflow:auto;margin-top:10px">
   <table><thead><tr><th>Case</th><th>Diagnosis</th><th>Provider</th><th>Next step</th><th>Days Open</th><th>Days Since Last Update</th><th>Priority</th><th></th></tr></thead><tbody id="followupRows"></tbody></table>
  </div>
 </div>
 
-<div class="panel">
- <div class="row">
-  <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
-  <label>Status<select id="statusFilter"><option>All</option><option>Open - Pending Completion</option><option>Completed / Closed</option></select></label>
-  <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
- </div>
-</div>
-<div class="panel" style="overflow:auto">
- <table><thead><tr><th>Case</th><th>Patient UID</th><th>Biopsy Provider</th><th>Biopsy Date</th><th>Final Diagnosis</th><th>Site</th><th>Status</th><th>Next step</th><th>Priority</th><th>Days Open</th><th>Updates</th><th></th></tr></thead><tbody id="caseRows"></tbody></table>
-</div>
-
 <div class="panel hidden" id="casePanel">
- <div class="row" style="justify-content:space-between"><h2 id="caseTitle" style="margin:0"></h2><span id="caseStepBadge"></span></div>
+ <div class="row" style="justify-content:space-between"><h2 id="caseTitle" style="margin:0"></h2><span class="row"><span id="caseStepBadge"></span><button class="secondary" id="jumpCloseBtn">Remove from worklist ↓</button></span></div>
  <div id="caseSource" class="source" style="margin-top:4px"></div>
+ <div class="row" style="margin-top:8px"><button class="secondary" id="viewReportBtn">View pathology report</button><span class="source">Check the diagnosis and site PH read against the original document before choosing a plan.</span></div>
+ <div id="reportViewer" class="section hidden" style="background:#f8fafc"></div>
  <div id="suggestBox" class="suggest hidden"></div>
+
+ <div class="section" id="planSection" style="border:2px solid var(--blue)">
+  <h3>Update plan</h3>
+  <div id="planCurrent" class="source" style="margin-bottom:8px"></div>
+  <div class="grid three">
+   <label>Date<input id="planDate" type="date"></label>
+   <label>Updated by<select id="planBy"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Pathology Coordinator</option><option>Medical Assistant</option><option>Nursing</option><option>Other</option></select></label>
+   <label>Next check date (optional)<input id="planDue" type="date"></label>
+  </div>
+  <label>What happened / the plan now<textarea id="planText" placeholder="e.g. Called patient, discussed SCC result. Mohs with Dr. Synthetic booked for 11/14."></textarea></label>
+  <div class="row" style="margin-top:8px"><button class="primary" id="planUpdatedBtn">Plan updated: keep on worklist</button><button class="success" id="planCompletedBtn">Plan completed: remove from worklist</button></div>
+  <div class="source" style="margin-top:4px">"Plan completed" takes you to the sign-off below with this note filled in; choose the reason and confirm. If you spoke with the patient, record it in section 1 first.</div>
+  <div id="planMsg"></div>
+ </div>
 
  <div class="section">
   <h3>Case details</h3>
@@ -72,6 +80,10 @@ details summary{cursor:pointer;font-weight:700}
    <label>Biopsy / Responsible Provider<select id="biopsyProvider"><option>Unassigned</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
    <label>Biopsy Date<input id="biopsyDate" type="date"></label>
    <label>Final Report Date<input id="reportDate" type="date"></label>
+  </div>
+  <div class="grid two" style="margin-top:12px">
+   <label>Biopsy site (correct it here if PH read it wrong)<input id="caseSite" placeholder="e.g. left forearm"></label>
+   <label>Final diagnosis (correct it here if PH read it wrong)<input id="caseDx"></label>
   </div>
   <div class="grid four" style="margin-top:12px">
    <div class="metric"><span>Biopsy → Report</span><strong id="d1">—</strong></div>
@@ -97,16 +109,17 @@ details summary{cursor:pointer;font-weight:700}
  </div>
 
  <div class="section" id="closeSection">
-  <h3>2. Close case</h3>
+  <h3>2. Remove from worklist (close case)</h3>
+  <div class="source" style="margin-bottom:8px">Choose why the patient is coming off the worklist. The case stays in the registry with its history and can be reopened.</div>
   <div id="closeForm">
    <div class="grid four">
     <label>Closure date<input id="closeDate" type="date"></label>
-    <label>Reason the case is complete<select id="closeReason"></select></label>
+    <label>Reason for removal<select id="closeReason"></select></label>
     <label>Closed by<select id="closedBy"><option></option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option></select></label>
     <label>Closure note<input id="closeNote" placeholder="e.g. Mohs completed 9/14, clear margins"></label>
    </div>
    <div class="source" id="reasonHint" style="margin-top:4px"></div>
-   <div class="row" style="margin-top:8px"><button class="success" id="closeCaseBtn">Close case</button></div>
+   <div class="row" style="margin-top:8px"><button class="success" id="closeCaseBtn">Remove from worklist</button></div>
   </div>
   <div id="closedSummary" class="hidden"></div>
   <div id="closeMsg"></div>
@@ -125,6 +138,18 @@ details summary{cursor:pointer;font-weight:700}
   </div>
   <div class="source">Patient contacts go in section 1 so they count toward closure.</div>
   <div class="row" style="margin-top:8px"><button class="primary" id="addUpdateBtn">Add Update</button></div>
+ </div>
+</div>
+
+<div class="panel">
+ <h2 style="margin:0 0 4px">Completed repository</h2>
+ <div class="source" style="margin-bottom:8px">Cases signed off once the patient was told and the plan was arranged or completed. Open one to see its full history or to reopen it.</div>
+ <div class="row">
+  <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
+  <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
+ </div>
+ <div style="overflow:auto;margin-top:10px">
+ <table><thead><tr><th>Case</th><th>Patient UID</th><th>Biopsy Provider</th><th>Biopsy Date</th><th>Final Diagnosis</th><th>Site</th><th>Status</th><th>Next step</th><th>Priority</th><th>Closed</th><th>Updates</th><th></th></tr></thead><tbody id="caseRows"></tbody></table>
  </div>
 </div>
 
@@ -161,16 +186,25 @@ const CONTACT_METHODS=[
  {m:"Phone — no answer",notified:false},
  {m:"Unable to reach — wrong or disconnected number",notified:false}
 ];
+/* Earlier versions used these labels; closure suggestions saved with them still map to the current list. */
+const LEGACY_REASONS={"Benign — patient notified, no further treatment needed":"Results given — benign, no further treatment needed","Results and plan given to patient — no further treatment needed":"Results given — benign, no further treatment needed","Definitive treatment completed":"Definitive care completed","Definitive care initiated — treatment scheduled or started":"Patient contacted and plan provided"};
+/* plan:true reasons put the plan in motion. They may close a high-priority case only after direct contact
+   (phone or in person, checked below) and with a note saying what was arranged and when. */
 const CLOSE_REASONS=[
- {r:"Benign — patient notified, no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient informed."},
- {r:"Definitive treatment completed",high:true,notify:true,hint:"Excision, Mohs, ED&C, destruction or a completed topical course. Add what was done and when in the note."},
+ {r:"Patient contacted and plan provided",high:true,notify:true,note:true,plan:true,hint:"Patient told the result and the plan. Note required: the plan and when it happens (e.g. ED&C at next visit 11/12)."},
+ {r:"Excision scheduled",high:true,notify:true,note:true,plan:true,hint:"Note required: date and provider of the excision."},
+ {r:"Mohs surgery scheduled",high:true,notify:true,note:true,plan:true,hint:"Note required: Mohs surgeon or practice and the date."},
+ {r:"Referred to surgical oncology",high:true,notify:true,note:true,plan:true,hint:"Note required: surgeon or practice, and the appointment date if known."},
+ {r:"Referred to oncology center",high:true,notify:true,note:true,plan:true,hint:"Note required: cancer center, and the appointment date if known."},
+ {r:"Referred to another specialist",high:true,notify:true,note:true,plan:true,hint:"Note required: specialty, practice, and the appointment date if known."},
+ {r:"Definitive care completed",high:true,notify:true,hint:"Excision, Mohs, ED&C, destruction or a completed topical course. Add what was done and when in the note."},
+ {r:"Results given — benign, no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient told. Follow-up at routine visits."},
  {r:"Excision with clear margins (from pathology report)",high:true,notify:true,hint:"The excision report shows uninvolved margins; patient informed."},
- {r:"Referred out — patient seen by specialist",high:true,notify:true,hint:"Confirmation that the referral visit happened (consult note on file)."},
- {r:"Referred out — management completed",high:true,notify:true,hint:"The receiving specialist has documented completed management."},
  {r:"Observation / surveillance plan documented",high:true,notify:true,note:true,hint:"Plan of watchful waiting documented with the patient. Note required."},
  {r:"Patient declined recommended treatment (documented)",high:true,notify:true,note:true,hint:"Informed refusal documented. Note required."},
  {r:"Lost to follow-up — contact attempts exhausted",high:true,notify:false,attempts:3,hint:"Requires at least 3 recorded contact attempts, including a mailed letter."},
  {r:"Patient deceased or transferred care",high:true,notify:false,note:true,hint:"Note required (date and source of information)."},
+ {r:"Duplicate or entered in error",high:true,notify:false,note:true,hint:"Use when this case repeats another case or was created by mistake. Note required: name the case it duplicates or the error."},
  {r:"Other documented closure",high:true,notify:true,note:true,hint:"Note required."}
 ];
 const seed=[
@@ -179,7 +213,7 @@ const seed=[
   {date:"2026-07-05",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"Final pathology received; Mohs recommended.",next:"Notify patient and schedule Mohs."},
   {date:"2026-07-06",type:"Patient notification",enteredBy:"Medical Assistant",text:"Phone — spoke with patient: Patient notified of diagnosis.",next:"Schedule Mohs."}]},
  {caseId:"PATH-SYN-002",patientId:"PT-SYN-001",provider:"Mallory Heath, PA-C",biopsy:"2026-07-10",report:"2026-07-13",completion:"2026-07-29",completionType:"Definitive treatment completed",closedBy:"Mallory Heath, PA-C",group:"Squamous Cell Carcinoma",dx:"Squamous Cell Carcinoma in situ",site:"Right forearm",status:"Completed / Closed",priority:"High",
-  closure:{date:"2026-07-29",reason:"Definitive treatment completed",by:"Mallory Heath, PA-C",note:"ED&C completed."},
+  closure:{date:"2026-07-29",reason:"Definitive care completed",by:"Mallory Heath, PA-C",note:"ED&C completed."},
   notifications:[{date:"2026-07-14",method:"Phone — spoke with patient",by:"Medical Assistant",success:true,note:""}],updates:[
   {date:"2026-07-13",type:"Pathology result",enteredBy:"Pathology Coordinator",text:"SCC in situ confirmed.",next:"Schedule ED&C."},
   {date:"2026-07-14",type:"Patient notification",enteredBy:"Medical Assistant",text:"Phone — spoke with patient.",next:"Schedule ED&C."},
@@ -192,6 +226,7 @@ const seed=[
 const KEY="ph-path-registry-011";
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}}
 let cases=load()||structuredClone(seed),active=null;
+if(!load())localStorage.setItem(KEY,JSON.stringify(cases));
 const $=x=>document.getElementById(x);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const today=()=>new Date().toISOString().slice(0,10);
@@ -222,34 +257,48 @@ function nextStep(c){
  if(needsDirect(c)&&!ns.direct)return{t:"Notify patient directly (phone or in person)",k:"step-notify"};
  if(c.referralPendingConfirmation)return{t:"Confirm referral was completed",k:"step-treat"};
  if(c.closureSuggestion)return{t:"Ready to close — suggestion available",k:"step-ready"};
+ if(c.currentPlan)return{t:"Plan in progress"+(c.planDue?` · check ${c.planDue}`:""),k:"step-treat"};
  if(c.priority==="High")return{t:"Awaiting definitive treatment",k:"step-treat"};
  return{t:"Ready to close",k:"step-ready"};
 }
 function stepBadge(c){const s=nextStep(c);return`<span class="badge ${s.k}">${s.t}</span>`}
+/* Worklist order (Todd, 2026-10-23): diagnosis risk group first, then priority, then longest since biopsy.
+   Autoimmune blistering / immunosuppression cases rank above cancers because they are followed weekly. */
+const RISK_TIERS=[
+ {label:"Autoimmune / immunosuppression",re:/pemphig|dermatitis herpetiformis|linear iga|epidermolysis bullosa acquisita|dermatomyositis|lupus|vasculitis|pyoderma gangrenosum|immunobullous|autoimmune blister|subepidermal blister|intraepidermal acantholytic blister/},
+ {label:"Melanoma",re:/melanoma/},
+ {label:"Aggressive rare cancer",re:/merkel|sebaceous carcinoma|dermatofibrosarcoma|angiosarcoma|atypical fibroxanthoma|pleomorphic dermal sarcoma|microcystic adnexal|porocarcinoma|extramammary paget|kaposi|mycosis fungoides|cutaneous (?:t|b)-cell lymphoma|lymphoma|leiomyosarcoma/},
+ {label:"Invasive SCC",re:/squamous cell carcinoma|\bscc\b/,not:/in situ|bowen/},
+ {label:"BCC / SCC in situ",re:/basal cell carcinoma|\bbcc\b|squamous cell carcinoma in situ|scc in situ|bowen/}
+];
+function riskTier(c){const t=String((c.dx||"")+" "+(c.group||"")).toLowerCase();const i=RISK_TIERS.findIndex(x=>x.re.test(t)&&!(x.not&&x.not.test(t)));return i<0?RISK_TIERS.length:i}
+function priorityRank(c){const p=String(c.priority||"").toLowerCase();return p==="high"?0:/routine|low/.test(p)?2:1}
+// cases in a risk group are high priority (direct contact before sign-off, no benign sign-off)
+function normalizePriorities(){let n=0;cases.forEach(c=>{if(!isClosed(c)&&riskTier(c)<RISK_TIERS.length&&c.priority!=="High"){c.priority="High";n++}});if(n)save()}
 function renderFollowup(){
  const t=today(),staleDays=Number($("staleThreshold").value)||14;
  const open=cases.filter(c=>!isClosed(c))
   .map(c=>({c,daysOpen:daysNum(c.biopsy||c.report,t),daysSinceUpdate:daysNum(lastUpdateDate(c),t)}))
-  .sort((a,b)=>(b.c.referralPendingConfirmation?1:0)-(a.c.referralPendingConfirmation?1:0)||(b.daysOpen||0)-(a.daysOpen||0));
+  .sort((a,b)=>riskTier(a.c)-riskTier(b.c)||priorityRank(a.c)-priorityRank(b.c)||(b.daysOpen||0)-(a.daysOpen||0));
  $("followupRows").innerHTML=open.length?open.map(({c,daysOpen,daysSinceUpdate})=>{
   const stale=daysSinceUpdate!==null&&daysSinceUpdate>=staleDays;
-  return `<tr${c.referralPendingConfirmation?' style="background:#fef2f2"':""}>
+  return `<tr data-id="${esc(c.caseId)}"${c.referralPendingConfirmation?' style="background:#fef2f2"':""}>
    <td>${c.caseId}</td>
    <td><b>${c.dx}</b><div class="source">${c.group}</div>${c.referralPendingConfirmation?'<span class="badge" style="background:#fecaca;color:#7f1d1d">⚠ REFERRAL UNCONFIRMED</span>':""}${c.noSourceDocument?'<div class="source">JSON import — no source document</div>':""}</td>
    <td>${c.provider}</td>
    <td>${stepBadge(c)}</td>
    <td>${daysOpen===null?"—":daysOpen+" d"}</td>
    <td>${daysSinceUpdate===null?"—":daysSinceUpdate+" d"}${stale?' <span class="badge stale">⚠ STALE</span>':""}</td>
-   <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td>
-   <td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td>
+   <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span>${riskTier(c)<RISK_TIERS.length?`<div class="source">${RISK_TIERS[riskTier(c)].label}</div>`:""}</td>
+   <td><a class="primary linkbtn" href="pathology-registry.html?case=${encodeURIComponent(c.caseId)}" target="_blank" onclick="lastRowId='${c.caseId}'">Update plan</a></td>
   </tr>`;
  }).join(""):'<tr><td colspan="8" class="source">No open cases — every case has been closed.</td></tr>';
 }
-function render(){
- const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf=$("statusFilter").value||"All",pf=$("providerFilter").value||"All";
+function render(){normalizePriorities();
+ const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf="Completed / Closed",pf=$("providerFilter").value||"All";
  $("groupFilter").innerHTML='<option>All</option>'+groups.map(g=>`<option ${g===gf?"selected":""}>${g}</option>`).join("");
  const filtered=cases.filter(c=>(gf==="All"||c.group===gf)&&(sf==="All"||c.status===sf)&&(pf==="All"||c.provider===pf)).sort((a,b)=>String(a.group).localeCompare(b.group)||String(a.dx).localeCompare(b.dx)||String(a.biopsy).localeCompare(b.biopsy));
- $("caseRows").innerHTML=filtered.map(c=>`<tr><td>${c.caseId}</td><td>${c.patientId}</td><td>${c.provider}</td><td>${c.biopsy||"—"}</td><td><b>${c.dx}</b><div class="source">${c.group}</div></td><td>${c.site}</td><td><span class="badge ${isClosed(c)?"closed":"open"}">${c.status}</span></td><td>${stepBadge(c)}</td><td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td><td>${isClosed(c)?"—":days(c.biopsy||c.report,today())}</td><td>${(c.updates||[]).length}</td><td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td></tr>`).join("");
+ $("caseRows").innerHTML=filtered.map(c=>`<tr><td>${c.caseId}</td><td>${c.patientId}</td><td>${c.provider}</td><td>${c.biopsy||"—"}</td><td><b>${c.dx}</b><div class="source">${c.group}</div></td><td>${c.site}</td><td><span class="badge ${isClosed(c)?"closed":"open"}">${c.status}</span></td><td>${stepBadge(c)}</td><td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td><td>${c.completion||"—"}</td><td>${(c.updates||[]).length}</td><td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td></tr>`).join("")||'<tr><td colspan="12" class="source">No completed cases yet.</td></tr>';
  const open=cases.filter(c=>!isClosed(c));
  $("openCount").textContent=open.length;$("closedCount").textContent=cases.length-open.length;
  $("highCount").textContent=open.filter(c=>c.priority==="High").length;
@@ -258,20 +307,20 @@ function render(){
  renderFollowup();
 }
 function fillSelect(sel,items,blank){sel.innerHTML=(blank?'<option value=""></option>':"")+items.map(x=>`<option>${esc(x)}</option>`).join("")}
-function openCase(id){
+function openCase(id){lastRowId=id;$("reportViewer").classList.add("hidden");$("viewReportBtn").textContent="View pathology report";
  active=cases.find(c=>c.caseId===id);if(!active)return;
  active.updates=active.updates||[];
  $("casePanel").classList.remove("hidden");
  $("caseTitle").textContent=`${active.caseId} — ${active.patientId}`.replace(/&amp;/g,"&");
- {const sel=$("biopsyProvider");if(active.provider&&![...sel.options].some(o=>o.value===active.provider)){const o=document.createElement("option");o.textContent=active.provider.replace(/&amp;/g,"&");o.value=active.provider;sel.appendChild(o)}sel.value=active.provider||"Unassigned";}$("biopsyDate").value=active.biopsy||"";$("reportDate").value=active.report||"";
- $("contactDate").value=today();$("closeDate").value=today();$("newUpdateDate").value=today();
+ {const sel=$("biopsyProvider");if(active.provider&&![...sel.options].some(o=>o.value===active.provider)){const o=document.createElement("option");o.textContent=active.provider.replace(/&amp;/g,"&");o.value=active.provider;sel.appendChild(o)}sel.value=active.provider||"Unassigned";}$("biopsyDate").value=active.biopsy||"";$("reportDate").value=active.report||"";$("caseSite").value=String(active.site||"").replace(/&amp;/g,"&");$("caseDx").value=String(active.dx||"").replace(/&amp;/g,"&");
+ $("contactDate").value=today();$("closeDate").value=today();$("planDate").value=today();$("planDue").value=active.planDue||"";$("planText").value="";$("planMsg").innerHTML="";$("newUpdateDate").value=today();
  ["detailsMsg"].forEach(x=>$(x).textContent="");["contactMsg","closeMsg"].forEach(x=>$(x).innerHTML="");
  renderCase();$("casePanel").scrollIntoView({behavior:"smooth"});
 }
 function renderCase(){
  if(!active)return;
  const ns=notifyState(active),closed=isClosed(active);
- $("caseStepBadge").innerHTML=stepBadge(active);
+ $("caseStepBadge").innerHTML=stepBadge(active);renderPlanCurrent();
  $("caseSource").innerHTML=[`${active.dx} · ${active.site||"site not recorded"} · ${active.priority} priority`,active.sourceDocument?`Source document: ${active.sourceDocument}`:"",active.noSourceDocument?"Loaded from a JSON case list — no source document":""].filter(Boolean).join(" · ");
  $("d1").textContent=days(active.biopsy,active.report);
  $("dN").textContent=days(active.report,ns.firstNotified);
@@ -284,18 +333,19 @@ function renderCase(){
  // suggestion
  const sg=active.closureSuggestion;
  if(sg&&!closed){$("suggestBox").classList.remove("hidden");$("suggestBox").innerHTML=`<b>Suggested closure</b> (from ${esc(sg.source||"import")}): ${esc(sg.reason)}<div class="source">${esc(sg.note||"")}</div><div class="row" style="margin-top:6px"><button class="primary" id="useSuggestBtn">Use this suggestion</button><button class="secondary" id="dismissSuggestBtn">Dismiss</button></div>`;
-  $("useSuggestBtn").onclick=()=>{$("closeReason").value=sg.reason;$("closeNote").value=String(sg.note||"").replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">");updateReasonHint();$("closeSection").scrollIntoView({behavior:"smooth"})};
+  $("useSuggestBtn").onclick=()=>{$("closeReason").value=LEGACY_REASONS[sg.reason]||sg.reason;$("closeNote").value=String(sg.note||"").replace(/&amp;/g,"&").replace(/&#39;/g,"'").replace(/&quot;/g,'"').replace(/&lt;/g,"<").replace(/&gt;/g,">");updateReasonHint();$("closeSection").scrollIntoView({behavior:"smooth"})};
   $("dismissSuggestBtn").onclick=()=>{active.updates.push({date:today(),type:"Provider review",enteredBy:"Registry user",text:`Closure suggestion dismissed: ${esc(sg.reason)}.`,next:""});delete active.closureSuggestion;save();renderCase();render()};
  }else $("suggestBox").classList.add("hidden");
  // close / closed
- const reasons=CLOSE_REASONS.map(x=>x.r);const curR=$("closeReason").value;fillSelect($("closeReason"),reasons,true);if(curR)$("closeReason").value=curR;updateReasonHint();
+ // high-priority (malignant / severe atypia) cases never see the benign reasons
+ const reasons=CLOSE_REASONS.filter(x=>x.high||active.priority!=="High").map(x=>x.r);const curR=$("closeReason").value;fillSelect($("closeReason"),reasons,true);if(curR)$("closeReason").value=curR;updateReasonHint();
  if(closed){
-  $("closeForm").classList.add("hidden");$("closedSummary").classList.remove("hidden");
+  $("closeForm").classList.add("hidden");$("closedSummary").classList.remove("hidden");$("jumpCloseBtn").classList.add("hidden");
   const cl=active.closure||{date:active.completion,reason:active.completionType,by:active.closedBy,note:""};
   $("closedSummary").innerHTML=`<div class="msg ok"><b>Closed ${cl.date||""}</b> · ${cl.reason||"reason not recorded"}${cl.by?` · by ${cl.by}`:""}${cl.note?`<div>${cl.note}</div>`:""}</div>
    <div class="grid two" style="margin-top:8px"><label>Reason for reopening<input id="reopenReason" placeholder="e.g. margins involved on re-review"></label><div class="row" style="align-items:flex-end"><button class="secondary" id="reopenBtn">Reopen case</button></div></div>`;
   $("reopenBtn").onclick=reopenCase;
- }else{$("closeForm").classList.remove("hidden");$("closedSummary").classList.add("hidden")}
+ }else{$("closeForm").classList.remove("hidden");$("closedSummary").classList.add("hidden");$("jumpCloseBtn").classList.remove("hidden")}
  $("updateHistory").innerHTML=(active.updates||[]).slice().sort((a,b)=>String(a.date).localeCompare(b.date)).map(u=>`<div class="panel" style="margin-bottom:8px"><b>${u.date||"Date not recorded"} · ${u.type}</b><div>${u.text}</div><div class="source">Entered by: ${u.enteredBy||"—"} · Next: ${u.next||"—"}</div></div>`).join("")||'<div class="source">No updates yet.</div>';
 }
 function updateMethodHint(){
@@ -304,6 +354,7 @@ function updateMethodHint(){
 }
 function updateReasonHint(){const r=CLOSE_REASONS.find(x=>x.r===$("closeReason").value);$("reasonHint").textContent=r?r.hint:"Choose why this case is complete."}
 function showMsg(id,ok,text){$(id).innerHTML=`<div class="msg ${ok?"ok":"bad"}">${text}</div>`}
+$("jumpCloseBtn").onclick=()=>$("closeSection").scrollIntoView({behavior:"smooth"});
 $("contactMethod").onchange=updateMethodHint;$("closeReason").onchange=updateReasonHint;
 $("recordContactBtn").onclick=()=>{
  if(!active)return;
@@ -324,12 +375,12 @@ $("closeCaseBtn").onclick=()=>{
  if(!date)problems.push("Enter the closure date.");
  if(!by)problems.push("Choose who is closing the case.");
  if(r){
-  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia); it cannot be closed as benign.");
+  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia), so it cannot be signed off as benign. Choose the plan that was arranged (plan provided, excision or Mohs scheduled, referral) or another reason.");
   if(r.notify&&!ns.notified)problems.push("Record the patient notification first (section 1).");
   if(r.notify&&ns.notified&&needsDirect(active)&&!ns.direct)problems.push("High-priority case: record a direct notification (phone — spoke with patient, or in person) first.");
   if(r.attempts&&(ns.attempts<r.attempts||ns.letters<1))problems.push(`Lost to follow-up needs at least ${r.attempts} recorded contact attempts including a mailed letter (currently ${ns.attempts} attempt${ns.attempts===1?"":"s"}, ${ns.letters} letter${ns.letters===1?"":"s"}).`);
   if(r.note&&!note)problems.push("A closure note is required for this reason.");
-  if(active.awaitingReport&&!/deceased|lost to follow-up|declined/i.test(reason))problems.push("No pathology report has been filed for this case yet.");
+  if(active.awaitingReport&&!/deceased|lost to follow-up|declined|duplicate/i.test(reason))problems.push("No pathology report has been filed for this case yet.");
  }
  if(problems.length)return showMsg("closeMsg",false,"Not closed:<br>• "+problems.join("<br>• "));
  active.closure={date,reason,by,note:esc(note)};
@@ -337,7 +388,68 @@ $("closeCaseBtn").onclick=()=>{
  active.updates.push({date,type:"Case closed",enteredBy:by,text:esc(reason+(note?": "+note:"")),next:"None — case closed."});
  delete active.closureSuggestion;
  $("closeNote").value="";save();renderCase();render();
- showMsg("closeMsg",true,"Case closed. It has left the open worklist and stays in the registry with its history.");
+ showMsg("closeMsg",true,"Removed from the worklist (case closed). It stays in the registry with its history.");
+ finishCaseWork("closeMsg","Removed from the worklist.");
+};
+/* After an update or sign-off: in the Update plan tab, close the tab (the worklist in the other tab refreshes
+   from storage). On the worklist page itself, close the case panel and return to where the user left off. */
+let lastRowId="";
+/* The original documents live in the main app's imported-document list (same browser storage). A case can
+   point to several: the report, a pending-biopsy note, a result-visit note. */
+const DOC_KEY="ph0613-work-queue";
+function sourceDocsFor(c){
+ let items=[];try{items=JSON.parse(localStorage.getItem(DOC_KEY)||"[]")}catch{}
+ const names=new Set([c.sourceDocument].filter(Boolean));
+ (c.updates||[]).forEach(u=>{const m=String(u.text||"").match(/(?:imported from file|clinic note|visit) \(([^)]+)\)/g);(m||[]).forEach(x=>names.add(x.replace(/^.*\(/,"").replace(/\)$/,"")))});
+ const seen=new Set();
+ return items.filter(it=>it.rawText&&(it.registryCaseId===c.caseId||names.has(it.filename))).filter(it=>{const k=it.filename+"|"+it.rawText.length;if(seen.has(k))return false;seen.add(k);return true});
+}
+function markTerms(text,terms){
+ let h=esc(text);
+ terms.filter(t=>t&&t.length>3).forEach(t=>{const e=esc(t).replace(/[.*+?^${}()|[\]\\]/g,"\\$&");h=h.replace(new RegExp(e,"gi"),m=>`<mark>${m}</mark>`)});
+ return h;
+}
+$("viewReportBtn").onclick=()=>{
+ const v=$("reportViewer");if(!active)return;
+ if(!v.classList.contains("hidden")){v.classList.add("hidden");$("viewReportBtn").textContent="View pathology report";return}
+ const docs=sourceDocsFor(active),dx=String(active.dx||"").replace(/&amp;/g,"&").replace(/\s*\([A-Z]\d[\d.]*\)\s*$/,""),site=String(active.site||"").replace(/&amp;/g,"&");
+ v.innerHTML=`<h3 style="margin:0 0 4px">Source document${docs.length===1?"":"s"}</h3><div class="source">PH read: <b>${esc(dx)||"no diagnosis"}</b> · site <b>${esc(site)||"not recorded"}</b>. Matches are highlighted below.</div>`+
+  (docs.length?docs.map(d=>`<div style="margin-top:10px"><b>${esc(d.filename)}</b>${d.partCount>1?` <span class="source">(specimen ${esc(d.partLabel)} of ${d.partCount})</span>`:""}<div class="reportText">${markTerms(d.rawText,[dx,site])}</div></div>`).join(""):
+  `<div class="msg bad">The original document is not stored in this browser. It may have come from a JSON case list, been loaded on another computer or browser, or been cleared by Reset Demo.</div>`);
+ v.classList.remove("hidden");$("viewReportBtn").textContent="Hide pathology report";
+};
+function finishCaseWork(msgId,msg){
+ if(FOCUS){
+  $(msgId).innerHTML=`<div class="msg ok">${msg} Closing this tab…</div>`;
+  setTimeout(()=>{window.close();setTimeout(()=>{$(msgId).innerHTML=`<div class="msg ok">${msg} The worklist has been updated. You can close this tab now.</div>`},400)},1200);
+  return;
+ }
+ const id=active&&active.caseId;
+ setTimeout(()=>{
+  $("casePanel").classList.add("hidden");
+  const rows=[...document.querySelectorAll("#followupRows tr[data-id]")];
+  const row=rows.find(r=>r.dataset.id===id)||rows.find(r=>r.dataset.id===lastRowId)||rows[0];
+  if(!row)return;
+  row.style.outline="2px solid var(--blue)";setTimeout(()=>row.style.outline="",2500);
+  if(EMBEDDED)parent.postMessage({ph:"registry-scroll",y:row.getBoundingClientRect().top+window.scrollY},"*");else row.scrollIntoView({block:"center"});
+ },900);
+}
+function renderPlanCurrent(){$("planCurrent").innerHTML=active&&active.currentPlan?`<b>Current plan</b> (${esc(active.currentPlan.date||"")}${active.currentPlan.by?", "+esc(active.currentPlan.by):""}): ${active.currentPlan.text}${active.planDue?` · next check ${esc(active.planDue)}`:""}`:"No plan update recorded yet."}
+$("planUpdatedBtn").onclick=()=>{
+ if(!active)return;const text=$("planText").value.trim(),date=$("planDate").value,by=$("planBy").value;
+ if(!text)return showMsg("planMsg",false,"Describe what happened or the new plan.");
+ active.currentPlan={date,by,text:esc(text)};active.planDue=$("planDue").value||"";
+ active.updates.push({date,type:"Plan updated",enteredBy:by,text:esc(text),next:active.planDue?`Check by ${active.planDue}.`:"Complete the plan, then sign off."});
+ $("planText").value="";save();renderCase();render();
+ showMsg("planMsg",true,"Plan saved. The case stays on the worklist until the plan is completed.");
+ finishCaseWork("planMsg","Plan saved; the case stays on the worklist.");
+};
+$("planCompletedBtn").onclick=()=>{
+ if(!active)return;const text=$("planText").value.trim();
+ if(text)$("closeNote").value=text;
+ $("closedBy").value=[...$("closedBy").options].some(o=>o.value===$("planBy").value)?$("planBy").value:$("closedBy").value;
+ $("closeDate").value=$("planDate").value||today();
+ $("closeSection").scrollIntoView({behavior:"smooth"});$("closeReason").focus();
 };
 function reopenCase(){
  const why=($("reopenReason")||{}).value||"";
@@ -347,9 +459,14 @@ function reopenCase(){
  save();renderCase();render();showMsg("closeMsg",true,"Case reopened and back on the open worklist.");
 }
 $("addUpdateBtn").onclick=()=>{if(!active)return;const text=$("newUpdateText").value.trim();if(!text)return alert("Enter update text.");active.updates.push({date:$("newUpdateDate").value,type:$("newUpdateType").value,enteredBy:$("enteredBy").value,text:esc(text),next:esc($("newNextAction").value)});$("newUpdateText").value="";$("newNextAction").value="";save();renderCase();render()};
-$("saveCaseBtn").onclick=()=>{if(!active)return;active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;if(active.report&&active.awaitingReport)active.awaitingReport=false;save();renderCase();render();$("detailsMsg").textContent="Saved."};
+$("saveCaseBtn").onclick=()=>{if(!active)return;
+ const site=$("caseSite").value.trim(),dx=$("caseDx").value.trim(),oldSite=String(active.site||"").replace(/&amp;/g,"&"),oldDx=String(active.dx||"").replace(/&amp;/g,"&"),ch=[];
+ if(site!==oldSite){ch.push(`site "${oldSite||"not recorded"}" → "${site}"`);active.site=esc(site)}
+ if(dx&&dx!==oldDx){ch.push(`diagnosis "${oldDx}" → "${dx}"`);active.dx=esc(dx)}
+ if(ch.length)active.updates.push({date:today(),type:"Provider review",enteredBy:"Registry user",text:esc("Corrected after checking the source report: "+ch.join("; ")+"."),next:""});
+ active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;if(active.report&&active.awaitingReport)active.awaitingReport=false;save();renderCase();render();$("detailsMsg").textContent="Saved."};
 function save(){localStorage.setItem(KEY,JSON.stringify(cases))}
-$("groupFilter").onchange=render;$("statusFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;
+$("groupFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;
 $("resetBtn").onclick=()=>{if(!confirm("Replace the whole registry with the three demo cases? Imported and hand-entered cases will be removed. This cannot be undone."))return;cases=structuredClone(seed);save();active=null;$("casePanel").classList.add("hidden");render();$("adminStatus").textContent="Demo data restored."};
 $("purgeImportBtn").onclick=()=>{
  // Imported cases are recognized by source tag or case-ID prefix, so cases imported by older versions are found too.
@@ -360,6 +477,28 @@ $("purgeImportBtn").onclick=()=>{
  cases=cases.filter(c=>!isImported(c));active=null;$("casePanel").classList.add("hidden");save();render();
  $("adminStatus").textContent=`Purged ${n} imported case(s).`;
 };
+/* Embedded in the main PH app (Pathology Worklist tab): drop the page header, report height to the parent,
+   and reload when the parent files new cases into the shared registry. */
+const EMBEDDED=window.self!==window.top;
+/* ?case=ID opens one case on its own (the worklist's Update plan button opens this in a new tab). */
+const FOCUS=new URLSearchParams(location.search).get("case");
+if(FOCUS&&cases.some(c=>c.caseId===FOCUS)){
+ document.querySelectorAll(".wrap > .panel").forEach(p=>{if(p.id!=="casePanel")p.classList.add("hidden")});
+ document.querySelector("header h1").firstChild.textContent="Update plan ";document.title="Update plan — "+FOCUS;
+ openCase(FOCUS);window.scrollTo(0,0);
+}
+if(EMBEDDED){
+ document.querySelector("header").classList.add("hidden");$("standaloneNote").classList.add("hidden");
+ document.querySelector(".wrap").style.padding="0";
+ const sendHeight=()=>parent.postMessage({ph:"registry-height",h:document.querySelector(".wrap").offsetHeight},"*");
+ new ResizeObserver(sendHeight).observe(document.body);sendHeight();
+}
+function reloadFromStore(){const fresh=load();if(!fresh)return;cases=fresh;if(active){active=cases.find(c=>c.caseId===active.caseId)||null;if(active)renderCase();else $("casePanel").classList.add("hidden")}render()}
+window.addEventListener("message",e=>{
+ if(e.data==="ph-registry-reload")reloadFromStore();
+ else if(e.data&&e.data.ph==="open-case"){reloadFromStore();if(cases.some(c=>c.caseId===e.data.id)){openCase(e.data.id);if(EMBEDDED)parent.postMessage({ph:"registry-scroll",y:$("casePanel").offsetTop},"*")}}
+});
+window.addEventListener("storage",e=>{if(e.key===KEY)reloadFromStore()});
 render();
 </script>
 </body></html>

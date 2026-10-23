@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#0b1f3a">
-<title>PH Alpha 0.6.14.0</title>
+<title>PH Alpha 0.6.14.1</title>
 <style>
 :root{--navy:#0b1f3a;--blue:#2563eb;--teal:#0f766e;--bg:#f4f7fb;--panel:#fff;--line:#d8e1ec;--ink:#162033;--muted:#64748b;--ok:#15803d;--warn:#b45309;--bad:#b91c1c;--shadow:0 10px 28px rgba(15,23,42,.08)}
 *{box-sizing:border-box}html{scroll-behavior:smooth}body{margin:0;background:var(--bg);color:var(--ink);font-family:Inter,Arial,Helvetica,sans-serif}
@@ -58,7 +58,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </head>
 <body>
 <header>
- <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.14.0</p></div>
+ <div><h1>PH</h1><p>Intelligent Prior Authorization Engine — Alpha 0.6.14.1</p></div>
  <div class="row"><span class="badge">Synthetic Test Environment</span><button id="resetBtn" class="btn secondary">Reset Demo</button></div>
 </header>
 
@@ -71,11 +71,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <button class="nav" data-view="soap">3. Structured SOAP</button>
  <button class="nav" data-view="treatment">4. Treatment Authorization</button>
  <button class="nav" data-view="queue">5. Work Queue (PA)</button>
- <button class="nav" data-view="pathintake">6. Pathology Intake</button>
- <button class="nav" data-view="biopsy">7. Biopsy / Pathology</button>
+ <button class="nav" data-view="pathintake">6. Pathology Worklist</button>
+ <button class="nav hidden" data-view="biopsy" title="Hidden in 0.6.14.1: biopsy tracking now happens in the Pathology Worklist">7. Biopsy / Pathology</button>
  <button class="nav" data-view="learning">8. Mapping Memory</button>
  <button class="nav" data-view="audit">Audit</button>
- <a href="pathology-registry.html" target="_blank" style="display:block;color:#dbeafe;text-decoration:none;padding:11px 12px;border-radius:8px;margin:2px 0;background:#334155">Pathology Registry ↗</a>
 </aside>
 
 <main>
@@ -249,7 +248,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="queue" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.14.0 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
+  <div class="row between"><div><h2>Work Queue</h2><div class="source">Alpha 0.6.14.1 · batch-imported encounters, assigned to staff, tracked through to PA resolution</div></div></div>
   <div class="notice">Import several clinic documents at once below. Each is extracted, mapped, and scanned for missing PA evidence automatically — the results accumulate here as a persistent worklist instead of being overwritten by the next document, so a coordinator or provider can work through them and record each outcome.</div>
  </div>
  <div class="panel">
@@ -300,7 +299,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.14.0 · surgical pathology reports, biopsies awaiting pathology and result visits, reviewed here and filed into the Pathology Registry</div></div></div>
+  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one list for pathology follow-up. Import reports and clinic notes here. Every biopsy and result goes onto the <b>pathology worklist</b> below and stays there until the patient has been told the plan and it is under way; then it is signed off with a reason. Only reports PH could not read cleanly wait above the worklist for a quick check.</div></div><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to worklist ↓</a></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -311,16 +310,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <div id="pathBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
  </div>
   <div class="panel" id="pathRoutePanel">
-   <div class="row between"><div><h3>Surgical Pathology Reports — Registry Review</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>Reports that need a check before they go on the worklist</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
    <div id="pathRouteTable"><div class="notice">No surgical pathology reports imported yet.</div></div>
-   <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows in Pathology Registry</button></div>
+   <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows onto master worklist</button></div>
    <div id="pathSendStatus" class="notice hidden" style="margin-top:8px"></div>
   </div>
   <div class="panel" id="clinicPathPanel">
-   <div class="row between"><div><h3>From Clinic Notes — Biopsies Awaiting Pathology &amp; Result Visits</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>Clinic notes that need action (result visits to record on a case)</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
    <div id="clinicPathTable"><div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div></div>
    <div class="row" style="margin-top:8px"><button id="clinicPathAll" class="btn secondary">Check all pending-pathology rows</button><button id="clinicPathNone" class="btn secondary">Uncheck all</button><button id="clinicPathFile" class="btn success">File checked rows as pending cases</button></div>
    <div id="clinicPathStatus" class="notice hidden" style="margin-top:8px"></div>
+  </div>
+  <div class="panel" id="pathMasterPanel">
+   <div class="row between"><div><h3>Pathology worklist</h3><div class="source">One row per patient result, from the day of the biopsy until sign-off. Imported reports and same-day biopsies land here automatically. Open a row, record the call to the patient, then remove it from the worklist with the reason (plan provided, Mohs scheduled, referred, care completed and so on). Signed-off cases move to the Completed repository.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
+   <iframe id="registryFrame" src="about:blank" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
   </div>
 </section>
 
@@ -392,6 +395,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </div>
 
 <button id="feedbackBtn" class="btn primary floating-feedback">Feedback / Change Order</button>
+<div id="discardModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2 style="margin:0">Final disposition</h2><button id="discardCancel" class="btn secondary">Cancel</button></div><div class="source" id="discardFile" style="margin-top:4px"></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Sign off the patient</h3><div class="source">Opens this patient's case on the master worklist below. Record how the patient was told, then choose the sign-off reason: definitive care completed, results and plan given, definitive care initiated, referred out, and others. A report that is not filed yet is filed first.</div><div id="signoffMsg" class="source" style="color:var(--bad);margin-top:6px"></div><button id="signoffBtn" class="btn success" style="margin-top:8px">Open case to sign off</button></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Take this document off the list (no patient case)</h3><div class="source">For a document that should not be tracked at all. It leaves the new-reports list; any case already on the master worklist is not changed. The reason is kept in Audit.</div><label style="margin-top:8px;display:block">Reason<select id="discardReason"><option value=""></option><option>Not a pathology report</option><option>Duplicate of another file</option><option>Wrong patient or misfiled</option><option>Unreadable, blank or test file</option><option>Already filed in the registry</option><option>Other (note required)</option></select></label><label>Note<input id="discardNote" placeholder="e.g. duplicate of PathRpt_098_BCC_inf.pdf"></label><div id="discardMsg" class="source" style="color:var(--bad);margin-top:6px"></div><button id="discardConfirm" class="btn danger" style="margin-top:8px">Take document off the list</button></div>
+</div></div>
 <div id="feedbackModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedback" class="btn secondary">Close</button></div><label>Comment<textarea id="feedbackComment"></textarea></label><button id="submitFeedback" class="btn primary">Submit Feedback</button><div id="feedbackStatus"></div></div></div>
 
 <div id="ctxMenu" class="ctx-menu hidden"></div>
@@ -536,10 +543,32 @@ function renderIcdReferenceTable(){
  document.querySelectorAll(".rmIcd").forEach(b=>b.onclick=()=>{icdReference.splice(Number(b.dataset.i),1);saveIcdReference(icdReference);renderIcdReferenceTable()});
 }
 
+let discardIdx=-1;
+function askDiscardIntake(i){const it=workQueueItems[i];if(!it)return;discardIdx=i;$("discardFile").textContent=it.filename;$("discardReason").value="";$("discardNote").value="";$("discardMsg").textContent="";$("signoffMsg").textContent="";$("signoffBtn").textContent=it.registryCaseId&&it.registryState==="sent"?"Open case to sign off":"File report and open case to sign off";$("discardModal").classList.remove("hidden")}
+$("signoffBtn").onclick=()=>{const it=workQueueItems[discardIdx];if(!it)return $("discardModal").classList.add("hidden");
+ let id=it.registryState==="sent"?it.registryCaseId:"";
+ if(!id){
+  if(!it.pathData||it.docType!=="surgical_pathology")return $("signoffMsg").textContent="File this clinic note first with the buttons under its table, then use Final disposition again.";
+  if(it.pathData.needsReview&&!it.pathData._approved)return $("signoffMsg").textContent="This report needs review before it can be filed. Click Open on the row, check it, then try again.";
+  const r=sendPathRecordToRegistry(it.pathData,it.filename);id=r.caseId;
+  if(r.status==="sent"){it.registryState="sent";it.registryCaseId=r.caseId;it.history.push({at:new Date().toISOString(),note:`Sent to Pathology Registry as ${r.caseId}.`});addAudit("Pathology report filed for sign-off",`${it.filename} → ${r.caseId}`)}
+  saveWorkQueue(workQueueItems);renderWorkQueueTable();
+ }
+ discardIdx=-1;$("discardModal").classList.add("hidden");
+ // open the case in its own tab (the worklist below refreshes when it is saved); fall back to the embedded panel
+ const w=window.open(`pathology-registry.html?case=${encodeURIComponent(id)}`,"_blank");
+ if(!w){const f=$("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage({ph:"open-case",id},"*")}
+};
+$("discardReason").onchange=()=>$("discardMsg").textContent="";
+$("discardCancel").onclick=()=>{discardIdx=-1;$("discardModal").classList.add("hidden")};
+$("discardConfirm").onclick=()=>{const it=workQueueItems[discardIdx];if(!it)return $("discardModal").classList.add("hidden");const r=$("discardReason").value,n=$("discardNote").value.trim();if(!r)return $("discardMsg").textContent="Choose a reason.";if(/^Other/.test(r)&&!n)return $("discardMsg").textContent="Add a note for \"Other\".";workQueueItems.splice(discardIdx,1);discardIdx=-1;saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Pathology intake item discarded",`${it.filename} · ${r}${n?": "+n:""}`);$("discardModal").classList.add("hidden")};
 function addAudit(action,detail){audit.unshift({time:new Date().toLocaleString(),action,detail});renderAudit()}
 function renderAudit(){$("auditList").innerHTML=audit.length?audit.map(a=>`<div class="map-item"><b>${esc(a.action)}</b><div class="mini">${esc(a.time)}</div><div>${esc(a.detail)}</div></div>`).join(""):'<div class="notice">No audit events yet.</div>'}
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>showView(n.dataset.view));
+if(location.hash==="#pathintake")showView("pathintake");
+// load the embedded worklist fresh each time so a cached copy never shows an older version
+{const f=document.getElementById("registryFrame");if(f)f.src="pathology-registry.html?t="+Date.now()}
 
 async function sha256Text(text){try{const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("")}catch{return"unavailable"}}
 function normalized(t){return String(t||"").replace(/\u00a0/g," ").replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
@@ -1329,8 +1358,9 @@ function pathCaseId(p,filename){
 function registryCaseFromPath(p,filename){
  const group=guessDiagnosisGroupV2(p.dxName,p.dxText);
  const malignant=/melanoma|carcinoma/.test(norm(p.dxName+" "+p.dxText))&&!p.dxNoTumor;
+ const autoimmune=/pemphig|dermatitis herpetiformis|linear iga|dermatomyositis|lupus|vasculitis|pyoderma gangrenosum/.test(norm(p.dxName+" "+p.dxText));
  const severeAtypia=/severe/.test(norm(p.dxName));
- const priority=(malignant||severeAtypia)?"High":"Routine";
+ const priority=(malignant||severeAtypia||autoimmune)?"High":"Routine";
  const clearExcision=p.specimenType==="Excision"&&p.marginStatus==="Uninvolved"&&!(p.partCount>1&&!p.marginPerPart);
  const dxDisplay=(p.dxDisplay||p.dxText||"(diagnosis not located)")+(p.icdReported?` (${p.icdReported})`:"");
  const today=new Date().toISOString().slice(0,10);
@@ -1430,10 +1460,14 @@ function pathStatePill(it){
 function renderPathRoutePanel(){
  renderClinicPathPanel();
  const box=$("pathRouteTable");if(!box)return;
- const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.docType==="surgical_pathology"&&it.pathData);
+ let rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.docType==="surgical_pathology"&&it.pathData);
  const filed=rows.filter(({it})=>it.registryState==="sent"||it.registryState==="duplicate").length;
- $("pathRouteBadge").textContent=`${rows.length-filed} waiting · ${filed} filed`;
- if(!rows.length){box.innerHTML='<div class="notice">No surgical pathology reports imported yet. Reports recognized in a batch appear here instead of in the prior-authorization checklist.</div>';return}
+ $("pathRouteBadge").textContent=`${rows.length-filed} need review · ${filed} on worklist`;
+ if(!rows.length){box.innerHTML='<div class="notice">No surgical pathology reports imported yet. Reports recognized in a batch go straight onto the pathology worklist below.</div>';return}
+ // 0.6.14.1: filed reports live on the worklist below; only reports that still need a check stay here
+ rows=rows.filter(({it})=>it.registryState!=="sent"&&it.registryState!=="duplicate");
+ $("pathSelectClean").parentElement.classList.toggle("hidden",!rows.length);
+ if(!rows.length){box.innerHTML=`<div class="notice ok">${filed===1?"The imported report is":`All ${filed} imported reports are`} on the pathology worklist below.</div>`;return}
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>Accession</th><th>Biopsy</th><th>Reported</th><th>Specimen / site</th><th>Final diagnosis</th><th>Margin</th><th>Follow-up</th><th>Review notes</th><th>Registry</th><th></th></tr></thead><tbody>'+
  rows.map(({it,i})=>{
   const p=it.pathData,filedRow=it.registryState==="sent"||it.registryState==="duplicate",blocked=p.needsReview&&!p._approved;
@@ -1445,11 +1479,11 @@ function renderPathRoutePanel(){
    <td><b>${esc(p.dxDisplay||p.dxText||"—")}</b>${p.dxName?`<div class="mini"><span class="pill">${esc(p.dxName)}</span>${p.icdReported?` ${esc(p.icdReported)}`:""}</div>`:'<div class="mini">not recognized</div>'}</td>
    <td>${esc(p.margin||"—")}</td><td>${esc((p.followup||"—").slice(0,120))}</td>
    <td>${notes}</td><td>${pathStatePill(it)}</td>
-   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></div></td></tr>`;
+   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Sign off the patient, or take the document off the list">Final disposition</button></div></td></tr>`;
  }).join("")+'</tbody></table>';
  box.querySelectorAll(".pathPick").forEach(c=>c.onchange=()=>{workQueueItems[Number(c.dataset.i)].pathSelected=c.checked;saveWorkQueue(workQueueItems)});
  box.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
- box.querySelectorAll(".pathRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Pathology intake item removed",it.filename)});
+ box.querySelectorAll(".pathRemove").forEach(b=>b.onclick=()=>askDiscardIntake(Number(b.dataset.i)));
 }
 function pathRouteSelect(mode){
  workQueueItems.forEach(it=>{
@@ -1461,13 +1495,26 @@ function pathRouteSelect(mode){
  });
  saveWorkQueue(workQueueItems);renderPathRoutePanel();
 }
+/* 0.6.14.1: one list. Biopsies done in clinic and pathology reports that need no manual check go straight onto
+   the pathology worklist; only reports with review notes wait above it. Pending cases are filed first so a
+   matching report links to its pending case instead of opening a second one. */
+function autoFileToWorklist(){
+ let pend=0;
+ workQueueItems.forEach(it=>{if(it.pathway==="pending_pathology"&&it.registryState!=="sent"){const r=filePendingCase(it);it.registryState="sent";it.registryCaseId=r.caseId;if(r.status!=="duplicate"){pend++;it.history.push({at:new Date().toISOString(),note:`Placed on the pathology worklist as ${r.caseId} (awaiting report).`})}}});
+ const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.registryState!=="sent"&&it.registryState!=="duplicate"&&!(it.pathData.needsReview&&!it.pathData._approved))idx.push(i)});
+ const r=idx.length?sendPathItemsToRegistry(idx):{added:0,dup:0};
+ let visits=0,signed=0;
+ workQueueItems.forEach(it=>{if(it.pathway==="path_result_visit"&&it.registryState!=="sent"){const v=recordResultVisitOnRegistry(it);it.registryState="sent";it.registryCaseId=v.caseId;if(v.status!=="duplicate"){visits++;if(v.closed)signed++;it.history.push({at:new Date().toISOString(),note:`${v.status==="matched"?"Recorded on":"Created"} worklist case ${v.caseId}: patient notified in person${v.closed?`; signed off (${v.reason})`:""}.`})}}});
+ if(pend||r.added||visits){saveWorkQueue(workQueueItems);addAudit("Placed on pathology worklist",`${r.added} report(s), ${pend} biopsy(ies) awaiting report, ${visits} result visit(s) recorded (${signed} signed off).`)}
+ return{reports:r.added,pending:pend,visits,signed};
+}
 function pathRouteSend(){
  const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.pathSelected&&it.registryState!=="sent"&&it.registryState!=="duplicate")idx.push(i)});
  const st=$("pathSendStatus");st.classList.remove("hidden");
  if(!idx.length){st.className="notice warn";st.textContent="Nothing is checked. Check the rows to file, or use “Check all rows with a recognized diagnosis”.";return}
  const r=sendPathItemsToRegistry(idx);
  st.className="notice ok";
- st.innerHTML=`Filed <b>${r.added}</b> case(s) in the Pathology Registry${r.dup?`; ${r.dup} already there and skipped`:""}${r.skipped?`; ${r.skipped} blocked by review notes`:""}. Open the Pathology Registry page to see them — cases with an unrecognized diagnosis are filed flagged “needs coding review”.`;
+ st.innerHTML=`Filed <b>${r.added}</b> case(s)${r.dup?`; ${r.dup} already there and skipped`:""}${r.skipped?`; ${r.skipped} blocked by review notes`:""}. They are on the master worklist below — cases with an unrecognized diagnosis are filed flagged “needs coding review”.`;
  addAudit("Pathology reports filed to registry",`${r.added} added, ${r.dup} duplicates, ${r.skipped} blocked.`);
  renderWorkQueueTable();
 }
@@ -1542,7 +1589,7 @@ function pfSend(){
  const r=sendPathRecordToRegistry(p,ingestState.filename||"report");
  if(ingestState.linkedQueueId){const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);if(it){it.pathData=p;it.docType="surgical_pathology";it.registryState=r.status==="sent"?"sent":"duplicate";it.registryCaseId=r.caseId;it.diagnosis=p.dxDisplay;it.icd=p.icdReported;it.history.push({at:new Date().toISOString(),note:`Reviewed in Document Intake Lab and ${r.status==="sent"?"filed to":"matched in"} the Pathology Registry as ${r.caseId}.`});saveWorkQueue(workQueueItems);renderWorkQueueTable()}}
  st.className=r.status==="sent"?"notice ok":"notice warn";
- st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. Open the Pathology Registry page to see it.`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
+ st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. It is on the Pathology Worklist (tab 6).`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
  addAudit("Pathology report filed to registry",`${ingestState.filename||"report"} → ${r.caseId} (${r.status}).`);
 }
 function pfSave(){
@@ -1598,7 +1645,8 @@ function extractNonPaDocument(dt){
 const WORK_QUEUE_KEY="ph0613-work-queue", TEAM_KEY="ph0613-team-members";
 const FIXED_ROLES=["Coordinator","Provider","Nursing","Unassigned"];
 function loadWorkQueue(){try{return JSON.parse(localStorage.getItem(WORK_QUEUE_KEY)||"[]")}catch{return[]}}
-function saveWorkQueue(a){localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}
+let wqSaveWarned=false;
+function saveWorkQueue(a){try{localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}catch(e){if(!wqSaveWarned){wqSaveWarned=true;alert("The browser's storage is full, so the imported documents could not be saved. They will disappear when the page is reloaded. File or discard some documents, then import the rest.")}}}
 let workQueueItems=loadWorkQueue();
 function loadTeamMembers(){try{return JSON.parse(localStorage.getItem(TEAM_KEY)||"[]")}catch{return[]}}
 function saveTeamMembers(a){localStorage.setItem(TEAM_KEY,JSON.stringify(a))}
@@ -1914,9 +1962,14 @@ function matchRegistryCaseForResult(rv,cases){
  const open=(cases||[]).filter(c=>!String(c.status||"").startsWith("Completed"));
  const group=rv.pathDx?guessDiagnosisGroupV2(rv.pathDx,rv.pathDx):"";
  const byId=_realId(rv.mrn)?open.filter(c=>c.patientId===rv.mrn):[];
- const pool=byId.length?byId:open;
- const hits=pool.filter(c=>_sitesMatch(rv.site,c.site)&&(!group||group==="Other / Benign"||c.group===group||c.group==="Pending pathology"));
- return hits.length===1?hits[0]:null;
+ // 0.6.14.1: a note with a real MRN only matches that patient's cases. Without one, the diagnosis group must
+ // agree exactly, so a benign note can never be recorded on another patient's melanoma case.
+ const realMrn=_realId(rv.mrn),pool=realMrn?byId:open;
+ const hits=pool.filter(c=>_sitesMatch(rv.site,c.site)&&(realMrn?(!group||group==="Other / Benign"||c.group===group||c.group==="Pending pathology"):(!!group&&group!=="Other / Benign"&&c.group===group)));
+ if(hits.length===1)return hits[0];
+ // 0.6.14.1: a signed-off case comes back when a new note about the same patient and site arrives
+ if(!hits.length&&_realId(rv.mrn)){const closed=(cases||[]).filter(c=>String(c.status||"").startsWith("Completed")&&c.patientId===rv.mrn&&_sitesMatch(rv.site,c.site));if(closed.length===1)return closed[0]}
+ return null;
 }
 function _caseBaseId(prefix,filename){return prefix+String(filename||"note").replace(/\.[a-z0-9]+$/i,"").replace(/[^A-Za-z0-9]+/g,"-").slice(0,40)}
 function filePendingCase(it){
@@ -1944,22 +1997,46 @@ function recordResultVisitOnRegistry(it){
    updates:[{date,type:"Pathology result",enteredBy:"From clinic note",text:esc(`Case created from a result-discussion visit (${it.filename}); the pathology report itself has not been filed. Result named in note: ${rv.pathDx||"not stated"}.`),next:"File the pathology report when available."}]};
   cases.unshift(c);created=true;
  }
+ if(String(c.status||"").startsWith("Completed")){
+  c.updates.push({date,type:"Case reopened",enteredBy:"From clinic note",text:esc(`Reopened: new clinic note ${it.filename} (was: ${c.completionType||"closed"}).`),next:"Review the new note."});
+  c.closure=null;c.completion="";c.completionType="";c.closedBy="";c.status="Open - Pending Completion";
+ }
  c.notifications=Array.isArray(c.notifications)?c.notifications:[];
  c.notifications.push({date,method:"In person at visit",by:"From clinic note",success:true,note:esc(`Result discussed at visit (${it.filename}).`),source:it.filename});
  c.updates.push({date,type:"Patient notification",enteredBy:"From clinic note",text:esc(`Pathology result discussed with patient in person (${it.filename}). Plan: ${rv.planText||"see note"}`),next:esc(rv.actions&&rv.actions.referral?"Confirm the referral appointment happened and obtain the consult note.":rv.actions&&(rv.actions.mohs||rv.actions.excision||rv.actions.edc)?"Confirm definitive treatment is scheduled and completed.":"Close the case if no further treatment is needed.")});
  const a=rv.actions||{},high=c.priority==="High";
- if(a.treatedAlready)c.closureSuggestion={reason:"Definitive treatment completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
- else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Benign — patient notified, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
+ if(a.treatedAlready)c.closureSuggestion={reason:"Definitive care completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
+ else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Results given — benign, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
  else if(a.referral)c.referralPendingConfirmation=true;
+ /* 0.6.14.1: the note documents that the result and plan were discussed in person, so it is the sign-off
+    record. High-priority cases sign off only when the note names the arranged treatment or referral;
+    otherwise they stay on the worklist as "confirm plan". */
+ const planLow=String(rv.planText||"").toLowerCase();
+ let auto="";
+ if(a.treatedAlready)auto="Definitive care completed";
+ else if(a.referral)auto=/surgical oncolog/.test(planLow)?"Referred to surgical oncology":/oncolog|cancer cent|md anderson|tertiary/.test(planLow)?"Referred to oncology center":"Referred to another specialist";
+ else if(a.mohs)auto="Mohs surgery scheduled";
+ else if(a.excision)auto="Excision scheduled";
+ else if(a.edc)auto="Patient contacted and plan provided";
+ else if(!high)auto=a.noFurtherTx?"Results given — benign, no further treatment needed":"Patient contacted and plan provided";
+ if(auto&&!c.awaitingReport){
+  const note=`Signed off automatically from clinic note ${it.filename}: result and plan discussed with the patient in person on ${date}. Plan: ${rv.planText||"see note"}`.slice(0,500);
+  c.closure={date,reason:auto,by:"From clinic note",note:esc(note)};c.completion=date;c.completionType=auto;c.closedBy="From clinic note";c.status="Completed / Closed";
+  c.referralPendingConfirmation=false;delete c.closureSuggestion;
+  c.updates.push({date,type:"Case closed",enteredBy:"From clinic note (automatic)",text:esc(auto+": "+note),next:"None — case closed. A new note or report for this patient and site reopens it."});
+ }else if(high&&!auto)c.updates.push({date,type:"Provider review",enteredBy:"From clinic note",text:"High-priority result discussed, but the note does not name an arranged treatment or referral.",next:"Confirm the plan (Update plan), then sign off."});
  savePathRegistry(cases);
- return{status:created?"created":"matched",caseId:c.caseId};
+ return{status:created?"created":"matched",caseId:c.caseId,closed:!!(auto&&!c.awaitingReport),reason:auto};
 }
 function renderClinicPathPanel(){
  const box=$("clinicPathTable");if(!box)return;
- const rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.pathway==="pending_pathology"||it.pathway==="path_result_visit");
+ let rows=workQueueItems.map((it,i)=>({it,i})).filter(({it})=>it.pathway==="pending_pathology"||it.pathway==="path_result_visit");
  const done=rows.filter(({it})=>it.registryState==="sent").length;
- if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} waiting · ${done} filed`;
+ if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} need action · ${done} on worklist`;
  if(!rows.length){box.innerHTML='<div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div>';return}
+ rows=rows.filter(({it})=>it.registryState!=="sent");
+ $("clinicPathAll").parentElement.classList.toggle("hidden",!rows.length);
+ if(!rows.length){box.innerHTML=`<div class="notice ok">${done===1?"The clinic note is":`All ${done} clinic notes are`} on the pathology worklist below.</div>`;return}
  const cases=loadPathRegistry()||[];
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>What happened</th><th>Date</th><th>Site</th><th>Working dx / result</th><th>Plan / next step</th><th>Registry</th><th></th></tr></thead><tbody>'+
  rows.map(({it,i})=>{
@@ -1974,16 +2051,16 @@ function renderClinicPathPanel(){
    <td>${isPend?esc([it.diagnosis,d.differential?"diff: "+d.differential:""].filter(Boolean).join(" · ")):`<b>${esc(d.pathDx||"—")}</b>`}</td>
    <td style="min-width:220px">${esc(String(isPend?(d.procedure||"—"):(d.planText||"—")).slice(0,160))}${String(isPend?(d.procedure||""):(d.planText||"")).length>160?"…":""}</td>
    <td>${regCell}</td>
-   <td><div class="row" style="flex-wrap:nowrap">${!isPend&&!filed?`<button class="btn success clinicResultRecord" data-i="${i}" style="min-height:32px;padding:5px 9px">${match?"Record on case":"Create case"}</button>`:""}<button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px">Remove</button></div></td></tr>`;
+   <td><div class="row" style="flex-wrap:nowrap">${!isPend&&!filed?`<button class="btn success clinicResultRecord" data-i="${i}" style="min-height:32px;padding:5px 9px">${match?"Record on case":"Create case"}</button>`:""}<button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Sign off the patient, or take the document off the list">Final disposition</button></div></td></tr>`;
  }).join("")+'</tbody></table>';
  box.querySelectorAll(".clinicPathPick").forEach(c=>c.onchange=()=>{workQueueItems[Number(c.dataset.i)].pathSelected=c.checked;saveWorkQueue(workQueueItems)});
  box.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
- box.querySelectorAll(".pathRemove").forEach(b=>b.onclick=()=>{const it=workQueueItems[Number(b.dataset.i)];workQueueItems.splice(Number(b.dataset.i),1);saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Pathology intake item removed",it.filename)});
+ box.querySelectorAll(".pathRemove").forEach(b=>b.onclick=()=>askDiscardIntake(Number(b.dataset.i)));
  box.querySelectorAll(".clinicResultRecord").forEach(b=>b.onclick=()=>{
   const it=workQueueItems[Number(b.dataset.i)],r=recordResultVisitOnRegistry(it);
   if(r.status!=="duplicate"){it.registryState="sent";it.registryCaseId=r.caseId;it.history.push({at:new Date().toISOString(),note:`${r.status==="matched"?"Recorded on":"Created"} Pathology Registry case ${r.caseId}: patient notified in person.`})}
   saveWorkQueue(workQueueItems);renderWorkQueueTable();
-  const st=$("clinicPathStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=r.status==="duplicate"?`A case for this note already exists (${r.caseId}).`:`${r.status==="matched"?"Recorded the in-person notification on":"Created"} ${r.caseId}. Open the Pathology Registry to review or close it.`;
+  const st=$("clinicPathStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=r.status==="duplicate"?`A case for this note already exists (${r.caseId}).`:`${r.status==="matched"?"Recorded the in-person notification on":"Created"} ${r.caseId}. Find it on the master worklist below to review or close it.`;
   addAudit("Result visit recorded in registry",`${it.filename} → ${r.caseId} (${r.status})`);
  });
 }
@@ -2112,9 +2189,10 @@ async function handleBatchImport(fileList){
    done++;
  }
  saveWorkQueue(workQueueItems);
+ const auto=autoFileToWorklist();
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending||auto.visits)?` Pathology worklist: ${auto.reports} report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report added; ${auto.visits} result visit${auto.visits===1?"":"s"} recorded, ${auto.signed} signed off.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
@@ -2419,7 +2497,8 @@ function detectBiopsyFromLoadedNote(){
 */
 const PATH_REGISTRY_KEY="ph-path-registry-011";
 function loadPathRegistry(){try{return JSON.parse(localStorage.getItem(PATH_REGISTRY_KEY)||"null")}catch{return null}}
-function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases))}
+function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases));const f=document.getElementById("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage("ph-registry-reload","*")}
+window.addEventListener("message",e=>{const f=document.getElementById("registryFrame");if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-height")f.style.height=Math.max(300,Number(e.data.h)||0)+20+"px";if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-scroll")window.scrollTo({top:f.getBoundingClientRect().top+window.scrollY+(Number(e.data.y)||0)-80,behavior:"smooth"})});
 function guessDiagnosisGroup(text){
  const n=norm(text||"");
  if(/basal cell/.test(n))return"Basal Cell Carcinoma";
@@ -2592,6 +2671,7 @@ $("clinicPathAll").onclick=()=>clinicPathSelectAll(true);$("clinicPathNone").onc
 $("pathSelectClean").onclick=()=>pathRouteSelect("clean");$("pathSelectAll").onclick=()=>pathRouteSelect("all");$("pathSelectNone").onclick=()=>pathRouteSelect("none");$("pathSendBtn").onclick=pathRouteSend;
 $("pfSend").onclick=pfSend;$("pfSave").onclick=pfSave;$("pfDx").oninput=refreshPathFormCoding;
 $("docTypeOverride").onchange=()=>{if(($("rawSource").value||"").trim())extractAndMap()};
+autoFileToWorklist();
 renderPathRoutePanel();
 renderTeamMembers();renderWorkQueueTable();
 renderBiopsyPreState();renderBiopsyHistory();renderLearnedMapTable();renderIcdReferenceTable();updateLearnedBadge();
