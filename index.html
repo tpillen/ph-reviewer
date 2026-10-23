@@ -71,11 +71,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <button class="nav" data-view="soap">3. Structured SOAP</button>
  <button class="nav" data-view="treatment">4. Treatment Authorization</button>
  <button class="nav" data-view="queue">5. Work Queue (PA)</button>
- <button class="nav" data-view="pathintake">6. Pathology Intake</button>
+ <button class="nav" data-view="pathintake">6. Pathology Worklist</button>
  <button class="nav" data-view="biopsy">7. Biopsy / Pathology</button>
  <button class="nav" data-view="learning">8. Mapping Memory</button>
  <button class="nav" data-view="audit">Audit</button>
- <a href="pathology-registry.html" target="_blank" style="display:block;color:#dbeafe;text-decoration:none;padding:11px 12px;border-radius:8px;margin:2px 0;background:#334155">Pathology Registry ↗</a>
 </aside>
 
 <main>
@@ -300,7 +299,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Intake <span class="mini">Step 1 of 2: inbox</span></h2><div class="source">Alpha 0.6.14.1 · new pathology reports, biopsies awaiting pathology and result visits land here. Check what PH read, then file them. Filed cases are tracked to treatment and signed off in the Pathology Registry (step 2).</div></div><a class="btn primary" href="pathology-registry.html" target="_blank" style="text-decoration:none">Go to tracking list (step 2) ↗</a></div>
+  <div class="row between"><div><h2>Pathology Worklist</h2><div class="source">Alpha 0.6.14.1 · one place for pathology follow-up. <b>New reports to file</b> (top): check what PH read from each incoming report or clinic note, then file it. <b>Master worklist</b> (below): every filed case stays here until the patient is notified and definitive care is done, then it is removed with a reason and moves to the <b>Completed repository</b>.</div></div><a class="btn secondary" href="#pathMasterPanel" style="text-decoration:none">Jump to master worklist ↓</a></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -311,16 +310,20 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <div id="pathBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
  </div>
   <div class="panel" id="pathRoutePanel">
-   <div class="row between"><div><h3>Surgical Pathology Reports — Registry Review</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>New reports to file: surgical pathology</h3><div class="source">Documents PH recognizes as surgical pathology reports come here instead of the prior-authorization checklist (the procedure is already done). Review what was extracted, then file the checked rows in the Pathology Registry.</div></div><span class="badge" id="pathRouteBadge">0 waiting · 0 filed</span></div>
    <div id="pathRouteTable"><div class="notice">No surgical pathology reports imported yet.</div></div>
-   <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows in Pathology Registry</button></div>
+   <div class="row" style="margin-top:8px"><button id="pathSelectClean" class="btn secondary">Check all rows with a recognized diagnosis</button><button id="pathSelectAll" class="btn secondary">Check every fileable row</button><button id="pathSelectNone" class="btn secondary">Uncheck all</button><button id="pathSendBtn" class="btn success">File checked rows onto master worklist</button></div>
    <div id="pathSendStatus" class="notice hidden" style="margin-top:8px"></div>
   </div>
   <div class="panel" id="clinicPathPanel">
-   <div class="row between"><div><h3>From Clinic Notes — Biopsies Awaiting Pathology &amp; Result Visits</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
+   <div class="row between"><div><h3>New reports to file: clinic notes (biopsies awaiting pathology &amp; result visits)</h3><div class="source">A clinic note that documents a biopsy or excision done that day opens a pending-pathology case, so the specimen is tracked until its report arrives. A note where the result was discussed with the patient records that in-person notification on the matching registry case (or creates one).</div></div><span class="badge" id="clinicPathBadge">0 waiting · 0 filed</span></div>
    <div id="clinicPathTable"><div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div></div>
    <div class="row" style="margin-top:8px"><button id="clinicPathAll" class="btn secondary">Check all pending-pathology rows</button><button id="clinicPathNone" class="btn secondary">Uncheck all</button><button id="clinicPathFile" class="btn success">File checked rows as pending cases</button></div>
    <div id="clinicPathStatus" class="notice hidden" style="margin-top:8px"></div>
+  </div>
+  <div class="panel" id="pathMasterPanel">
+   <div class="row between"><div><h3>Master worklist &amp; completed repository</h3><div class="source">Cases filed above appear here right away. Open a case to record the patient notification, then use "Remove from worklist" with a reason once definitive care is done.</div></div><a class="btn secondary" href="pathology-registry.html" target="_blank" style="text-decoration:none;min-height:32px;padding:6px 10px">Open full screen ↗</a></div>
+   <iframe id="registryFrame" src="pathology-registry.html" title="Pathology master worklist" style="width:100%;height:900px;border:0;margin-top:8px;display:block"></iframe>
   </div>
 </section>
 
@@ -392,7 +395,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </div>
 
 <button id="feedbackBtn" class="btn primary floating-feedback">Feedback / Change Order</button>
-<div id="discardModal" class="modal-backdrop hidden"><div class="modal-card"><h2 style="margin-top:0">Discard intake document</h2><div class="source" id="discardFile"></div><p class="source">This takes the document off the Pathology Intake list only. It does not change any case already in the Pathology Registry. To take a patient off the registry worklist, open the case in the Pathology Registry and use "Remove from worklist".</p><label>Reason for discarding<select id="discardReason"><option value=""></option><option>Not a pathology report</option><option>Duplicate of another file</option><option>Wrong patient or misfiled</option><option>Unreadable, blank or test file</option><option>Already filed in the registry</option><option>Other (note required)</option></select></label><label>Note<input id="discardNote" placeholder="e.g. duplicate of PathRpt_098_BCC_inf.pdf"></label><div id="discardMsg" class="source" style="color:var(--bad);margin-top:6px"></div><div class="row" style="margin-top:10px"><button id="discardConfirm" class="btn danger">Discard document</button><button id="discardCancel" class="btn secondary">Cancel</button></div></div></div>
+<div id="discardModal" class="modal-backdrop hidden"><div class="modal-card"><h2 style="margin-top:0">Discard intake document</h2><div class="source" id="discardFile"></div><p class="source">This takes the document off the Pathology Intake list only. It does not change any case already in the Pathology Registry. To take a patient off the master worklist, open the case in the master worklist (below the new reports) and use "Remove from worklist".</p><label>Reason for discarding<select id="discardReason"><option value=""></option><option>Not a pathology report</option><option>Duplicate of another file</option><option>Wrong patient or misfiled</option><option>Unreadable, blank or test file</option><option>Already filed in the registry</option><option>Other (note required)</option></select></label><label>Note<input id="discardNote" placeholder="e.g. duplicate of PathRpt_098_BCC_inf.pdf"></label><div id="discardMsg" class="source" style="color:var(--bad);margin-top:6px"></div><div class="row" style="margin-top:10px"><button id="discardConfirm" class="btn danger">Discard document</button><button id="discardCancel" class="btn secondary">Cancel</button></div></div></div>
 <div id="feedbackModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedback" class="btn secondary">Close</button></div><label>Comment<textarea id="feedbackComment"></textarea></label><button id="submitFeedback" class="btn primary">Submit Feedback</button><div id="feedbackStatus"></div></div></div>
 
 <div id="ctxMenu" class="ctx-menu hidden"></div>
@@ -1474,7 +1477,7 @@ function pathRouteSend(){
  if(!idx.length){st.className="notice warn";st.textContent="Nothing is checked. Check the rows to file, or use “Check all rows with a recognized diagnosis”.";return}
  const r=sendPathItemsToRegistry(idx);
  st.className="notice ok";
- st.innerHTML=`Filed <b>${r.added}</b> case(s) in the Pathology Registry${r.dup?`; ${r.dup} already there and skipped`:""}${r.skipped?`; ${r.skipped} blocked by review notes`:""}. Open the Pathology Registry page to see them — cases with an unrecognized diagnosis are filed flagged “needs coding review”.`;
+ st.innerHTML=`Filed <b>${r.added}</b> case(s)${r.dup?`; ${r.dup} already there and skipped`:""}${r.skipped?`; ${r.skipped} blocked by review notes`:""}. They are on the master worklist below — cases with an unrecognized diagnosis are filed flagged “needs coding review”.`;
  addAudit("Pathology reports filed to registry",`${r.added} added, ${r.dup} duplicates, ${r.skipped} blocked.`);
  renderWorkQueueTable();
 }
@@ -1549,7 +1552,7 @@ function pfSend(){
  const r=sendPathRecordToRegistry(p,ingestState.filename||"report");
  if(ingestState.linkedQueueId){const it=workQueueItems.find(x=>x.id===ingestState.linkedQueueId);if(it){it.pathData=p;it.docType="surgical_pathology";it.registryState=r.status==="sent"?"sent":"duplicate";it.registryCaseId=r.caseId;it.diagnosis=p.dxDisplay;it.icd=p.icdReported;it.history.push({at:new Date().toISOString(),note:`Reviewed in Document Intake Lab and ${r.status==="sent"?"filed to":"matched in"} the Pathology Registry as ${r.caseId}.`});saveWorkQueue(workQueueItems);renderWorkQueueTable()}}
  st.className=r.status==="sent"?"notice ok":"notice warn";
- st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. Open the Pathology Registry page to see it.`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
+ st.innerHTML=r.status==="sent"?`Filed in the Pathology Registry as <b>${esc(r.caseId)}</b>${p.dxName?"":" (flagged needs coding review)"}. It is on the Pathology Worklist (tab 6).`:`A registry case with ID <b>${esc(r.caseId)}</b> already exists, so nothing new was added.`;
  addAudit("Pathology report filed to registry",`${ingestState.filename||"report"} → ${r.caseId} (${r.status}).`);
 }
 function pfSave(){
@@ -1990,7 +1993,7 @@ function renderClinicPathPanel(){
   const it=workQueueItems[Number(b.dataset.i)],r=recordResultVisitOnRegistry(it);
   if(r.status!=="duplicate"){it.registryState="sent";it.registryCaseId=r.caseId;it.history.push({at:new Date().toISOString(),note:`${r.status==="matched"?"Recorded on":"Created"} Pathology Registry case ${r.caseId}: patient notified in person.`})}
   saveWorkQueue(workQueueItems);renderWorkQueueTable();
-  const st=$("clinicPathStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=r.status==="duplicate"?`A case for this note already exists (${r.caseId}).`:`${r.status==="matched"?"Recorded the in-person notification on":"Created"} ${r.caseId}. Open the Pathology Registry to review or close it.`;
+  const st=$("clinicPathStatus");st.classList.remove("hidden");st.className="notice ok";st.textContent=r.status==="duplicate"?`A case for this note already exists (${r.caseId}).`:`${r.status==="matched"?"Recorded the in-person notification on":"Created"} ${r.caseId}. Find it on the master worklist below to review or close it.`;
   addAudit("Result visit recorded in registry",`${it.filename} → ${r.caseId} (${r.status})`);
  });
 }
@@ -2426,7 +2429,8 @@ function detectBiopsyFromLoadedNote(){
 */
 const PATH_REGISTRY_KEY="ph-path-registry-011";
 function loadPathRegistry(){try{return JSON.parse(localStorage.getItem(PATH_REGISTRY_KEY)||"null")}catch{return null}}
-function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases))}
+function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases));const f=document.getElementById("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage("ph-registry-reload","*")}
+window.addEventListener("message",e=>{const f=document.getElementById("registryFrame");if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-height")f.style.height=Math.max(300,Number(e.data.h)||0)+20+"px"});
 function guessDiagnosisGroup(text){
  const n=norm(text||"");
  if(/basal cell/.test(n))return"Basal Cell Carcinoma";

@@ -28,7 +28,7 @@ details summary{cursor:pointer;font-weight:700}
 </style>
 </head>
 <body>
-<header><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h1>PH Pathology Tracking Registry <span style="font-size:14px;font-weight:400">Step 2 of 2: tracking until sign-off</span></h1><a href="index.html#pathintake" style="color:#fff;background:rgba(255,255,255,.18);padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700">← Back to Pathology Intake (step 1)</a></div><div>Alpha 0.2.1 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
+<header><div style="display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap"><h1>PH Pathology Tracking Registry </h1><a href="index.html#pathintake" style="color:#fff;background:rgba(255,255,255,.18);padding:8px 12px;border-radius:8px;text-decoration:none;font-weight:700">← Back to PH Pathology Worklist</a></div><div>Alpha 0.2.1 · Synthetic demonstration · Closed-loop pathology worklist: report → patient notified → definitive treatment → closed</div></header>
 <div class="wrap">
 <div class="panel grid five">
  <div class="metric"><span>Open cases</span><strong id="openCount"></strong></div>
@@ -37,28 +37,17 @@ details summary{cursor:pointer;font-weight:700}
  <div class="metric"><span>High priority open</span><strong id="highCount"></strong></div>
  <div class="metric"><span>Closed</span><strong id="closedCount"></strong></div>
 </div>
-<div class="panel source">Pathology reports (PDF, image, fax, text), clinic notes and <b>.json case lists</b> are all loaded in the main PH app through <b>Pathology Intake → Choose Files</b>. PH files what it recognizes into this registry. A case leaves the open worklist only when it is closed with a reason; closed cases stay in the registry with their full history.</div>
+<div class="panel source" id="standaloneNote">Pathology reports (PDF, image, fax, text), clinic notes and <b>.json case lists</b> are all loaded in the main PH app through <b>Pathology Intake → Choose Files</b>. PH files what it recognizes into this registry. A case leaves the open worklist only when it is closed with a reason; closed cases stay in the registry with their full history.</div>
 
 <div class="panel followup-panel">
  <div class="row" style="justify-content:space-between">
-  <h2 style="margin:0">⚠ Open Worklist — Needs Follow-Up</h2>
+  <h2 style="margin:0">Master worklist: open cases</h2>
   <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
  </div>
- <div class="source">Every case that is not closed. Unconfirmed referrals first, then oldest open. Closing a case requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
+ <div class="source">Every case still in follow-up. Unconfirmed referrals first, then oldest open. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
  <div style="overflow:auto;margin-top:10px">
   <table><thead><tr><th>Case</th><th>Diagnosis</th><th>Provider</th><th>Next step</th><th>Days Open</th><th>Days Since Last Update</th><th>Priority</th><th></th></tr></thead><tbody id="followupRows"></tbody></table>
  </div>
-</div>
-
-<div class="panel">
- <div class="row">
-  <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
-  <label>Status<select id="statusFilter"><option>All</option><option>Open - Pending Completion</option><option>Completed / Closed</option></select></label>
-  <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
- </div>
-</div>
-<div class="panel" style="overflow:auto">
- <table><thead><tr><th>Case</th><th>Patient UID</th><th>Biopsy Provider</th><th>Biopsy Date</th><th>Final Diagnosis</th><th>Site</th><th>Status</th><th>Next step</th><th>Priority</th><th>Days Open</th><th>Updates</th><th></th></tr></thead><tbody id="caseRows"></tbody></table>
 </div>
 
 <div class="panel hidden" id="casePanel">
@@ -130,6 +119,18 @@ details summary{cursor:pointer;font-weight:700}
 </div>
 
 <div class="panel">
+ <h2 style="margin:0 0 4px">Completed repository</h2>
+ <div class="source" style="margin-bottom:8px">Cases signed off after notification and definitive care. Open one to see its full history or to reopen it.</div>
+ <div class="row">
+  <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
+  <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
+ </div>
+ <div style="overflow:auto;margin-top:10px">
+ <table><thead><tr><th>Case</th><th>Patient UID</th><th>Biopsy Provider</th><th>Biopsy Date</th><th>Final Diagnosis</th><th>Site</th><th>Status</th><th>Next step</th><th>Priority</th><th>Closed</th><th>Updates</th><th></th></tr></thead><tbody id="caseRows"></tbody></table>
+ </div>
+</div>
+
+<div class="panel">
  <details>
   <summary>Admin &amp; test tools</summary>
   <div class="row" style="margin-top:10px">
@@ -194,6 +195,7 @@ const seed=[
 const KEY="ph-path-registry-011";
 function load(){try{return JSON.parse(localStorage.getItem(KEY)||"null")}catch{return null}}
 let cases=load()||structuredClone(seed),active=null;
+if(!load())localStorage.setItem(KEY,JSON.stringify(cases));
 const $=x=>document.getElementById(x);
 const esc=s=>String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
 const today=()=>new Date().toISOString().slice(0,10);
@@ -248,10 +250,10 @@ function renderFollowup(){
  }).join(""):'<tr><td colspan="8" class="source">No open cases — every case has been closed.</td></tr>';
 }
 function render(){
- const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf=$("statusFilter").value||"All",pf=$("providerFilter").value||"All";
+ const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf="Completed / Closed",pf=$("providerFilter").value||"All";
  $("groupFilter").innerHTML='<option>All</option>'+groups.map(g=>`<option ${g===gf?"selected":""}>${g}</option>`).join("");
  const filtered=cases.filter(c=>(gf==="All"||c.group===gf)&&(sf==="All"||c.status===sf)&&(pf==="All"||c.provider===pf)).sort((a,b)=>String(a.group).localeCompare(b.group)||String(a.dx).localeCompare(b.dx)||String(a.biopsy).localeCompare(b.biopsy));
- $("caseRows").innerHTML=filtered.map(c=>`<tr><td>${c.caseId}</td><td>${c.patientId}</td><td>${c.provider}</td><td>${c.biopsy||"—"}</td><td><b>${c.dx}</b><div class="source">${c.group}</div></td><td>${c.site}</td><td><span class="badge ${isClosed(c)?"closed":"open"}">${c.status}</span></td><td>${stepBadge(c)}</td><td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td><td>${isClosed(c)?"—":days(c.biopsy||c.report,today())}</td><td>${(c.updates||[]).length}</td><td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td></tr>`).join("");
+ $("caseRows").innerHTML=filtered.map(c=>`<tr><td>${c.caseId}</td><td>${c.patientId}</td><td>${c.provider}</td><td>${c.biopsy||"—"}</td><td><b>${c.dx}</b><div class="source">${c.group}</div></td><td>${c.site}</td><td><span class="badge ${isClosed(c)?"closed":"open"}">${c.status}</span></td><td>${stepBadge(c)}</td><td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td><td>${c.completion||"—"}</td><td>${(c.updates||[]).length}</td><td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td></tr>`).join("")||'<tr><td colspan="12" class="source">No completed cases yet.</td></tr>';
  const open=cases.filter(c=>!isClosed(c));
  $("openCount").textContent=open.length;$("closedCount").textContent=cases.length-open.length;
  $("highCount").textContent=open.filter(c=>c.priority==="High").length;
@@ -352,7 +354,7 @@ function reopenCase(){
 $("addUpdateBtn").onclick=()=>{if(!active)return;const text=$("newUpdateText").value.trim();if(!text)return alert("Enter update text.");active.updates.push({date:$("newUpdateDate").value,type:$("newUpdateType").value,enteredBy:$("enteredBy").value,text:esc(text),next:esc($("newNextAction").value)});$("newUpdateText").value="";$("newNextAction").value="";save();renderCase();render()};
 $("saveCaseBtn").onclick=()=>{if(!active)return;active.provider=$("biopsyProvider").value;active.biopsy=$("biopsyDate").value;active.report=$("reportDate").value;if(active.report&&active.awaitingReport)active.awaitingReport=false;save();renderCase();render();$("detailsMsg").textContent="Saved."};
 function save(){localStorage.setItem(KEY,JSON.stringify(cases))}
-$("groupFilter").onchange=render;$("statusFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;
+$("groupFilter").onchange=render;$("providerFilter").onchange=render;$("staleThreshold").onchange=renderFollowup;
 $("resetBtn").onclick=()=>{if(!confirm("Replace the whole registry with the three demo cases? Imported and hand-entered cases will be removed. This cannot be undone."))return;cases=structuredClone(seed);save();active=null;$("casePanel").classList.add("hidden");render();$("adminStatus").textContent="Demo data restored."};
 $("purgeImportBtn").onclick=()=>{
  // Imported cases are recognized by source tag or case-ID prefix, so cases imported by older versions are found too.
@@ -363,6 +365,18 @@ $("purgeImportBtn").onclick=()=>{
  cases=cases.filter(c=>!isImported(c));active=null;$("casePanel").classList.add("hidden");save();render();
  $("adminStatus").textContent=`Purged ${n} imported case(s).`;
 };
+/* Embedded in the main PH app (Pathology Worklist tab): drop the page header, report height to the parent,
+   and reload when the parent files new cases into the shared registry. */
+const EMBEDDED=window.self!==window.top;
+if(EMBEDDED){
+ document.querySelector("header").classList.add("hidden");$("standaloneNote").classList.add("hidden");
+ document.querySelector(".wrap").style.padding="0";
+ const sendHeight=()=>parent.postMessage({ph:"registry-height",h:document.querySelector(".wrap").offsetHeight},"*");
+ new ResizeObserver(sendHeight).observe(document.body);sendHeight();
+}
+function reloadFromStore(){const fresh=load();if(!fresh)return;cases=fresh;if(active){active=cases.find(c=>c.caseId===active.caseId)||null;if(active)renderCase();else $("casePanel").classList.add("hidden")}render()}
+window.addEventListener("message",e=>{if(e.data==="ph-registry-reload")reloadFromStore()});
+window.addEventListener("storage",e=>{if(e.key===KEY)reloadFromStore()});
 render();
 </script>
 </body></html>
