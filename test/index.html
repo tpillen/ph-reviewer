@@ -1608,7 +1608,8 @@ function extractNonPaDocument(dt){
 const WORK_QUEUE_KEY="ph0613-work-queue", TEAM_KEY="ph0613-team-members";
 const FIXED_ROLES=["Coordinator","Provider","Nursing","Unassigned"];
 function loadWorkQueue(){try{return JSON.parse(localStorage.getItem(WORK_QUEUE_KEY)||"[]")}catch{return[]}}
-function saveWorkQueue(a){localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}
+let wqSaveWarned=false;
+function saveWorkQueue(a){try{localStorage.setItem(WORK_QUEUE_KEY,JSON.stringify(a))}catch(e){if(!wqSaveWarned){wqSaveWarned=true;alert("The browser's storage is full, so the imported documents could not be saved. They will disappear when the page is reloaded. File or discard some documents, then import the rest.")}}}
 let workQueueItems=loadWorkQueue();
 function loadTeamMembers(){try{return JSON.parse(localStorage.getItem(TEAM_KEY)||"[]")}catch{return[]}}
 function saveTeamMembers(a){localStorage.setItem(TEAM_KEY,JSON.stringify(a))}
