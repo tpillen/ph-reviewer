@@ -300,7 +300,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 
 <section id="pathintake" class="view hidden">
  <div class="panel">
-  <div class="row between"><div><h2>Pathology Intake</h2><div class="source">Alpha 0.6.14.1 · surgical pathology reports, biopsies awaiting pathology and result visits, reviewed here and filed into the Pathology Registry</div></div></div>
+  <div class="row between"><div><h2>Pathology Intake <span class="mini">Step 1 of 2: inbox</span></h2><div class="source">Alpha 0.6.14.1 · new pathology reports, biopsies awaiting pathology and result visits land here. Check what PH read, then file them. Filed cases are tracked to treatment and signed off in the Pathology Registry (step 2).</div></div><a class="btn primary" href="pathology-registry.html" target="_blank" style="text-decoration:none">Go to tracking list (step 2) ↗</a></div>
   <div class="notice">Completed biopsy results do not need prior authorization, so they are kept out of the Work Queue. Import pathology reports here (or import a mixed batch in either tab — PH sorts by document type), check what was extracted, and file the checked rows into the Pathology Registry.</div>
  </div>
  <div class="panel">
@@ -546,6 +546,7 @@ function addAudit(action,detail){audit.unshift({time:new Date().toLocaleString()
 function renderAudit(){$("auditList").innerHTML=audit.length?audit.map(a=>`<div class="map-item"><b>${esc(a.action)}</b><div class="mini">${esc(a.time)}</div><div>${esc(a.detail)}</div></div>`).join(""):'<div class="notice">No audit events yet.</div>'}
 function showView(id){document.querySelectorAll(".view").forEach(v=>v.classList.add("hidden"));$(id).classList.remove("hidden");document.querySelectorAll(".nav").forEach(n=>n.classList.toggle("active",n.dataset.view===id));window.scrollTo(0,0)}
 document.querySelectorAll(".nav").forEach(n=>n.onclick=()=>showView(n.dataset.view));
+if(location.hash==="#pathintake")showView("pathintake");
 
 async function sha256Text(text){try{const buf=await crypto.subtle.digest("SHA-256",new TextEncoder().encode(text));return Array.from(new Uint8Array(buf)).map(b=>b.toString(16).padStart(2,"0")).join("")}catch{return"unavailable"}}
 function normalized(t){return String(t||"").replace(/\u00a0/g," ").replace(/\r\n/g,"\n").replace(/\r/g,"\n").replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim()}
