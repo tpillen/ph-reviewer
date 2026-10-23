@@ -72,7 +72,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
  <button class="nav" data-view="treatment">4. Treatment Authorization</button>
  <button class="nav" data-view="queue">5. Work Queue (PA)</button>
  <button class="nav" data-view="pathintake">6. Pathology Worklist</button>
- <button class="nav" data-view="biopsy">7. Biopsy / Pathology</button>
+ <button class="nav hidden" data-view="biopsy" title="Hidden in 0.6.14.1: biopsy tracking now happens in the Pathology Worklist">7. Biopsy / Pathology</button>
  <button class="nav" data-view="learning">8. Mapping Memory</button>
  <button class="nav" data-view="audit">Audit</button>
 </aside>
@@ -395,7 +395,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
 </div>
 
 <button id="feedbackBtn" class="btn primary floating-feedback">Feedback / Change Order</button>
-<div id="discardModal" class="modal-backdrop hidden"><div class="modal-card"><h2 style="margin-top:0">Discard intake document</h2><div class="source" id="discardFile"></div><p class="source">This takes the document off the Pathology Intake list only. It does not change any case already in the Pathology Registry. To take a patient off the master worklist, open the case in the master worklist (below the new reports) and use "Remove from worklist".</p><label>Reason for discarding<select id="discardReason"><option value=""></option><option>Not a pathology report</option><option>Duplicate of another file</option><option>Wrong patient or misfiled</option><option>Unreadable, blank or test file</option><option>Already filed in the registry</option><option>Other (note required)</option></select></label><label>Note<input id="discardNote" placeholder="e.g. duplicate of PathRpt_098_BCC_inf.pdf"></label><div id="discardMsg" class="source" style="color:var(--bad);margin-top:6px"></div><div class="row" style="margin-top:10px"><button id="discardConfirm" class="btn danger">Discard document</button><button id="discardCancel" class="btn secondary">Cancel</button></div></div></div>
+<div id="discardModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2 style="margin:0">Final disposition</h2><button id="discardCancel" class="btn secondary">Cancel</button></div><div class="source" id="discardFile" style="margin-top:4px"></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Sign off the patient</h3><div class="source">Opens this patient's case on the master worklist below. Record how the patient was told, then choose the sign-off reason: definitive care completed, results and plan given, definitive care initiated, referred out, and others. A report that is not filed yet is filed first.</div><div id="signoffMsg" class="source" style="color:var(--bad);margin-top:6px"></div><button id="signoffBtn" class="btn success" style="margin-top:8px">Open case to sign off</button></div>
+ <div class="card" style="margin-top:12px"><h3 style="margin:0 0 4px">Take this document off the list (no patient case)</h3><div class="source">For a document that should not be tracked at all. It leaves the new-reports list; any case already on the master worklist is not changed. The reason is kept in Audit.</div><label style="margin-top:8px;display:block">Reason<select id="discardReason"><option value=""></option><option>Not a pathology report</option><option>Duplicate of another file</option><option>Wrong patient or misfiled</option><option>Unreadable, blank or test file</option><option>Already filed in the registry</option><option>Other (note required)</option></select></label><label>Note<input id="discardNote" placeholder="e.g. duplicate of PathRpt_098_BCC_inf.pdf"></label><div id="discardMsg" class="source" style="color:var(--bad);margin-top:6px"></div><button id="discardConfirm" class="btn danger" style="margin-top:8px">Take document off the list</button></div>
+</div></div>
 <div id="feedbackModal" class="modal-backdrop hidden"><div class="modal-card"><div class="row between"><h2>Reviewer Feedback</h2><button id="closeFeedback" class="btn secondary">Close</button></div><label>Comment<textarea id="feedbackComment"></textarea></label><button id="submitFeedback" class="btn primary">Submit Feedback</button><div id="feedbackStatus"></div></div></div>
 
 <div id="ctxMenu" class="ctx-menu hidden"></div>
@@ -541,7 +544,19 @@ function renderIcdReferenceTable(){
 }
 
 let discardIdx=-1;
-function askDiscardIntake(i){const it=workQueueItems[i];if(!it)return;discardIdx=i;$("discardFile").textContent=it.filename;$("discardReason").value="";$("discardNote").value="";$("discardMsg").textContent="";$("discardModal").classList.remove("hidden")}
+function askDiscardIntake(i){const it=workQueueItems[i];if(!it)return;discardIdx=i;$("discardFile").textContent=it.filename;$("discardReason").value="";$("discardNote").value="";$("discardMsg").textContent="";$("signoffMsg").textContent="";$("signoffBtn").textContent=it.registryCaseId&&it.registryState==="sent"?"Open case to sign off":"File report and open case to sign off";$("discardModal").classList.remove("hidden")}
+$("signoffBtn").onclick=()=>{const it=workQueueItems[discardIdx];if(!it)return $("discardModal").classList.add("hidden");
+ let id=it.registryState==="sent"?it.registryCaseId:"";
+ if(!id){
+  if(!it.pathData||it.docType!=="surgical_pathology")return $("signoffMsg").textContent="File this clinic note first with the buttons under its table, then use Final disposition again.";
+  if(it.pathData.needsReview&&!it.pathData._approved)return $("signoffMsg").textContent="This report needs review before it can be filed. Click Open on the row, check it, then try again.";
+  const r=sendPathRecordToRegistry(it.pathData,it.filename);id=r.caseId;
+  if(r.status==="sent"){it.registryState="sent";it.registryCaseId=r.caseId;it.history.push({at:new Date().toISOString(),note:`Sent to Pathology Registry as ${r.caseId}.`});addAudit("Pathology report filed for sign-off",`${it.filename} → ${r.caseId}`)}
+  saveWorkQueue(workQueueItems);renderWorkQueueTable();
+ }
+ discardIdx=-1;$("discardModal").classList.add("hidden");
+ const f=$("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage({ph:"open-case",id},"*");
+};
 $("discardReason").onchange=()=>$("discardMsg").textContent="";
 $("discardCancel").onclick=()=>{discardIdx=-1;$("discardModal").classList.add("hidden")};
 $("discardConfirm").onclick=()=>{const it=workQueueItems[discardIdx];if(!it)return $("discardModal").classList.add("hidden");const r=$("discardReason").value,n=$("discardNote").value.trim();if(!r)return $("discardMsg").textContent="Choose a reason.";if(/^Other/.test(r)&&!n)return $("discardMsg").textContent="Add a note for \"Other\".";workQueueItems.splice(discardIdx,1);discardIdx=-1;saveWorkQueue(workQueueItems);renderWorkQueueTable();addAudit("Pathology intake item discarded",`${it.filename} · ${r}${n?": "+n:""}`);$("discardModal").classList.add("hidden")};
@@ -1455,7 +1470,7 @@ function renderPathRoutePanel(){
    <td><b>${esc(p.dxDisplay||p.dxText||"—")}</b>${p.dxName?`<div class="mini"><span class="pill">${esc(p.dxName)}</span>${p.icdReported?` ${esc(p.icdReported)}`:""}</div>`:'<div class="mini">not recognized</div>'}</td>
    <td>${esc(p.margin||"—")}</td><td>${esc((p.followup||"—").slice(0,120))}</td>
    <td>${notes}</td><td>${pathStatePill(it)}</td>
-   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Take this document off the intake list (asks for a reason)">Discard</button></div></td></tr>`;
+   <td><div class="row" style="flex-wrap:nowrap"><button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Sign off the patient, or take the document off the list">Final disposition</button></div></td></tr>`;
  }).join("")+'</tbody></table>';
  box.querySelectorAll(".pathPick").forEach(c=>c.onchange=()=>{workQueueItems[Number(c.dataset.i)].pathSelected=c.checked;saveWorkQueue(workQueueItems)});
  box.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
@@ -1959,8 +1974,8 @@ function recordResultVisitOnRegistry(it){
  c.notifications.push({date,method:"In person at visit",by:"From clinic note",success:true,note:esc(`Result discussed at visit (${it.filename}).`),source:it.filename});
  c.updates.push({date,type:"Patient notification",enteredBy:"From clinic note",text:esc(`Pathology result discussed with patient in person (${it.filename}). Plan: ${rv.planText||"see note"}`),next:esc(rv.actions&&rv.actions.referral?"Confirm the referral appointment happened and obtain the consult note.":rv.actions&&(rv.actions.mohs||rv.actions.excision||rv.actions.edc)?"Confirm definitive treatment is scheduled and completed.":"Close the case if no further treatment is needed.")});
  const a=rv.actions||{},high=c.priority==="High";
- if(a.treatedAlready)c.closureSuggestion={reason:"Definitive treatment completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
- else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Benign — patient notified, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
+ if(a.treatedAlready)c.closureSuggestion={reason:"Definitive care completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
+ else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Results and plan given to patient — no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
  else if(a.referral)c.referralPendingConfirmation=true;
  savePathRegistry(cases);
  return{status:created?"created":"matched",caseId:c.caseId};
@@ -1985,7 +2000,7 @@ function renderClinicPathPanel(){
    <td>${isPend?esc([it.diagnosis,d.differential?"diff: "+d.differential:""].filter(Boolean).join(" · ")):`<b>${esc(d.pathDx||"—")}</b>`}</td>
    <td style="min-width:220px">${esc(String(isPend?(d.procedure||"—"):(d.planText||"—")).slice(0,160))}${String(isPend?(d.procedure||""):(d.planText||"")).length>160?"…":""}</td>
    <td>${regCell}</td>
-   <td><div class="row" style="flex-wrap:nowrap">${!isPend&&!filed?`<button class="btn success clinicResultRecord" data-i="${i}" style="min-height:32px;padding:5px 9px">${match?"Record on case":"Create case"}</button>`:""}<button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Take this document off the intake list (asks for a reason)">Discard</button></div></td></tr>`;
+   <td><div class="row" style="flex-wrap:nowrap">${!isPend&&!filed?`<button class="btn success clinicResultRecord" data-i="${i}" style="min-height:32px;padding:5px 9px">${match?"Record on case":"Create case"}</button>`:""}<button class="btn primary wqOpen" data-i="${i}" style="min-height:32px;padding:5px 9px">Open</button><button class="btn secondary pathRemove" data-i="${i}" style="min-height:32px;padding:5px 9px" title="Sign off the patient, or take the document off the list">Final disposition</button></div></td></tr>`;
  }).join("")+'</tbody></table>';
  box.querySelectorAll(".clinicPathPick").forEach(c=>c.onchange=()=>{workQueueItems[Number(c.dataset.i)].pathSelected=c.checked;saveWorkQueue(workQueueItems)});
  box.querySelectorAll(".wqOpen").forEach(b=>b.onclick=()=>openWorkQueueItem(Number(b.dataset.i)));
@@ -2431,7 +2446,7 @@ function detectBiopsyFromLoadedNote(){
 const PATH_REGISTRY_KEY="ph-path-registry-011";
 function loadPathRegistry(){try{return JSON.parse(localStorage.getItem(PATH_REGISTRY_KEY)||"null")}catch{return null}}
 function savePathRegistry(cases){localStorage.setItem(PATH_REGISTRY_KEY,JSON.stringify(cases));const f=document.getElementById("registryFrame");if(f&&f.contentWindow)f.contentWindow.postMessage("ph-registry-reload","*")}
-window.addEventListener("message",e=>{const f=document.getElementById("registryFrame");if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-height")f.style.height=Math.max(300,Number(e.data.h)||0)+20+"px"});
+window.addEventListener("message",e=>{const f=document.getElementById("registryFrame");if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-height")f.style.height=Math.max(300,Number(e.data.h)||0)+20+"px";if(f&&e.source===f.contentWindow&&e.data&&e.data.ph==="registry-scroll")window.scrollTo({top:f.getBoundingClientRect().top+window.scrollY+(Number(e.data.y)||0)-80,behavior:"smooth"})});
 function guessDiagnosisGroup(text){
  const n=norm(text||"");
  if(/basal cell/.test(n))return"Basal Cell Carcinoma";
