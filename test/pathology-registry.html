@@ -41,7 +41,7 @@ details summary{cursor:pointer;font-weight:700}
 
 <div class="panel followup-panel">
  <div class="row" style="justify-content:space-between">
-  <h2 style="margin:0">Master worklist: open cases</h2>
+  <h2 style="margin:0">Pathology worklist: open results</h2>
   <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
  </div>
  <div class="source">Every case still in follow-up. Unconfirmed referrals first, then oldest open. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
@@ -120,7 +120,7 @@ details summary{cursor:pointer;font-weight:700}
 
 <div class="panel">
  <h2 style="margin:0 0 4px">Completed repository</h2>
- <div class="source" style="margin-bottom:8px">Cases signed off after notification and definitive care. Open one to see its full history or to reopen it.</div>
+ <div class="source" style="margin-bottom:8px">Cases signed off once the patient was told and the plan was arranged or completed. Open one to see its full history or to reopen it.</div>
  <div class="row">
   <label>Diagnosis Group<select id="groupFilter"><option>All</option></select></label>
   <label>Provider<select id="providerFilter"><option>All</option><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Other provider</option><option>Unassigned</option></select></label>
@@ -164,14 +164,19 @@ const CONTACT_METHODS=[
  {m:"Unable to reach — wrong or disconnected number",notified:false}
 ];
 /* Earlier versions used these labels; closure suggestions saved with them still map to the current list. */
-const LEGACY_REASONS={"Benign — patient notified, no further treatment needed":"Results and plan given to patient — no further treatment needed","Definitive treatment completed":"Definitive care completed"};
+const LEGACY_REASONS={"Benign — patient notified, no further treatment needed":"Results given — benign, no further treatment needed","Results and plan given to patient — no further treatment needed":"Results given — benign, no further treatment needed","Definitive treatment completed":"Definitive care completed","Definitive care initiated — treatment scheduled or started":"Patient contacted and plan provided"};
+/* plan:true reasons put the plan in motion. They may close a high-priority case only after direct contact
+   (phone or in person, checked below) and with a note saying what was arranged and when. */
 const CLOSE_REASONS=[
+ {r:"Patient contacted and plan provided",high:true,notify:true,note:true,plan:true,hint:"Patient told the result and the plan. Note required: the plan and when it happens (e.g. ED&C at next visit 11/12)."},
+ {r:"Excision scheduled",high:true,notify:true,note:true,plan:true,hint:"Note required: date and provider of the excision."},
+ {r:"Mohs surgery scheduled",high:true,notify:true,note:true,plan:true,hint:"Note required: Mohs surgeon or practice and the date."},
+ {r:"Referred to surgical oncology",high:true,notify:true,note:true,plan:true,hint:"Note required: surgeon or practice, and the appointment date if known."},
+ {r:"Referred to oncology center",high:true,notify:true,note:true,plan:true,hint:"Note required: cancer center, and the appointment date if known."},
+ {r:"Referred to another specialist",high:true,notify:true,note:true,plan:true,hint:"Note required: specialty, practice, and the appointment date if known."},
  {r:"Definitive care completed",high:true,notify:true,hint:"Excision, Mohs, ED&C, destruction or a completed topical course. Add what was done and when in the note."},
- {r:"Results and plan given to patient — no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient told the result and the plan. Not allowed for high-priority cases."},
- {r:"Definitive care initiated — treatment scheduled or started",high:false,notify:true,note:true,hint:"Patient told the result and treatment is booked or under way. Note required (what and when). High-priority cases stay open until care is completed."},
+ {r:"Results given — benign, no further treatment needed",high:false,notify:true,hint:"Benign or non-actionable result; patient told. Follow-up at routine visits."},
  {r:"Excision with clear margins (from pathology report)",high:true,notify:true,hint:"The excision report shows uninvolved margins; patient informed."},
- {r:"Referred out — patient seen by specialist",high:true,notify:true,hint:"Confirmation that the referral visit happened (consult note on file)."},
- {r:"Referred out — management completed",high:true,notify:true,hint:"The receiving specialist has documented completed management."},
  {r:"Observation / surveillance plan documented",high:true,notify:true,note:true,hint:"Plan of watchful waiting documented with the patient. Note required."},
  {r:"Patient declined recommended treatment (documented)",high:true,notify:true,note:true,hint:"Informed refusal documented. Note required."},
  {r:"Lost to follow-up — contact attempts exhausted",high:true,notify:false,attempts:3,hint:"Requires at least 3 recorded contact attempts, including a mailed letter."},
@@ -332,7 +337,7 @@ $("closeCaseBtn").onclick=()=>{
  if(!date)problems.push("Enter the closure date.");
  if(!by)problems.push("Choose who is closing the case.");
  if(r){
-  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia). It stays on the worklist until definitive care is completed, referred care is confirmed, or another high-priority reason applies.");
+  if(active.priority==="High"&&!r.high)problems.push("This is a high-priority case (malignant or severe atypia), so it cannot be signed off as benign. Choose the plan that was arranged (plan provided, excision or Mohs scheduled, referral) or another reason.");
   if(r.notify&&!ns.notified)problems.push("Record the patient notification first (section 1).");
   if(r.notify&&ns.notified&&needsDirect(active)&&!ns.direct)problems.push("High-priority case: record a direct notification (phone — spoke with patient, or in person) first.");
   if(r.attempts&&(ns.attempts<r.attempts||ns.letters<1))problems.push(`Lost to follow-up needs at least ${r.attempts} recorded contact attempts including a mailed letter (currently ${ns.attempts} attempt${ns.attempts===1?"":"s"}, ${ns.letters} letter${ns.letters===1?"":"s"}).`);
