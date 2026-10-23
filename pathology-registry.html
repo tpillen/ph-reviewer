@@ -55,6 +55,20 @@ details summary{cursor:pointer;font-weight:700}
  <div id="caseSource" class="source" style="margin-top:4px"></div>
  <div id="suggestBox" class="suggest hidden"></div>
 
+ <div class="section" id="planSection" style="border:2px solid var(--blue)">
+  <h3>Update plan</h3>
+  <div id="planCurrent" class="source" style="margin-bottom:8px"></div>
+  <div class="grid three">
+   <label>Date<input id="planDate" type="date"></label>
+   <label>Updated by<select id="planBy"><option>Todd Pillen, PA-C/SA</option><option>Mallory Heath, PA-C</option><option>Pathology Coordinator</option><option>Medical Assistant</option><option>Nursing</option><option>Other</option></select></label>
+   <label>Next check date (optional)<input id="planDue" type="date"></label>
+  </div>
+  <label>What happened / the plan now<textarea id="planText" placeholder="e.g. Called patient, discussed SCC result. Mohs with Dr. Synthetic booked for 11/14."></textarea></label>
+  <div class="row" style="margin-top:8px"><button class="primary" id="planUpdatedBtn">Plan updated: keep on worklist</button><button class="success" id="planCompletedBtn">Plan completed: remove from worklist</button></div>
+  <div class="source" style="margin-top:4px">"Plan completed" takes you to the sign-off below with this note filled in; choose the reason and confirm. If you spoke with the patient, record it in section 1 first.</div>
+  <div id="planMsg"></div>
+ </div>
+
  <div class="section">
   <h3>Case details</h3>
   <div class="grid three">
@@ -234,6 +248,7 @@ function nextStep(c){
  if(needsDirect(c)&&!ns.direct)return{t:"Notify patient directly (phone or in person)",k:"step-notify"};
  if(c.referralPendingConfirmation)return{t:"Confirm referral was completed",k:"step-treat"};
  if(c.closureSuggestion)return{t:"Ready to close — suggestion available",k:"step-ready"};
+ if(c.currentPlan)return{t:"Plan in progress"+(c.planDue?` · check ${c.planDue}`:""),k:"step-treat"};
  if(c.priority==="High")return{t:"Awaiting definitive treatment",k:"step-treat"};
  return{t:"Ready to close",k:"step-ready"};
 }
@@ -253,7 +268,7 @@ function renderFollowup(){
    <td>${daysOpen===null?"—":daysOpen+" d"}</td>
    <td>${daysSinceUpdate===null?"—":daysSinceUpdate+" d"}${stale?' <span class="badge stale">⚠ STALE</span>':""}</td>
    <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span></td>
-   <td><button class="primary" onclick="openCase('${c.caseId}')">Open</button></td>
+   <td><button class="primary" onclick="openPlanTab('${c.caseId}')">Update plan</button></td>
   </tr>`;
  }).join(""):'<tr><td colspan="8" class="source">No open cases — every case has been closed.</td></tr>';
 }
@@ -276,14 +291,14 @@ function openCase(id){
  $("casePanel").classList.remove("hidden");
  $("caseTitle").textContent=`${active.caseId} — ${active.patientId}`.replace(/&amp;/g,"&");
  {const sel=$("biopsyProvider");if(active.provider&&![...sel.options].some(o=>o.value===active.provider)){const o=document.createElement("option");o.textContent=active.provider.replace(/&amp;/g,"&");o.value=active.provider;sel.appendChild(o)}sel.value=active.provider||"Unassigned";}$("biopsyDate").value=active.biopsy||"";$("reportDate").value=active.report||"";
- $("contactDate").value=today();$("closeDate").value=today();$("newUpdateDate").value=today();
+ $("contactDate").value=today();$("closeDate").value=today();$("planDate").value=today();$("planDue").value=active.planDue||"";$("planText").value="";$("planMsg").innerHTML="";$("newUpdateDate").value=today();
  ["detailsMsg"].forEach(x=>$(x).textContent="");["contactMsg","closeMsg"].forEach(x=>$(x).innerHTML="");
  renderCase();$("casePanel").scrollIntoView({behavior:"smooth"});
 }
 function renderCase(){
  if(!active)return;
  const ns=notifyState(active),closed=isClosed(active);
- $("caseStepBadge").innerHTML=stepBadge(active);
+ $("caseStepBadge").innerHTML=stepBadge(active);renderPlanCurrent();
  $("caseSource").innerHTML=[`${active.dx} · ${active.site||"site not recorded"} · ${active.priority} priority`,active.sourceDocument?`Source document: ${active.sourceDocument}`:"",active.noSourceDocument?"Loaded from a JSON case list — no source document":""].filter(Boolean).join(" · ");
  $("d1").textContent=days(active.biopsy,active.report);
  $("dN").textContent=days(active.report,ns.firstNotified);
@@ -352,6 +367,23 @@ $("closeCaseBtn").onclick=()=>{
  $("closeNote").value="";save();renderCase();render();
  showMsg("closeMsg",true,"Removed from the worklist (case closed). It stays in the registry with its history.");
 };
+function openPlanTab(id){const w=window.open(`pathology-registry.html?case=${encodeURIComponent(id)}`,"_blank");if(!w){openCase(id)}}
+function renderPlanCurrent(){$("planCurrent").innerHTML=active&&active.currentPlan?`<b>Current plan</b> (${esc(active.currentPlan.date||"")}${active.currentPlan.by?", "+esc(active.currentPlan.by):""}): ${active.currentPlan.text}${active.planDue?` · next check ${esc(active.planDue)}`:""}`:"No plan update recorded yet."}
+$("planUpdatedBtn").onclick=()=>{
+ if(!active)return;const text=$("planText").value.trim(),date=$("planDate").value,by=$("planBy").value;
+ if(!text)return showMsg("planMsg",false,"Describe what happened or the new plan.");
+ active.currentPlan={date,by,text:esc(text)};active.planDue=$("planDue").value||"";
+ active.updates.push({date,type:"Plan updated",enteredBy:by,text:esc(text),next:active.planDue?`Check by ${active.planDue}.`:"Complete the plan, then sign off."});
+ $("planText").value="";save();renderCase();render();
+ showMsg("planMsg",true,"Plan saved. The case stays on the worklist until the plan is completed."+(FOCUS?" You can close this tab.":""));
+};
+$("planCompletedBtn").onclick=()=>{
+ if(!active)return;const text=$("planText").value.trim();
+ if(text)$("closeNote").value=text;
+ $("closedBy").value=[...$("closedBy").options].some(o=>o.value===$("planBy").value)?$("planBy").value:$("closedBy").value;
+ $("closeDate").value=$("planDate").value||today();
+ $("closeSection").scrollIntoView({behavior:"smooth"});$("closeReason").focus();
+};
 function reopenCase(){
  const why=($("reopenReason")||{}).value||"";
  if(!why.trim())return showMsg("closeMsg",false,"Enter the reason for reopening.");
@@ -376,6 +408,13 @@ $("purgeImportBtn").onclick=()=>{
 /* Embedded in the main PH app (Pathology Worklist tab): drop the page header, report height to the parent,
    and reload when the parent files new cases into the shared registry. */
 const EMBEDDED=window.self!==window.top;
+/* ?case=ID opens one case on its own (the worklist's Update plan button opens this in a new tab). */
+const FOCUS=new URLSearchParams(location.search).get("case");
+if(FOCUS&&cases.some(c=>c.caseId===FOCUS)){
+ document.querySelectorAll(".wrap > .panel").forEach(p=>{if(p.id!=="casePanel")p.classList.add("hidden")});
+ document.querySelector("header h1").firstChild.textContent="Update plan ";document.title="Update plan — "+FOCUS;
+ openCase(FOCUS);window.scrollTo(0,0);
+}
 if(EMBEDDED){
  document.querySelector("header").classList.add("hidden");$("standaloneNote").classList.add("hidden");
  document.querySelector(".wrap").style.padding="0";

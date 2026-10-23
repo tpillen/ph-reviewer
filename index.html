@@ -1461,6 +1461,7 @@ function renderPathRoutePanel(){
  if(!rows.length){box.innerHTML='<div class="notice">No surgical pathology reports imported yet. Reports recognized in a batch go straight onto the pathology worklist below.</div>';return}
  // 0.6.14.1: filed reports live on the worklist below; only reports that still need a check stay here
  rows=rows.filter(({it})=>it.registryState!=="sent"&&it.registryState!=="duplicate");
+ $("pathSelectClean").parentElement.classList.toggle("hidden",!rows.length);
  if(!rows.length){box.innerHTML=`<div class="notice ok">${filed===1?"The imported report is":`All ${filed} imported reports are`} on the pathology worklist below.</div>`;return}
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>Accession</th><th>Biopsy</th><th>Reported</th><th>Specimen / site</th><th>Final diagnosis</th><th>Margin</th><th>Follow-up</th><th>Review notes</th><th>Registry</th><th></th></tr></thead><tbody>'+
  rows.map(({it,i})=>{
@@ -1497,8 +1498,10 @@ function autoFileToWorklist(){
  workQueueItems.forEach(it=>{if(it.pathway==="pending_pathology"&&it.registryState!=="sent"){const r=filePendingCase(it);it.registryState="sent";it.registryCaseId=r.caseId;if(r.status!=="duplicate"){pend++;it.history.push({at:new Date().toISOString(),note:`Placed on the pathology worklist as ${r.caseId} (awaiting report).`})}}});
  const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.registryState!=="sent"&&it.registryState!=="duplicate"&&!(it.pathData.needsReview&&!it.pathData._approved))idx.push(i)});
  const r=idx.length?sendPathItemsToRegistry(idx):{added:0,dup:0};
- if(pend||r.added){saveWorkQueue(workQueueItems);addAudit("Placed on pathology worklist",`${r.added} report(s), ${pend} biopsy(ies) awaiting report.`)}
- return{reports:r.added,pending:pend};
+ let visits=0,signed=0;
+ workQueueItems.forEach(it=>{if(it.pathway==="path_result_visit"&&it.registryState!=="sent"){const v=recordResultVisitOnRegistry(it);it.registryState="sent";it.registryCaseId=v.caseId;if(v.status!=="duplicate"){visits++;if(v.closed)signed++;it.history.push({at:new Date().toISOString(),note:`${v.status==="matched"?"Recorded on":"Created"} worklist case ${v.caseId}: patient notified in person${v.closed?`; signed off (${v.reason})`:""}.`})}}});
+ if(pend||r.added||visits){saveWorkQueue(workQueueItems);addAudit("Placed on pathology worklist",`${r.added} report(s), ${pend} biopsy(ies) awaiting report, ${visits} result visit(s) recorded (${signed} signed off).`)}
+ return{reports:r.added,pending:pend,visits,signed};
 }
 function pathRouteSend(){
  const idx=[];workQueueItems.forEach((it,i)=>{if(it.docType==="surgical_pathology"&&it.pathData&&it.pathSelected&&it.registryState!=="sent"&&it.registryState!=="duplicate")idx.push(i)});
@@ -1954,9 +1957,14 @@ function matchRegistryCaseForResult(rv,cases){
  const open=(cases||[]).filter(c=>!String(c.status||"").startsWith("Completed"));
  const group=rv.pathDx?guessDiagnosisGroupV2(rv.pathDx,rv.pathDx):"";
  const byId=_realId(rv.mrn)?open.filter(c=>c.patientId===rv.mrn):[];
- const pool=byId.length?byId:open;
- const hits=pool.filter(c=>_sitesMatch(rv.site,c.site)&&(!group||group==="Other / Benign"||c.group===group||c.group==="Pending pathology"));
- return hits.length===1?hits[0]:null;
+ // 0.6.14.1: a note with a real MRN only matches that patient's cases. Without one, the diagnosis group must
+ // agree exactly, so a benign note can never be recorded on another patient's melanoma case.
+ const realMrn=_realId(rv.mrn),pool=realMrn?byId:open;
+ const hits=pool.filter(c=>_sitesMatch(rv.site,c.site)&&(realMrn?(!group||group==="Other / Benign"||c.group===group||c.group==="Pending pathology"):(!!group&&group!=="Other / Benign"&&c.group===group)));
+ if(hits.length===1)return hits[0];
+ // 0.6.14.1: a signed-off case comes back when a new note about the same patient and site arrives
+ if(!hits.length&&_realId(rv.mrn)){const closed=(cases||[]).filter(c=>String(c.status||"").startsWith("Completed")&&c.patientId===rv.mrn&&_sitesMatch(rv.site,c.site));if(closed.length===1)return closed[0]}
+ return null;
 }
 function _caseBaseId(prefix,filename){return prefix+String(filename||"note").replace(/\.[a-z0-9]+$/i,"").replace(/[^A-Za-z0-9]+/g,"-").slice(0,40)}
 function filePendingCase(it){
@@ -1984,6 +1992,10 @@ function recordResultVisitOnRegistry(it){
    updates:[{date,type:"Pathology result",enteredBy:"From clinic note",text:esc(`Case created from a result-discussion visit (${it.filename}); the pathology report itself has not been filed. Result named in note: ${rv.pathDx||"not stated"}.`),next:"File the pathology report when available."}]};
   cases.unshift(c);created=true;
  }
+ if(String(c.status||"").startsWith("Completed")){
+  c.updates.push({date,type:"Case reopened",enteredBy:"From clinic note",text:esc(`Reopened: new clinic note ${it.filename} (was: ${c.completionType||"closed"}).`),next:"Review the new note."});
+  c.closure=null;c.completion="";c.completionType="";c.closedBy="";c.status="Open - Pending Completion";
+ }
  c.notifications=Array.isArray(c.notifications)?c.notifications:[];
  c.notifications.push({date,method:"In person at visit",by:"From clinic note",success:true,note:esc(`Result discussed at visit (${it.filename}).`),source:it.filename});
  c.updates.push({date,type:"Patient notification",enteredBy:"From clinic note",text:esc(`Pathology result discussed with patient in person (${it.filename}). Plan: ${rv.planText||"see note"}`),next:esc(rv.actions&&rv.actions.referral?"Confirm the referral appointment happened and obtain the consult note.":rv.actions&&(rv.actions.mohs||rv.actions.excision||rv.actions.edc)?"Confirm definitive treatment is scheduled and completed.":"Close the case if no further treatment is needed.")});
@@ -1991,8 +2003,25 @@ function recordResultVisitOnRegistry(it){
  if(a.treatedAlready)c.closureSuggestion={reason:"Definitive care completed",note:`Result discussed in person on ${date}; the note states the lesion was already treated: ${rv.planText||""}`.slice(0,400),source:it.filename};
  else if(a.noFurtherTx&&!high&&!a.referral&&!a.mohs&&!a.excision&&!a.edc)c.closureSuggestion={reason:"Results given — benign, no further treatment needed",note:`Result discussed in person on ${date}; plan: ${rv.planText||"no further treatment"}.`,source:it.filename};
  else if(a.referral)c.referralPendingConfirmation=true;
+ /* 0.6.14.1: the note documents that the result and plan were discussed in person, so it is the sign-off
+    record. High-priority cases sign off only when the note names the arranged treatment or referral;
+    otherwise they stay on the worklist as "confirm plan". */
+ const planLow=String(rv.planText||"").toLowerCase();
+ let auto="";
+ if(a.treatedAlready)auto="Definitive care completed";
+ else if(a.referral)auto=/surgical oncolog/.test(planLow)?"Referred to surgical oncology":/oncolog|cancer cent|md anderson|tertiary/.test(planLow)?"Referred to oncology center":"Referred to another specialist";
+ else if(a.mohs)auto="Mohs surgery scheduled";
+ else if(a.excision)auto="Excision scheduled";
+ else if(a.edc)auto="Patient contacted and plan provided";
+ else if(!high)auto=a.noFurtherTx?"Results given — benign, no further treatment needed":"Patient contacted and plan provided";
+ if(auto&&!c.awaitingReport){
+  const note=`Signed off automatically from clinic note ${it.filename}: result and plan discussed with the patient in person on ${date}. Plan: ${rv.planText||"see note"}`.slice(0,500);
+  c.closure={date,reason:auto,by:"From clinic note",note:esc(note)};c.completion=date;c.completionType=auto;c.closedBy="From clinic note";c.status="Completed / Closed";
+  c.referralPendingConfirmation=false;delete c.closureSuggestion;
+  c.updates.push({date,type:"Case closed",enteredBy:"From clinic note (automatic)",text:esc(auto+": "+note),next:"None — case closed. A new note or report for this patient and site reopens it."});
+ }else if(high&&!auto)c.updates.push({date,type:"Provider review",enteredBy:"From clinic note",text:"High-priority result discussed, but the note does not name an arranged treatment or referral.",next:"Confirm the plan (Update plan), then sign off."});
  savePathRegistry(cases);
- return{status:created?"created":"matched",caseId:c.caseId};
+ return{status:created?"created":"matched",caseId:c.caseId,closed:!!(auto&&!c.awaitingReport),reason:auto};
 }
 function renderClinicPathPanel(){
  const box=$("clinicPathTable");if(!box)return;
@@ -2001,6 +2030,7 @@ function renderClinicPathPanel(){
  if($("clinicPathBadge"))$("clinicPathBadge").textContent=`${rows.length-done} need action · ${done} on worklist`;
  if(!rows.length){box.innerHTML='<div class="notice">No clinic notes with a biopsy, excision or result discussion imported yet.</div>';return}
  rows=rows.filter(({it})=>it.registryState!=="sent");
+ $("clinicPathAll").parentElement.classList.toggle("hidden",!rows.length);
  if(!rows.length){box.innerHTML=`<div class="notice ok">${done===1?"The clinic note is":`All ${done} clinic notes are`} on the pathology worklist below.</div>`;return}
  const cases=loadPathRegistry()||[];
  box.innerHTML='<table><thead><tr><th></th><th>Document</th><th>What happened</th><th>Date</th><th>Site</th><th>Working dx / result</th><th>Plan / next step</th><th>Registry</th><th></th></tr></thead><tbody>'+
@@ -2157,7 +2187,7 @@ async function handleBatchImport(fileList){
  const auto=autoFileToWorklist();
  renderWorkQueueTable();
  prog.className=failed.length?"notice warn":"notice ok";
- prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending)?` ${auto.reports} pathology report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report went onto the pathology worklist.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
+ prog.textContent=`Batch import complete: ${done-failed.length}/${files.length} files processed, ${made} worklist item${made===1?"":"s"} created.`+((auto.reports||auto.pending||auto.visits)?` Pathology worklist: ${auto.reports} report${auto.reports===1?"":"s"} and ${auto.pending} biops${auto.pending===1?"y":"ies"} awaiting report added; ${auto.visits} result visit${auto.visits===1?"":"s"} recorded, ${auto.signed} signed off.`:"")+(extra?` ${extra} extra row${extra===1?"":"s"} from reports with several specimens.`:"")+(dups?` ${dups} duplicate${dups===1?"":"s"} recognized (same content as a file already imported) and not queued.`:"")+(jsonAdded||jsonSkipped?` JSON case lists: ${jsonAdded} case${jsonAdded===1?"":"s"} added to the Pathology Registry${jsonSkipped?`, ${jsonSkipped} skipped (missing or existing case ID)`:""}.`:"")+(failed.length?` Failed: ${failed.join("; ")}`:"");
  addAudit("Batch import completed",`${done-failed.length}/${files.length} documents added to Work Queue.`+(failed.length?` ${failed.length} failed.`:""));
 }
 /* 0.6.13.7: round-trip between the Work Queue worklist and the Document Intake Lab — opening an
