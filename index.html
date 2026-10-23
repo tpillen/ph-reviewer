@@ -92,8 +92,10 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:9px;borde
   <h3>1. Source Document Intake</h3>
   <div class="grid two">
    <div>
-    <label>Load document for data extraction and mapping (synthetic/de-identified only)<input id="clinicalFileInput" type="file" accept=".json,application/json,.txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
+    <label>Main intake: load one or many documents (synthetic/de-identified only). PH sorts each one: prior-authorization items go to 5. Work Queue, pathology reports and biopsy notes go to 6. Pathology Worklist, worklist files are restored. A single document also opens here for review.<input id="clinicalFileInput" type="file" multiple accept=".json,application/json,.txt,.rtf,.docx,.pdf,.png,.jpg,.jpeg,text/plain,application/rtf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/pdf,image/png,image/jpeg"></label>
     <div class="row"><button id="clearBtn" class="btn secondary">Clear</button></div>
+    <div id="labBatchProgress" class="notice" style="margin-top:8px;display:none"></div>
+    <div id="labRouteLinks" class="row hidden" style="margin-top:6px"><button class="btn secondary" id="labGoQueue">Go to 5. Work Queue</button><button class="btn secondary" id="labGoPath">Go to 6. Pathology Worklist</button></div>
     <div id="sourceMeta" class="source" style="margin-top:8px">No source loaded.</div>
     <div id="extractStatus" class="notice" style="margin-top:8px">Select a file or load the synthetic note.</div>
     <div id="docTypeBar" class="notice hidden" style="margin-top:8px"></div>
@@ -2200,7 +2202,7 @@ function renderWorkQueueTable(){
 async function handleBatchImport(fileList){
  const files=[...fileList];
  if(!files.length)return;
- const progs=[$("batchProgress"),$("pathBatchProgress")].filter(Boolean);
+ const progs=[$("batchProgress"),$("pathBatchProgress"),$("labBatchProgress")].filter(Boolean);
  const prog={set textContent(t){progs.forEach(p=>{p.style.display="";p.textContent=t})},set className(c){progs.forEach(p=>{p.className=c})}};
  prog.className="notice";
  let done=0,failed=[],extra=0,dups=0,made=0,jsonAdded=0,jsonSkipped=0,jsonDocs=0;
@@ -2670,9 +2672,15 @@ function finalizePathology(){const id=$("biopsyEpisodeId").value;if(!id){alert("
 function renderBiopsyHistory(){if(!$("biopsyHistory"))return;$("biopsyHistory").innerHTML=biopsyEpisodes.length?biopsyEpisodes.map(ep=>`<div class="map-item"><b>${esc(ep.id)} · Specimen ${esc(ep.specimen)}</b><br>Working: ${esc(ep.workingDiagnosis)}${ep.workingIcd?` (${esc(ep.workingIcd)})`:""}<br>Differential: ${ep.differential?.length?ep.differential.map(esc).join(" vs "):"—"}<br>Pathology status: <span class="biopsy-chip ${ep.finalDiagnosis?"biopsy-final":"biopsy-pending"}">${esc(ep.pathStatus||"Pending")}</span><br>${ep.finalDiagnosis?`Resolved: <b>${esc(ep.finalDiagnosis)}</b>${ep.finalIcd?` (${esc(ep.finalIcd)})`:""}<br>`:""}${ep.followup?`Follow-up: ${esc(ep.followup)}`:""}</div>`).join(""):"No biopsy/pathology history yet."}
 
 $("clearBtn").onclick=()=>{try{resetDocTypeUI()}catch(e){};ingestState={filename:"",importedAt:"",fingerprint:"",raw:"",mappings:[],meds:[],accepted:false,linkedQueueId:null,relevanceVerdict:null};$("rawSource").value="";$("sourcePane").textContent="No source loaded.";$("sourceMeta").textContent="No source loaded.";$("preserved").textContent="Not loaded";$("mappingRows").innerHTML='<tr><td colspan="6">No extraction run.</td></tr>';$("previsitSummary").value="";$("intervalSummary").value="";$("linkedQueueNotice").classList.add("hidden")};
-$("clinicalFileInput").onchange=async e=>{const f=e.target.files?.[0];if(!f)return;
- // a worklist export or JSON case list is not a clinical document: load it into the pathology worklist instead
- if(/\.json$/i.test(f.name)){e.target.value="";$("extractStatus").textContent=`${f.name} is a worklist / case-list file, so it was loaded into 6. Pathology Worklist.`;await handleBatchImport([f]);showView("pathintake");return}$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name)}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
+/* 0.6.14.1: the Document Intake Lab picker is the main intake port. Every file goes through the batch sorter
+   (PA items -> Work Queue, pathology -> Pathology Worklist, worklist .json -> restored). When exactly one clinical
+   document is chosen it is also opened here for review, as before. */
+$("labGoQueue").onclick=()=>showView("queue");$("labGoPath").onclick=()=>showView("pathintake");
+$("clinicalFileInput").onchange=async e=>{const files=[...(e.target.files||[])];e.target.value="";if(!files.length)return;
+ await handleBatchImport(files);$("labRouteLinks").classList.remove("hidden");
+ const docs=files.filter(x=>!/\.json$/i.test(x.name));
+ if(docs.length!==1){$("extractStatus").textContent=docs.length?`${docs.length} documents sorted. Use the buttons above to work them, or Open on any row to review one here.`:"Worklist file loaded into 6. Pathology Worklist.";return}
+ const f=docs[0];$("extractStatus").textContent="Extracting "+f.name+"…";try{await loadSource(await extractFile(f),f.name);const it=workQueueItems.find(x=>x.filename===f.name);if(it)ingestState.linkedQueueId=it.id}catch(err){$("extractStatus").className="notice warn";$("extractStatus").textContent="Extraction failed: "+err.message}};
 $("extractBtn").onclick=extractAndMap;$("acceptBtn").onclick=acceptMappings;$("syncQueueBtn").onclick=syncCurrentDocumentToQueue;$("visitType").onchange=()=>{if(ingestState.mappings.length){$("intervalSummary").value=buildInterval();$("previsitSummary").value=buildPrevisit()}};
 $("paDrug").innerHTML=PA_DRUGS.map(d=>`<option value="${d.id}">${esc(d.name)}</option>`).join("");$("paDrug").value="isotretinoin";fillPADx();$("paPathway").onchange=()=>scanPAEvidence();$("paDrug").onchange=()=>{fillPADx();scanPAEvidence()};$("paDx").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("paPayer").onchange=()=>{renderKnownRules();updatePAStats();scanPAEvidence()};$("scanPA").onclick=scanPAEvidence;$("extractDenial").onclick=extractDenialRules;$("addDenialRules").onclick=addDenialRules;$("recordApproved").onclick=()=>recordOutcome("Approved");$("recordDenied").onclick=()=>recordOutcome("Denied");
 
