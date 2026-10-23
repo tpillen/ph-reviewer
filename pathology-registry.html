@@ -292,7 +292,7 @@ function renderFollowup(){
    <td><span class="badge ${c.priority==="High"?"high":""}">${c.priority}</span>${riskTier(c)<RISK_TIERS.length?`<div class="source">${RISK_TIERS[riskTier(c)].label}</div>`:""}</td>
    <td><a class="primary linkbtn" href="pathology-registry.html?case=${encodeURIComponent(c.caseId)}" target="_blank" onclick="lastRowId='${c.caseId}'">Update plan</a></td>
   </tr>`;
- }).join(""):'<tr><td colspan="8" class="source">No open cases — every case has been closed.</td></tr>';
+ }).join(""):`<tr><td colspan="8" class="source">${cases.length?"No open cases — every case has been closed.":"The worklist is empty. Import pathology reports or a worklist file in PH with Choose Files."}</td></tr>`;
 }
 function render(){normalizePriorities();
  const groups=[...new Set(cases.map(c=>c.group))].sort(),gf=$("groupFilter").value||"All",sf="Completed / Closed",pf=$("providerFilter").value||"All";
