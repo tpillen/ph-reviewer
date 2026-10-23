@@ -47,7 +47,7 @@ a.linkbtn{display:inline-block;padding:9px 12px;border-radius:8px;font-weight:70
   <h2 style="margin:0">Pathology worklist: open results</h2>
   <label style="min-width:220px">Stale threshold (days since last update)<input id="staleThreshold" type="number" value="14" min="1" style="margin-top:2px"></label>
  </div>
- <div class="source">Every case still in follow-up. Unconfirmed referrals first, then oldest open. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
+ <div class="source">Every case still in follow-up. High priority first, then longest since biopsy. Removing a case from the worklist requires a recorded patient notification (or documented exhausted contact attempts) and a closure reason.</div>
  <div style="overflow:auto;margin-top:10px">
   <table><thead><tr><th>Case</th><th>Diagnosis</th><th>Provider</th><th>Next step</th><th>Days Open</th><th>Days Since Last Update</th><th>Priority</th><th></th></tr></thead><tbody id="followupRows"></tbody></table>
  </div>
@@ -262,11 +262,13 @@ function nextStep(c){
  return{t:"Ready to close",k:"step-ready"};
 }
 function stepBadge(c){const s=nextStep(c);return`<span class="badge ${s.k}">${s.t}</span>`}
+/* Worklist order: priority first (High, then any middle level, then Routine), then longest since biopsy. */
+function priorityRank(c){const p=String(c.priority||"").toLowerCase();return p==="high"?0:/routine|low/.test(p)?2:1}
 function renderFollowup(){
  const t=today(),staleDays=Number($("staleThreshold").value)||14;
  const open=cases.filter(c=>!isClosed(c))
   .map(c=>({c,daysOpen:daysNum(c.biopsy||c.report,t),daysSinceUpdate:daysNum(lastUpdateDate(c),t)}))
-  .sort((a,b)=>(b.c.referralPendingConfirmation?1:0)-(a.c.referralPendingConfirmation?1:0)||(b.daysOpen||0)-(a.daysOpen||0));
+  .sort((a,b)=>priorityRank(a.c)-priorityRank(b.c)||(b.daysOpen||0)-(a.daysOpen||0));
  $("followupRows").innerHTML=open.length?open.map(({c,daysOpen,daysSinceUpdate})=>{
   const stale=daysSinceUpdate!==null&&daysSinceUpdate>=staleDays;
   return `<tr data-id="${esc(c.caseId)}"${c.referralPendingConfirmation?' style="background:#fef2f2"':""}>
